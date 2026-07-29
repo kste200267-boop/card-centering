@@ -95,6 +95,7 @@ display:flex;align-items:center;gap:12px}
       <button type="button" id="ccAuto">자동 감지</button>
       <button type="button" id="ccWarp">📐 기울기 보정</button>
       <button type="button" id="ccRotate">↻ 회전</button>
+      <button type="button" id="ccOrig">↩️ 원본 복원</button>
       <button type="button" class="warn" id="ccReset">초기화</button>
     </div>
     <div id="ccWarpBar" style="display:none;background:#26313f;border:1px solid #3a4757;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#c9d4e0;line-height:1.6">
@@ -203,6 +204,7 @@ function loadInto(sideKey,file,done){
     var im=new Image();
     im.onload=function(){
       S[sideKey].img=im;S[sideKey].W=im.naturalWidth;S[sideKey].H=im.naturalHeight;
+      S[sideKey].orig=im;S[sideKey].origW=im.naturalWidth;S[sideKey].origH=im.naturalHeight;
       S[sideKey].L=defL();S[sideKey].res=null;S[sideKey].detected=false;S[sideKey].cropped=false;S[sideKey].autoWarped=false;S[sideKey].lastCorners=null;S[sideKey].cond=null;
       if(done)done();
     };
@@ -888,6 +890,17 @@ function rotate90(){
   }catch(err){alert('회전에 실패했습니다.')}
 }
 $('ccRotate').addEventListener('click',function(e){e.preventDefault();rotate90()});
+$('ccOrig').addEventListener('click',function(e){
+  e.preventDefault();
+  var s=st();
+  if(!s.orig){alert('원본이 없습니다.');return}
+  if(warpMode)stopWarp();
+  s.img=s.orig;s.W=s.origW;s.H=s.origH;
+  s.L=defL();s.detected=false;s.res=null;s.cond=null;s.lastCorners=null;
+  s.cropped=true;s.autoWarped=true; // 자동 크롭·보정 없이 원본 그대로 유지
+  $('ccAiPanel').style.display='none';
+  fit();autoDetect(true); // 가이드선 감지만 수행
+});
 
 function autoDetect(silent){
   try{
