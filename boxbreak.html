@@ -148,7 +148,12 @@ function cardUrls(setCode,c){
       :[num+'_'+base+rar,num,num+'_'+base,unp+'_'+base+rar,unp];
     urls=cands.map(function(x){return CDN+'/'+setCode+'/'+x+'.webp'}).concat(jpFallbacks(setCode,num));
   }
-  return urls;
+  // 핫링크 차단 대비: 이미지 프록시 경유 폴백 (마지막 수단)
+  var prox=[];
+  if(urls.length)prox.push('https://wsrv.nl/?url='+encodeURIComponent(urls[0]));
+  var jpF=jpFallbacks(setCode,num);
+  if(jpF.length)prox.push('https://wsrv.nl/?url='+encodeURIComponent(jpF[jpF.length-1]));
+  return urls.concat(prox);
 }
 window.bbImgFallback=function(img){
   try{
