@@ -256,7 +256,7 @@ function renderPack(){
   $('btnNext').style.display='none';
   $('btnFlipAll').disabled=false;
   // 박스 모드 전체 한번에: 버튼 텍스트 조정
-  $('btnFlipAll').textContent=session.mode==='box'?'⚡ 박스 전체 한번에 까기':'⚡ 전체 한번에 까기';
+  $('btnFlipAll').textContent=session.mode==='box'?'⚡ 박스 한번에 까고 정리':'⚡ 전체 한번에 까기';
 }
 function makeSlot(c){
   var slot=document.createElement('div');slot.className='cardSlot';
@@ -310,29 +310,46 @@ $('btnNext').addEventListener('click',function(){
 $('btnFlipAll').addEventListener('click',function(){
   this.disabled=true;
   if(session.mode==='box'){
-    // 남은 모든 팩 카드 수집
-    var rest=[],i2,j2;
-    // 현재 화면 팩부터 순서대로 순차 공개 연출
-    revealAllSequential();
+    revealBoxAll();
   }else{
     revealAllSequential();
   }
 });
+function revealBoxAll(){
+  // 전 팩 카드 수집 → 히트만 가격순 정렬해서 한 화면에 정리
+  var all=[],hits=[],norm=0,i2,j2,c;
+  for(i2=0;i2<session.packs.length;i2++){
+    for(j2=0;j2<session.packs[i2].length;j2++){
+      c=session.packs[i2][j2];all.push(c);
+      if(c.norm){norm++}else{hits.push(c)}
+    }
+  }
+  session.opened=all;
+  hits.sort(function(a,b){return (b.p||0)-(a.p||0)});
+  $('packTitle').textContent='📦 '+session.s.name+' — 박스 전체 결과 ('+session.packs.length+'팩)';
+  $('btnNext').style.display='none';
+  var host=$('packs');host.innerHTML='';
+  var grid=document.createElement('div');grid.className='packGrid';
+  for(i2=0;i2<hits.length;i2++){
+    var slot=makeSlot(hits[i2]);
+    // 클릭 없이 바로 공개 (짧은 시간차로 촤르륵)
+    (function(sl,d){setTimeout(function(){sl.classList.add('flip')},d)})(slot,Math.min(i2*45,900));
+    grid.appendChild(slot);
+  }
+  host.appendChild(grid);
+  var nn=document.createElement('p');
+  nn.style.cssText='font-size:13px;color:#5f6c7c;margin:12px 0 0';
+  nn.textContent='💤 일반 카드 '+norm+'장은 생략했습니다. (가격순 정렬)';
+  host.appendChild(nn);
+  setTimeout(showTally,Math.min(hits.length*45,900)+300);
+}
 function revealAllSequential(){
   var slots=Array.prototype.slice.call(document.querySelectorAll('.cardSlot:not(.flip)'));
-  var pk=session.packs[session.idx];
   var i2=0;
   function step(){
     if(i2<slots.length){
       slots[i2].click();i2++;
       setTimeout(step,90);
-    }else if(session.mode==='box'&&session.idx<session.packs.length-1){
-      session.idx++;
-      renderPack();
-      setTimeout(function(){
-        $('btnFlipAll').disabled=true;
-        revealAllSequential();
-      },350);
     }
   }
   step();
