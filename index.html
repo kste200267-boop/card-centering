@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>카드 센터링 계산기</title>
+<style>html,body{margin:0;padding:0;background:#0b0f14}</style>
+</head>
+<body>
+<!-- 블로거에 올릴 때는 <div id="ccWrap"> 부터 </div> 까지만 복사해서 붙여넣으세요 -->
+<div id="ccWrap">
+<style>
+#ccWrap{max-width:960px;margin:0 auto;padding:18px 14px 60px;background:#12161c;color:#e8edf3;
+font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;word-break:keep-all;border-radius:14px}
+#ccWrap *{box-sizing:border-box}
+#ccWrap h2{font-size:22px;margin:0 0 4px;letter-spacing:-.5px}
+#ccWrap .ccSub{color:#93a1b3;font-size:13px;margin:0 0 18px;line-height:1.6}
+#ccWrap .ccCard{background:#1b222c;border:1px solid #2c3644;border-radius:12px;padding:14px;margin-bottom:14px}
+#ccDrop{border:2px dashed #3a4757;border-radius:12px;padding:34px 16px;text-align:center;color:#93a1b3;
+font-size:14px;transition:border-color .15s,background .15s;cursor:pointer;line-height:1.7}
+#ccDrop.hot{border-color:#39c5cf;background:rgba(57,197,207,.06);color:#39c5cf}
+#ccWrap .ccBtnRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+#ccWrap button{font-family:inherit;font-size:13px;font-weight:700;border:none;border-radius:8px;
+padding:9px 14px;cursor:pointer;background:#2a3542;color:#e8edf3}
+#ccWrap button.pri{background:#39c5cf;color:#0c1116}
+#ccWrap button.warn{background:#3a2a2a;color:#f0a0a0}
+#ccWrap button:active{transform:translateY(1px)}
+#ccStage{display:none}
+#ccCanvasBox{position:relative;background:#0b0f14;border-radius:10px;overflow:hidden;touch-action:none}
+#ccCanvas{display:block;width:100%;touch-action:none}
+#ccNoImg{display:none;padding:60px 16px;text-align:center;color:#93a1b3;font-size:14px;line-height:1.8}
+#ccLoupe{position:absolute;width:130px;height:130px;border-radius:50%;border:3px solid #f0b429;
+overflow:hidden;pointer-events:none;display:none;box-shadow:0 4px 14px rgba(0,0,0,.5);background:#000}
+#ccWrap .ccToolRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 4px}
+#ccWrap .ccSeg{display:inline-flex;border:1px solid #2c3644;border-radius:8px;overflow:hidden}
+#ccWrap .ccSeg button{border-radius:0;background:#1b222c;color:#93a1b3;font-size:13px;padding:8px 14px;position:relative}
+#ccWrap .ccSeg button.on{background:#39c5cf;color:#0c1116}
+#ccWrap .ccSeg button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#3fb96f;margin-left:5px;vertical-align:1px}
+#ccWrap .ccNudge{display:flex;gap:6px;align-items:center;margin-left:auto}
+#ccWrap .ccNudge button{width:40px;height:40px;padding:0;font-size:16px;background:#232d39}
+#ccSelName{font-size:12px;color:#93a1b3;min-width:80px;text-align:right}
+#ccWrap .ccHint{font-size:12px;color:#93a1b3;line-height:1.7;margin-top:8px}
+#ccWrap .ccReadout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+#ccWrap .ccAxis{background:#141a22;border:1px solid #2c3644;border-radius:10px;padding:12px}
+#ccWrap .ccAxis h4{margin:0 0 6px;font-size:12px;color:#93a1b3;font-weight:600;letter-spacing:.5px}
+#ccWrap .ccPct{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+#ccWrap .ccMm{font-size:12px;color:#93a1b3;font-variant-numeric:tabular-nums;margin-top:2px}
+#ccSlab{margin-top:12px;background:#f4f6f8;color:#111820;border-radius:10px;padding:12px 14px;
+display:flex;align-items:center;gap:12px}
+#ccSlab .g{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+#ccSlab .t{font-size:12px;line-height:1.5;color:#444f5c}
+#ccSlab .t b{color:#111820}
+#ccWrap table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;font-variant-numeric:tabular-nums}
+#ccWrap th,#ccWrap td{border:1px solid #2c3644;padding:8px 6px;text-align:center}
+#ccWrap th{background:#141a22;color:#93a1b3;font-weight:600;font-size:12px}
+#ccWrap td.hit{background:rgba(57,197,207,.14);color:#39c5cf;font-weight:800}
+#ccWrap td.gradeCell{font-weight:800}
+#ccCombined{display:none;margin-top:16px}
+#ccCombined h3{font-size:15px;margin:0 0 4px}
+#ccWrap .ccFoot{font-size:11px;color:#5f6c7c;line-height:1.7;margin-top:10px}
+@media(max-width:560px){#ccWrap .ccReadout{grid-template-columns:1fr}#ccWrap h2{font-size:19px}#ccLoupe{width:110px;height:110px}}
+</style>
+
+<h2>🎴 카드 센터링 계산기</h2>
+<p class="ccSub">앞면·뒷면 사진 2장을 한 번에 올려보세요. 앞면/뒷면 버튼을 누르면 해당 사진과 가이드가 자동으로 전환되고, 두 면이 모두 측정되면 종합 예상 등급이 표시됩니다. 순서가 바뀌었으면 ⇄ 버튼으로 교체하면 됩니다.</p>
+
+<div class="ccCard" id="ccUploadCard">
+  <div id="ccDrop">여기에 사진을 끌어다 놓거나 아래 버튼을 누르세요<br><span style="font-size:12px">2장을 함께 선택하면 1번째 → 앞면, 2번째 → 뒷면으로 들어갑니다</span></div>
+  <div class="ccBtnRow">
+    <button type="button" class="pri" id="ccPick">사진 선택 (1~2장)</button>
+    <button type="button" id="ccCam">카메라로 촬영</button>
+  </div>
+  <input type="file" id="ccFile" accept="image/*" multiple style="display:none">
+  <input type="file" id="ccFileCam" accept="image/*" capture="environment" style="display:none">
+</div>
+
+<div id="ccStage">
+  <div class="ccCard">
+    <div class="ccToolRow">
+      <div class="ccSeg">
+        <button type="button" id="ccFront" class="on">앞면</button>
+        <button type="button" id="ccBack">뒷면</button>
+      </div>
+      <button type="button" id="ccSwap" title="앞뒷면 사진 교체">⇄ 앞뒤 교체</button>
+      <button type="button" id="ccAuto">자동 감지</button>
+      <button type="button" id="ccWarp">📐 기울기 보정</button>
+      <button type="button" id="ccRotate">↻ 회전</button>
+      <button type="button" class="warn" id="ccReset">초기화</button>
+    </div>
+    <div id="ccWarpBar" style="display:none;background:#26313f;border:1px solid #3a4757;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#c9d4e0;line-height:1.6">
+      📐 카드의 <b>네 모서리</b>에 주황 점을 정확히 맞춘 뒤 적용을 누르세요. 비스듬히·굴곡지게 찍힌 사진이 반듯한 정면 이미지로 펴집니다.
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button type="button" class="pri" id="ccWarpApply">✅ 보정 적용</button>
+        <button type="button" id="ccWarpCancel">취소</button>
+      </div>
+    </div>
+    <div id="ccCanvasBox">
+      <canvas id="ccCanvas"></canvas>
+      <div id="ccNoImg">이 면의 사진이 아직 없습니다.<br><button type="button" class="pri" id="ccAddSide" style="margin-top:10px">이 면 사진 올리기</button></div>
+      <div id="ccLoupe"><canvas id="ccLoupeCv" width="260" height="260"></canvas></div>
+    </div>
+    <div class="ccToolRow">
+      <span class="ccHint" style="margin-top:0">실선 = 카드 바깥 모서리 · 점선 = 인쇄 테두리 안쪽 경계<br>드래그하면 돋보기가 뜹니다. 선을 탭한 뒤 −/＋ 버튼이나 방향키(Shift = 5칸)로 미세조정하세요.</span>
+      <div class="ccNudge">
+        <span id="ccSelName">선택 없음</span>
+        <button type="button" id="ccMinus">−</button>
+        <button type="button" id="ccPlus">＋</button>
+      </div>
+    </div>
+    <div class="ccBtnRow" style="justify-content:flex-start;margin-top:8px">
+      <button type="button" id="ccReplace">이 면 사진 바꾸기</button>
+      <button type="button" class="pri" id="ccReport">🏁 결과보기</button>
+      <button type="button" class="warn" id="ccNew">처음부터</button>
+    </div>
+    <input type="file" id="ccFileSide" accept="image/*" style="display:none">
+  </div>
+
+  <div class="ccCard">
+    <div class="ccReadout">
+      <div class="ccAxis"><h4>좌 / 우</h4><div class="ccPct" id="ccLR">– / –</div><div class="ccMm" id="ccLRmm"></div></div>
+      <div class="ccAxis"><h4>상 / 하</h4><div class="ccPct" id="ccTB">– / –</div><div class="ccMm" id="ccTBmm"></div></div>
+    </div>
+    <div id="ccSlab">
+      <div class="g" id="ccWorst">–</div>
+      <div class="t" id="ccSlabTxt">가이드를 맞추면 축별 센터링 중 <b>더 나쁜 쪽</b> 기준으로 등급을 예측합니다.</div>
+    </div>
+    <table id="ccTable">
+      <thead><tr><th>업체</th><th>10</th><th>9</th><th>8</th><th>7</th><th>예상</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="ccCombined">
+      <h3>🏆 앞·뒷면 종합 예상 등급</h3>
+      <table id="ccComboTable">
+        <thead><tr><th>업체</th><th>앞면</th><th>뒷면</th><th>종합</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="ccFoot">※ 센터링 단일 항목 기준의 예측입니다. 표면·코너·엣지 상태에 따라 실제 등급은 낮아질 수 있습니다. mm 값은 표준 TCG 카드(63×88mm)를 가정한 환산치입니다. PSA는 2025년 개정 기준(앞면 10 = 55/45, 뒷면 10 = 75/25)을 적용했습니다. 종합 등급은 앞·뒷면 중 낮은 쪽을 따르는 단순 추정입니다.</p>
+  </div>
+</div>
+
+<div id="ccResultOv" style="display:none;position:fixed;inset:0;background:rgba(5,8,12,.9);z-index:9999;overflow:auto;padding:16px;text-align:center">
+  <img id="ccResultImg" alt="결과 이미지" style="max-width:min(94vw,560px);width:100%;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6)">
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+    <button type="button" id="ccResultSave" style="font-family:inherit;font-size:14px;font-weight:700;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;background:#39c5cf;color:#0c1116">💾 사진 저장</button>
+    <button type="button" id="ccResultClose" style="font-family:inherit;font-size:14px;font-weight:700;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;background:#2a3542;color:#e8edf3">닫기</button>
+  </div>
+</div>
+
+<script>
+(function(){
+function defL(){return {ol:.05,il:.14,ir:.86,or_:.95,ot:.04,it:.12,ib:.88,ob:.96}}
+var S={
+  front:{img:null,W:0,H:0,L:defL(),res:null},
+  back:{img:null,W:0,H:0,L:defL(),res:null}
+};
+var cur='front';
+var canvas=document.getElementById('ccCanvas');
+var ctx=canvas.getContext('2d');
+var box=document.getElementById('ccCanvasBox');
+var loupe=document.getElementById('ccLoupe');
+var loupeCv=document.getElementById('ccLoupeCv');
+var loupeCtx=loupeCv.getContext('2d');
+var KEYS=['ol','il','ir','or_','ot','it','ib','ob'];
+var NAMES={ol:'좌측 바깥',il:'좌측 안쪽',ir:'우측 안쪽',or_:'우측 바깥',ot:'상단 바깥',it:'상단 안쪽',ib:'하단 안쪽',ob:'하단 바깥'};
+var sel=null, drag=false;
+var warpMode=false, corners=null, wSel=-1;
+var DPR=Math.min(window.devicePixelRatio||1,2);
+
+var TH={
+ front:{PSA:[55,60,65,70],SGC:[55,60,65,70],BGS:[50,55,60,65],EDGE:[55,60,70,75]},
+ back:{PSA:[75,90,90,90],SGC:[55,60,65,70],BGS:[50,70,80,90],EDGE:[70,80,90,90]}
+};
+var ORDER=['PSA','SGC','BGS','EDGE'];
+
+function $(id){return document.getElementById(id)}
+function isV(k){return k==='ol'||k==='il'||k==='ir'||k==='or_'}
+function st(){return S[cur]}
+
+function otherEmpty(){return S[cur==='front'?'back':'front'].img===null}
+
+function loadInto(sideKey,file,done){
+  if(!file||!file.type||file.type.indexOf('image')!==0){if(done)done();return}
+  var r=new FileReader();
+  r.onload=function(e){
+    var im=new Image();
+    im.onload=function(){
+      S[sideKey].img=im;S[sideKey].W=im.naturalWidth;S[sideKey].H=im.naturalHeight;
+      S[sideKey].L=defL();S[sideKey].res=null;S[sideKey].detected=false;
+      if(done)done();
+    };
+    im.src=e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function refreshSeg(){
+  $('ccFront').className=cur==='front'?'on':'';
+  $('ccBack').className=cur==='back'?'on':'';
+  $('ccFront').innerHTML='앞면'+(S.front.img?'<span class="dot"></span>':'');
+  $('ccBack').innerHTML='뒷면'+(S.back.img?'<span class="dot"></span>':'');
+}
+
+function showSide(){
+  if(warpMode){warpMode=false;corners=null;wSel=-1;$('ccWarpBar').style.display='none'}
+  sel=null;$('ccSelName').textContent='선택 없음';hideLoupe();
+  if(st().img){
+    $('ccNoImg').style.display='none';
+    canvas.style.display='block';
+    fit();
+    if(!st().detected){autoDetect(true)}else{draw();calc()}
+  }else{
+    canvas.style.display='none';
+    $('ccNoImg').style.display='block';
+    $('ccLR').textContent='– / –';$('ccTB').textContent='– / –';
+    $('ccLRmm').textContent='';$('ccTBmm').textContent='';
+    $('ccWorst').textContent='–';$('ccWorst').style.color='#111820';
+    $('ccSlabTxt').innerHTML=(cur==='front'?'앞면':'뒷면')+' 사진을 올리면 측정이 시작됩니다.';
+    $('ccTable').getElementsByTagName('tbody')[0].innerHTML='';
+  }
+}
+
+function fit(){
+  var s=st();if(!s.img)return;
+  var w=box.clientWidth||600;
+  var h=Math.round(w*s.H/s.W);
+  var maxH=Math.round(window.innerHeight*0.72);
+  if(h>maxH){h=maxH;w=Math.round(h*s.W/s.H)}
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+  canvas.width=Math.round(w*DPR);canvas.height=Math.round(h*DPR);
+}
+
+function drawLines(c,w,h,lw,L){
+  function line(v,inner,key,vert){
+    c.beginPath();
+    c.setLineDash(inner?[7*lw,6*lw]:[]);
+    c.lineWidth=(sel===key?3:2)*lw;
+    c.strokeStyle=sel===key?'#f0b429':(inner?'#39c5cf':'#e05252');
+    if(vert){c.moveTo(v*w,0);c.lineTo(v*w,h)}else{c.moveTo(0,v*h);c.lineTo(w,v*h)}
+    c.stroke();
+  }
+  line(L.ol,false,'ol',true);line(L.il,true,'il',true);line(L.ir,true,'ir',true);line(L.or_,false,'or_',true);
+  line(L.ot,false,'ot',false);line(L.it,true,'it',false);line(L.ib,true,'ib',false);line(L.ob,false,'ob',false);
+  c.setLineDash([]);
+}
+
+function draw(){
+  var s=st();if(!s.img)return;
+  var w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(s.img,0,0,w,h);
+  if(warpMode&&corners){
+    var j,p;
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x*w,corners[0].y*h);
+    for(j=1;j<4;j++){ctx.lineTo(corners[j].x*w,corners[j].y*h)}
+    ctx.closePath();
+    ctx.strokeStyle='#f0b429';ctx.lineWidth=2*DPR;ctx.setLineDash([8*DPR,6*DPR]);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(240,180,41,.10)';ctx.fill();
+    for(j=0;j<4;j++){
+      p=corners[j];
+      ctx.beginPath();
+      ctx.arc(p.x*w,p.y*h,(wSel===j?11:9)*DPR,0,Math.PI*2);
+      ctx.fillStyle=wSel===j?'#f0b429':'#ffffff';
+      ctx.fill();
+      ctx.lineWidth=2*DPR;ctx.strokeStyle='#111';ctx.stroke();
+    }
+    return;
+  }
+  drawLines(ctx,w,h,DPR,s.L);
+  var i,k,x,y,hs=6*DPR;
+  ctx.fillStyle='#ffffff';ctx.strokeStyle='#111';ctx.lineWidth=1*DPR;
+  for(i=0;i<KEYS.length;i++){
+    k=KEYS[i];
+    if(isV(k)){x=s.L[k]*w;y=h/2}else{x=w/2;y=s.L[k]*h}
+    ctx.fillRect(x-hs,y-hs,hs*2,hs*2);ctx.strokeRect(x-hs,y-hs,hs*2,hs*2);
+  }
+}
+
+function pick(px,py){
+  var s=st();
+  var w=canvas.width,h=canvas.height;
+  var best=null,bd=18*DPR,i,k,d;
+  for(i=0;i<KEYS.length;i++){
+    k=KEYS[i];
+    if(isV(k)){d=Math.abs(px-s.L[k]*w)}else{d=Math.abs(py-s.L[k]*h)}
+    if(d<bd){bd=d;best=k}
+  }
+  return best;
+}
+
+function clampLine(L,k){
+  var m=0.004;
+  if(k==='ol')L.ol=Math.min(Math.max(L.ol,0),L.il-m);
+  if(k==='il')L.il=Math.min(Math.max(L.il,L.ol+m),L.ir-m);
+  if(k==='ir')L.ir=Math.min(Math.max(L.ir,L.il+m),L.or_-m);
+  if(k==='or_')L.or_=Math.min(Math.max(L.or_,L.ir+m),1);
+  if(k==='ot')L.ot=Math.min(Math.max(L.ot,0),L.it-m);
+  if(k==='it')L.it=Math.min(Math.max(L.it,L.ot+m),L.ib-m);
+  if(k==='ib')L.ib=Math.min(Math.max(L.ib,L.it+m),L.ob-m);
+  if(k==='ob')L.ob=Math.min(Math.max(L.ob,L.ib+m),1);
+}
+
+function showLoupe(clientX,clientY){
+  var s=st();if(!s.img)return;
+  var r=canvas.getBoundingClientRect();
+  var nx=(clientX-r.left)/r.width, ny=(clientY-r.top)/r.height;
+  if(nx<0)nx=0;if(nx>1)nx=1;if(ny<0)ny=0;if(ny>1)ny=1;
+  var Z=4;
+  var sw=loupeCv.width/Z, sh=loupeCv.height/Z;
+  var sx=nx*s.W-sw/2, sy=ny*s.H-sh/2;
+  loupeCtx.fillStyle='#000';
+  loupeCtx.fillRect(0,0,loupeCv.width,loupeCv.height);
+  loupeCtx.drawImage(s.img,sx,sy,sw,sh,0,0,loupeCv.width,loupeCv.height);
+  if(warpMode&&corners){
+    loupeCtx.beginPath();
+    var j2,cx2,cy2;
+    loupeCtx.moveTo((corners[0].x*s.W-sx)/sw*loupeCv.width,(corners[0].y*s.H-sy)/sh*loupeCv.height);
+    for(j2=1;j2<5;j2++){
+      cx2=(corners[j2%4].x*s.W-sx)/sw*loupeCv.width;
+      cy2=(corners[j2%4].y*s.H-sy)/sh*loupeCv.height;
+      loupeCtx.lineTo(cx2,cy2);
+    }
+    loupeCtx.strokeStyle='#f0b429';loupeCtx.lineWidth=2;loupeCtx.setLineDash([6,5]);loupeCtx.stroke();
+    loupeCtx.setLineDash([]);
+    loupeCtx.strokeStyle='rgba(255,255,255,.6)';loupeCtx.lineWidth=1;
+    loupeCtx.beginPath();
+    loupeCtx.moveTo(loupeCv.width/2,0);loupeCtx.lineTo(loupeCv.width/2,loupeCv.height);
+    loupeCtx.moveTo(0,loupeCv.height/2);loupeCtx.lineTo(loupeCv.width,loupeCv.height/2);
+    loupeCtx.stroke();
+    var lx2=(clientX-r.left)<r.width/2 ? r.width-loupe.offsetWidth-10 : 10;
+    loupe.style.left=lx2+'px';loupe.style.top='10px';loupe.style.display='block';
+    var cvs2=loupe.firstElementChild;cvs2.style.width='100%';cvs2.style.height='100%';
+    return;
+  }
+  var i,k,gx,gy;
+  for(i=0;i<KEYS.length;i++){
+    k=KEYS[i];
+    loupeCtx.beginPath();
+    loupeCtx.lineWidth=2;
+    var inner=(k==='il'||k==='ir'||k==='it'||k==='ib');
+    loupeCtx.setLineDash(inner?[6,5]:[]);
+    loupeCtx.strokeStyle=sel===k?'#f0b429':(inner?'#39c5cf':'#e05252');
+    if(isV(k)){
+      gx=(s.L[k]*s.W-sx)/sw*loupeCv.width;
+      if(gx>=0&&gx<=loupeCv.width){loupeCtx.moveTo(gx,0);loupeCtx.lineTo(gx,loupeCv.height)}
+    }else{
+      gy=(s.L[k]*s.H-sy)/sh*loupeCv.height;
+      if(gy>=0&&gy<=loupeCv.height){loupeCtx.moveTo(0,gy);loupeCtx.lineTo(loupeCv.width,gy)}
+    }
+    loupeCtx.stroke();
+  }
+  loupeCtx.setLineDash([]);
+  loupeCtx.strokeStyle='rgba(255,255,255,.6)';loupeCtx.lineWidth=1;
+  loupeCtx.beginPath();
+  loupeCtx.moveTo(loupeCv.width/2,0);loupeCtx.lineTo(loupeCv.width/2,loupeCv.height);
+  loupeCtx.moveTo(0,loupeCv.height/2);loupeCtx.lineTo(loupeCv.width,loupeCv.height/2);
+  loupeCtx.stroke();
+  var lx=(clientX-r.left)<r.width/2 ? r.width-loupe.offsetWidth-10 : 10;
+  loupe.style.left=lx+'px';loupe.style.top='10px';loupe.style.display='block';
+  var cvs=loupe.firstElementChild;cvs.style.width='100%';cvs.style.height='100%';
+}
+function hideLoupe(){loupe.style.display='none'}
+
+canvas.addEventListener('pointerdown',function(e){
+  e.preventDefault();
+  if(!st().img)return;
+  var r=canvas.getBoundingClientRect();
+  if(warpMode&&corners){
+    var nx=(e.clientX-r.left)/r.width, ny=(e.clientY-r.top)/r.height;
+    var bi=-1,bd=0.06,j,dx,dy,dd;
+    for(j=0;j<4;j++){
+      dx=nx-corners[j].x;dy=ny-corners[j].y;dd=Math.sqrt(dx*dx+dy*dy);
+      if(dd<bd){bd=dd;bi=j}
+    }
+    if(bi>=0){wSel=bi;drag=true;try{canvas.setPointerCapture(e.pointerId)}catch(err){};showLoupe(e.clientX,e.clientY)}
+    draw();return;
+  }
+  var px=(e.clientX-r.left)*DPR,py=(e.clientY-r.top)*DPR;
+  var k=pick(px,py);
+  if(k){sel=k;drag=true;$('ccSelName').textContent=NAMES[k];try{canvas.setPointerCapture(e.pointerId)}catch(err){};showLoupe(e.clientX,e.clientY)}
+  draw();
+});
+canvas.addEventListener('pointermove',function(e){
+  if(!drag)return;
+  e.preventDefault();
+  var r=canvas.getBoundingClientRect();
+  if(warpMode&&wSel>=0){
+    corners[wSel]={x:Math.min(Math.max((e.clientX-r.left)/r.width,0),1),
+                   y:Math.min(Math.max((e.clientY-r.top)/r.height,0),1)};
+    draw();showLoupe(e.clientX,e.clientY);return;
+  }
+  if(!sel)return;
+  var L=st().L;
+  if(isV(sel)){L[sel]=(e.clientX-r.left)/r.width}
+  else{L[sel]=(e.clientY-r.top)/r.height}
+  clampLine(L,sel);draw();calc();showLoupe(e.clientX,e.clientY);
+});
+canvas.addEventListener('pointerup',function(){drag=false;hideLoupe()});
+canvas.addEventListener('pointercancel',function(){drag=false;hideLoupe()});
+
+function nudge(dir,big){
+  var s=st();
+  if(!sel||!s.img)return;
+  var step=(isV(sel)?1/s.W:1/s.H)*(big?5:1);
+  s.L[sel]+=dir*step;clampLine(s.L,sel);draw();calc();
+}
+$('ccMinus').addEventListener('click',function(e){e.preventDefault();nudge(-1)});
+$('ccPlus').addEventListener('click',function(e){e.preventDefault();nudge(1)});
+document.addEventListener('keydown',function(e){
+  if(!sel||!st().img||$('ccStage').style.display==='none')return;
+  var big=e.shiftKey;
+  if(isV(sel)){
+    if(e.key==='ArrowLeft'){e.preventDefault();nudge(-1,big)}
+    if(e.key==='ArrowRight'){e.preventDefault();nudge(1,big)}
+  }else{
+    if(e.key==='ArrowUp'){e.preventDefault();nudge(-1,big)}
+    if(e.key==='ArrowDown'){e.preventDefault();nudge(1,big)}
+  }
+});
+
+function calc(){
+  var s=st();if(!s.img)return;
+  var L=s.L;
+  var lB=(L.il-L.ol)*s.W, rB=(L.or_-L.ir)*s.W;
+  var tB=(L.it-L.ot)*s.H, bB=(L.ob-L.ib)*s.H;
+  var lr=lB+rB, tb=tB+bB;
+  var lp=lr>0?lB/lr*100:50, tp=tb>0?tB/tb*100:50;
+  var lrWorse=Math.max(lp,100-lp), tbWorse=Math.max(tp,100-tp);
+  var worst=Math.max(lrWorse,tbWorse);
+  var cw=(L.or_-L.ol)*s.W, ch=(L.ob-L.ot)*s.H;
+  var mmL=cw>0?lB/cw*63:0, mmR=cw>0?rB/cw*63:0;
+  var mmT=ch>0?tB/ch*88:0, mmB=ch>0?bB/ch*88:0;
+  $('ccLR').textContent=Math.round(lp)+' / '+Math.round(100-lp);
+  $('ccTB').textContent=Math.round(tp)+' / '+Math.round(100-tp);
+  $('ccLRmm').textContent='좌 '+mmL.toFixed(2)+'mm · 우 '+mmR.toFixed(2)+'mm ('+lp.toFixed(1)+'%)';
+  $('ccTBmm').textContent='상 '+mmT.toFixed(2)+'mm · 하 '+mmB.toFixed(2)+'mm ('+tp.toFixed(1)+'%)';
+  var axis=lrWorse>=tbWorse?'좌/우':'상/하';
+  $('ccSlabTxt').innerHTML=(cur==='front'?'앞면':'뒷면')+' 기준 축: <b>'+axis+'</b> · 센터링 <b>'+Math.round(worst)+'/'+Math.round(100-worst)+'</b> (더 나쁜 축 적용)';
+  s.res={lp:lp,tp:tp,worst:worst};
+  renderTable(worst);
+  updateCombined();
+}
+
+function gradeFor(th,worst){
+  if(worst<=th[0])return 10;
+  if(worst<=th[1])return 9;
+  if(worst<=th[2])return 8;
+  if(worst<=th[3])return 7;
+  return 6;
+}
+function gCol(g){return g>=10?'#39c5cf':g===9?'#3fb96f':g===8?'#f0b429':'#e05252'}
+function gTxt(g){return g<=6?'6 이하':g}
+
+function renderTable(worst){
+  var tb=$('ccTable').getElementsByTagName('tbody')[0];
+  var html='';var i,co,th,g,j,best=0;
+  for(i=0;i<ORDER.length;i++){
+    co=ORDER[i];th=TH[cur][co];g=gradeFor(th,worst);
+    if(g>best)best=g;
+    html+='<tr><td>'+co+'</td>';
+    for(j=0;j<4;j++){
+      var lab=th[j]+'/'+(100-th[j]);
+      var hit=(g===10-j)?' class="hit"':'';
+      html+='<td'+hit+'>'+lab+'</td>';
+    }
+    html+='<td class="gradeCell" style="color:'+gCol(g)+'">'+gTxt(g)+'</td></tr>';
+  }
+  tb.innerHTML=html;
+  $('ccWorst').textContent=(best<=6?'≤6':best);
+  $('ccWorst').style.color=best>=10?'#0e7f87':best===9?'#1e7a45':best===8?'#8a6410':'#a83232';
+}
+
+function updateCombined(){
+  if(!S.front.res||!S.back.res){$('ccCombined').style.display='none';return}
+  var tb=$('ccComboTable').getElementsByTagName('tbody')[0];
+  var html='';var i,co,gf,gb,gc;
+  for(i=0;i<ORDER.length;i++){
+    co=ORDER[i];
+    gf=gradeFor(TH.front[co],S.front.res.worst);
+    gb=gradeFor(TH.back[co],S.back.res.worst);
+    gc=Math.min(gf,gb);
+    html+='<tr><td>'+co+'</td>'
+      +'<td style="color:'+gCol(gf)+';font-weight:700">'+gTxt(gf)+'</td>'
+      +'<td style="color:'+gCol(gb)+';font-weight:700">'+gTxt(gb)+'</td>'
+      +'<td class="gradeCell" style="color:'+gCol(gc)+'">'+gTxt(gc)+'</td></tr>';
+  }
+  tb.innerHTML=html;
+  $('ccCombined').style.display='block';
+}
+
+// ── 📐 원근(기울기) 보정 ─────────────────────
+function startWarp(){
+  var s=st();
+  if(!s.img){alert('먼저 이 면의 사진을 올려주세요.');return}
+  var L=s.L;
+  corners=[{x:L.ol,y:L.ot},{x:L.or_,y:L.ot},{x:L.or_,y:L.ob},{x:L.ol,y:L.ob}];
+  warpMode=true;wSel=-1;sel=null;
+  $('ccWarpBar').style.display='block';
+  $('ccSelName').textContent='모서리 조정';
+  draw();
+}
+function stopWarp(){
+  warpMode=false;corners=null;wSel=-1;
+  $('ccWarpBar').style.display='none';
+  $('ccSelName').textContent='선택 없음';
+  draw();
+}
+function solve3(m,v){ // 3x3 가우스 소거
+  var a=[[m[0][0],m[0][1],m[0][2],v[0]],[m[1][0],m[1][1],m[1][2],v[1]],[m[2][0],m[2][1],m[2][2],v[2]]];
+  var i,j,k,f,mx,mi,t;
+  for(i=0;i<3;i++){
+    mx=Math.abs(a[i][i]);mi=i;
+    for(j=i+1;j<3;j++){if(Math.abs(a[j][i])>mx){mx=Math.abs(a[j][i]);mi=j}}
+    t=a[i];a[i]=a[mi];a[mi]=t;
+    if(Math.abs(a[i][i])<1e-10)return null;
+    for(j=i+1;j<3;j++){
+      f=a[j][i]/a[i][i];
+      for(k=i;k<4;k++){a[j][k]-=f*a[i][k]}
+    }
+  }
+  var x=[0,0,0];
+  for(i=2;i>=0;i--){
+    x[i]=a[i][3];
+    for(j=i+1;j<3;j++){x[i]-=a[i][j]*x[j]}
+    x[i]/=a[i][i];
+  }
+  return x;
+}
+function homography(dst,srcQ){ // 단위사각형(0~1) → 원본 사각형 사상 H
+  // dst: [{u,v}] 4점(0,0)(1,0)(1,1)(0,1), srcQ: 픽셀 4점
+  var A=[],b=[],i,u,v,X,Y;
+  for(i=0;i<4;i++){
+    u=dst[i].u;v=dst[i].v;X=srcQ[i].x;Y=srcQ[i].y;
+    A.push([u,v,1,0,0,0,-u*X,-v*X]);b.push(X);
+    A.push([0,0,0,u,v,1,-u*Y,-v*Y]);b.push(Y);
+  }
+  // 8x8 가우스 소거
+  var n=8,M=[],j,k,f,mx,mi,t;
+  for(i=0;i<n;i++){M.push(A[i].concat([b[i]]))}
+  for(i=0;i<n;i++){
+    mx=Math.abs(M[i][i]);mi=i;
+    for(j=i+1;j<n;j++){if(Math.abs(M[j][i])>mx){mx=Math.abs(M[j][i]);mi=j}}
+    t=M[i];M[i]=M[mi];M[mi]=t;
+    if(Math.abs(M[i][i])<1e-10)return null;
+    for(j=i+1;j<n;j++){
+      f=M[j][i]/M[i][i];
+      for(k=i;k<=n;k++){M[j][k]-=f*M[i][k]}
+    }
+  }
+  var h=[0,0,0,0,0,0,0,0];
+  for(i=n-1;i>=0;i--){
+    h[i]=M[i][n];
+    for(j=i+1;j<n;j++){h[i]-=M[i][j]*h[j]}
+    h[i]/=M[i][i];
+  }
+  return function(u,v){
+    var w=h[6]*u+h[7]*v+1;
+    return {x:(h[0]*u+h[1]*v+h[2])/w, y:(h[3]*u+h[4]*v+h[5])/w};
+  };
+}
+function texTri(c,im,s0,s1,s2,d0,d1,d2){
+  // 목적지 삼각형을 살짝 팽창시켜 이음새 제거
+  var cx=(d0.x+d1.x+d2.x)/3, cy=(d0.y+d1.y+d2.y)/3, E=1.015;
+  function ex(p){return {x:cx+(p.x-cx)*E, y:cy+(p.y-cy)*E}}
+  var e0=ex(d0),e1=ex(d1),e2=ex(d2);
+  var A=solve3([[s0.x,s0.y,1],[s1.x,s1.y,1],[s2.x,s2.y,1]],[d0.x,d1.x,d2.x]);
+  var B=solve3([[s0.x,s0.y,1],[s1.x,s1.y,1],[s2.x,s2.y,1]],[d0.y,d1.y,d2.y]);
+  if(!A||!B)return;
+  c.save();
+  c.beginPath();c.moveTo(e0.x,e0.y);c.lineTo(e1.x,e1.y);c.lineTo(e2.x,e2.y);c.closePath();c.clip();
+  c.setTransform(A[0],B[0],A[1],B[1],A[2],B[2]);
+  c.drawImage(im,0,0);
+  c.restore();
+  c.setTransform(1,0,0,1,0,0);
+}
+function applyWarp(){
+  var s=st();
+  if(!s.img||!corners){stopWarp();return}
+  try{
+    var srcQ=[
+      {x:corners[0].x*s.W,y:corners[0].y*s.H},
+      {x:corners[1].x*s.W,y:corners[1].y*s.H},
+      {x:corners[2].x*s.W,y:corners[2].y*s.H},
+      {x:corners[3].x*s.W,y:corners[3].y*s.H}
+    ];
+    var Hm=homography([{u:0,v:0},{u:1,v:0},{u:1,v:1},{u:0,v:1}],srcQ);
+    if(!Hm){alert('모서리 위치가 올바르지 않습니다.');return}
+    var pad=0.06; // 카드 주변 여백 6% 포함해 펴기(외곽선 조정 여지)
+    var DW=1000, DH=Math.round(1000*88/63);
+    var OW=Math.round(DW*(1+pad*2)), OH=Math.round(DH*(1+pad*2));
+    var oc=document.createElement('canvas');oc.width=OW;oc.height=OH;
+    var c=oc.getContext('2d');
+    c.fillStyle='#202830';c.fillRect(0,0,OW,OH);
+    var N=22,gx,gy,u0,u1,v0,v1,p00,p10,p11,p01,q00,q10,q11,q01;
+    for(gy=0;gy<N;gy++){
+      for(gx=0;gx<N;gx++){
+        u0=-pad+(1+2*pad)*gx/N; u1=-pad+(1+2*pad)*(gx+1)/N;
+        v0=-pad+(1+2*pad)*gy/N; v1=-pad+(1+2*pad)*(gy+1)/N;
+        p00=Hm(u0,v0);p10=Hm(u1,v0);p11=Hm(u1,v1);p01=Hm(u0,v1);
+        q00={x:gx/N*OW,y:gy/N*OH};q10={x:(gx+1)/N*OW,y:gy/N*OH};
+        q11={x:(gx+1)/N*OW,y:(gy+1)/N*OH};q01={x:gx/N*OW,y:(gy+1)/N*OH};
+        texTri(c,s.img,p00,p10,p11,q00,q10,q11);
+        texTri(c,s.img,p00,p11,p01,q00,q11,q01);
+      }
+    }
+    var im=new Image();
+    im.onload=function(){
+      s.img=im;s.W=im.naturalWidth;s.H=im.naturalHeight;
+      s.L=defL();s.detected=false;
+      stopWarp();
+      fit();autoDetect(true);
+    };
+    im.src=oc.toDataURL('image/png');
+  }catch(err){alert('보정에 실패했습니다: '+err.message);stopWarp()}
+}
+$('ccWarp').addEventListener('click',function(e){e.preventDefault();if(warpMode){stopWarp()}else{startWarp()}});
+$('ccWarpApply').addEventListener('click',function(e){e.preventDefault();applyWarp()});
+$('ccWarpCancel').addEventListener('click',function(e){e.preventDefault();stopWarp()});
+
+// ── 🏁 결과 리포트 이미지 ─────────────────────
+var lastReportURL=null;
+function rr(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y);
+  c.arcTo(x+w,y,x+w,y+h,r);
+  c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r);
+  c.arcTo(x,y,x+w,y,r);
+  c.closePath();
+}
+function cropDraw(c,sd,x,y,w,h){
+  // 해당 면 이미지를 외곽선 기준으로 잘라 rect에 맞춰(contain) 그림
+  var s=S[sd],L=s.L;
+  var sx=L.ol*s.W, sy=L.ot*s.H, sw=(L.or_-L.ol)*s.W, sh=(L.ob-L.ot)*s.H;
+  if(sw<=0||sh<=0)return;
+  var sc=Math.min(w/sw,h/sh);
+  var dw=sw*sc, dh=sh*sc, dx=x+(w-dw)/2, dy=y+(h-dh)/2;
+  c.save();
+  rr(c,dx,dy,dw,dh,18);c.clip();
+  c.drawImage(s.img,sx,sy,sw,sh,dx,dy,dw,dh);
+  c.restore();
+  rr(c,dx,dy,dw,dh,18);
+  c.lineWidth=2;c.strokeStyle='rgba(255,255,255,.18)';c.stroke();
+}
+function buildReport(){
+  var haveF=!!(S.front.img&&S.front.res), haveB=!!(S.back.img&&S.back.res);
+  if(!haveF&&!haveB){alert('먼저 사진을 올리고 가이드를 맞춰주세요.');return}
+  var W=1080,H=1350;
+  var oc=document.createElement('canvas');oc.width=W;oc.height=H;
+  var c=oc.getContext('2d');
+  // 배경
+  var g=c.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0d1117');g.addColorStop(1,'#141b26');
+  c.fillStyle=g;c.fillRect(0,0,W,H);
+  // 상단 라인
+  var g2=c.createLinearGradient(0,0,W,0);
+  g2.addColorStop(0,'#39c5cf');g2.addColorStop(1,'#f0b429');
+  c.fillStyle=g2;c.fillRect(0,0,W,8);
+  // 헤더
+  c.fillStyle='#93a1b3';c.font='600 24px sans-serif';c.textAlign='center';
+  c.fillText('CARD CENTERING REPORT',W/2,84);
+  c.fillStyle='#e8edf3';c.font='800 52px sans-serif';
+  c.fillText('🎴 센터링 측정 결과',W/2,148);
+  // 카드 패널
+  var y0=200, panelH=660;
+  function panel(x,w,sd,label){
+    c.fillStyle='#1b222c';rr(c,x,y0,w,panelH,20);c.fill();
+    c.strokeStyle='#2c3644';c.lineWidth=2;rr(c,x,y0,w,panelH,20);c.stroke();
+    c.fillStyle='#93a1b3';c.font='700 26px sans-serif';c.textAlign='center';
+    c.fillText(label,x+w/2,y0+44);
+    cropDraw(c,sd,x+24,y0+64,w-48,panelH-170);
+    var r2=S[sd].res;
+    c.fillStyle='#e8edf3';c.font='800 30px sans-serif';
+    c.fillText('L/R '+Math.round(r2.lp)+'/'+Math.round(100-r2.lp)
+      +'   T/B '+Math.round(r2.tp)+'/'+Math.round(100-r2.tp),x+w/2,y0+panelH-56);
+    c.fillStyle='#93a1b3';c.font='500 22px sans-serif';
+    c.fillText('센터링 '+Math.round(r2.worst)+'/'+Math.round(100-r2.worst),x+w/2,y0+panelH-22);
+  }
+  if(haveF&&haveB){
+    panel(48,468,'front','앞 면');
+    panel(564,468,'back','뒷 면');
+  }else{
+    panel(270,540,haveF?'front':'back',haveF?'앞 면':'뒷 면');
+  }
+  // 등급
+  var gy=y0+panelH+70;
+  c.fillStyle='#93a1b3';c.font='600 24px sans-serif';
+  c.fillText(haveF&&haveB?'앞·뒷면 종합 예상 등급':'측정 면 기준 예상 등급',W/2,gy);
+  var chips=[],i2,co,gg,gf2,gb2;
+  for(i2=0;i2<ORDER.length;i2++){
+    co=ORDER[i2];
+    if(haveF&&haveB){
+      gf2=gradeFor(TH.front[co],S.front.res.worst);
+      gb2=gradeFor(TH.back[co],S.back.res.worst);
+      gg=Math.min(gf2,gb2);
+    }else if(haveF){gg=gradeFor(TH.front[co],S.front.res.worst)}
+    else{gg=gradeFor(TH.back[co],S.back.res.worst)}
+    chips.push({co:co,g:gg});
+  }
+  // 대표(가장 큰) 표시: PSA
+  var psa=chips[0];
+  c.fillStyle=gCol(psa.g);c.font='900 84px sans-serif';
+  c.fillText('예상 PSA '+gTxt(psa.g),W/2,gy+100);
+  // 업체 칩 4개
+  var cw2=228,gap=22,total=cw2*4+gap*3,x0=(W-total)/2,cy=gy+150;
+  for(i2=0;i2<4;i2++){
+    var chx=x0+i2*(cw2+gap);
+    c.fillStyle='#141a22';rr(c,chx,cy,cw2,86,14);c.fill();
+    c.strokeStyle='#2c3644';c.lineWidth=2;rr(c,chx,cy,cw2,86,14);c.stroke();
+    c.fillStyle='#93a1b3';c.font='600 22px sans-serif';
+    c.fillText(chips[i2].co,chx+cw2/2,cy+34);
+    c.fillStyle=gCol(chips[i2].g);c.font='800 34px sans-serif';
+    c.fillText(''+gTxt(chips[i2].g),chx+cw2/2,cy+72);
+  }
+  // 푸터
+  var fy=cy+150;
+  c.strokeStyle='#2c3644';c.lineWidth=2;
+  c.beginPath();c.moveTo(80,fy);c.lineTo(W-80,fy);c.stroke();
+  c.fillStyle='#f0b429';c.font='800 36px sans-serif';
+  c.fillText('대구 포켓몬 카드 거래',W/2,fy+58);
+  var dt=new Date();
+  c.fillStyle='#5f6c7c';c.font='500 22px sans-serif';
+  c.fillText('릴리에릴리라 제작 · '+dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate()
+    +' · 센터링 단일 항목 기준 예측',W/2,fy+100);
+  c.textAlign='left';
+  lastReportURL=oc.toDataURL('image/png');
+  $('ccResultImg').src=lastReportURL;
+  $('ccResultOv').style.display='block';
+}
+$('ccReport').addEventListener('click',function(e){e.preventDefault();buildReport()});
+$('ccResultSave').addEventListener('click',function(e){
+  e.preventDefault();
+  if(!lastReportURL)return;
+  var a=document.createElement('a');
+  a.download='centering-report.png';
+  a.href=lastReportURL;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+});
+$('ccResultClose').addEventListener('click',function(e){e.preventDefault();$('ccResultOv').style.display='none'});
+
+function rotate90(){
+  var s=st();if(!s.img)return;
+  if(warpMode)stopWarp();
+  try{
+    var oc=document.createElement('canvas');oc.width=s.H;oc.height=s.W;
+    var c=oc.getContext('2d');
+    c.translate(s.H,0);c.rotate(Math.PI/2);
+    c.drawImage(s.img,0,0);
+    var im=new Image();
+    im.onload=function(){s.img=im;s.W=im.naturalWidth;s.H=im.naturalHeight;s.L=defL();fit();autoDetect(true)};
+    im.src=oc.toDataURL('image/png');
+  }catch(err){alert('회전에 실패했습니다.')}
+}
+$('ccRotate').addEventListener('click',function(e){e.preventDefault();rotate90()});
+
+function autoDetect(silent){
+  try{
+    var s=st();if(!s.img)return;
+    var W=560,H=Math.round(W*s.H/s.W);
+    var oc=document.createElement('canvas');oc.width=W;oc.height=H;
+    var octx=oc.getContext('2d');octx.drawImage(s.img,0,0,W,H);
+    var d=octx.getImageData(0,0,W,H).data;
+    function px(x,y){var p=(y*W+x)*4;return [d[p],d[p+1],d[p+2]]}
+    // ① 배경 통계: 네 변 바깥쪽 3px 띠에서 표본 추출 (평균 + 표준편차)
+    var samples=[],x,y,i;
+    for(x=0;x<W;x+=4){samples.push(px(x,1));samples.push(px(x,H-2))}
+    for(y=0;y<H;y+=4){samples.push(px(1,y));samples.push(px(W-2,y))}
+    var mr=0,mg=0,mb=0;
+    for(i=0;i<samples.length;i++){mr+=samples[i][0];mg+=samples[i][1];mb+=samples[i][2]}
+    mr/=samples.length;mg/=samples.length;mb/=samples.length;
+    var vs=0;
+    for(i=0;i<samples.length;i++){
+      var dr=samples[i][0]-mr,dg=samples[i][1]-mg,db=samples[i][2]-mb;
+      vs+=Math.sqrt(dr*dr+dg*dg+db*db);
+    }
+    var bgStd=vs/samples.length;
+    var T=Math.max(26, bgStd*2.6); // 적응형 임계값
+    function diff(x,y){
+      var p=px(x,y);
+      var dr=p[0]-mr,dg=p[1]-mg,db=p[2]-mb;
+      return Math.sqrt(dr*dr+dg*dg+db*db);
+    }
+    // ② 카드 화소 비율 기반 스캔: 해당 열/행에서 배경과 다른 화소가 55% 이상 + 2연속이면 경계
+    function colScore(x){var c=0,n=0,yy;for(yy=Math.round(H*.2);yy<H*.8;yy+=2){n++;if(diff(x,yy)>T)c++}return c/n}
+    function rowScore(y){var c=0,n=0,xx;for(xx=Math.round(W*.2);xx<W*.8;xx+=2){n++;if(diff(xx,y)>T)c++}return c/n}
+    function scanEdge(from,to,step,fn){
+      var run=0,i;
+      for(i=from;step>0?i<to:i>to;i+=step){
+        if(fn(i)>0.55){run++;if(run>=2)return i-step}else{run=0}
+      }
+      return -1;
+    }
+    var fL=scanEdge(1,Math.round(W*.45),1,colScore);
+    var fR=scanEdge(W-2,Math.round(W*.55),-1,colScore);
+    var fT=scanEdge(1,Math.round(H*.45),1,rowScore);
+    var fB=scanEdge(H-2,Math.round(H*.55),-1,rowScore);
+    var L=s.L;
+    if(fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
+      L.ol=fL/W;L.or_=fR/W;L.ot=fT/H;L.ob=fB/H;
+      // ③ 안쪽 테두리: RGB 그라디언트(3px 평활) 최대 지점, 카드 안쪽 2~22% 구간
+      function gAt(x,y,vert){
+        var a=vert?px(Math.max(x-2,0),y):px(x,Math.max(y-2,0));
+        var b=vert?px(Math.min(x+2,W-1),y):px(x,Math.min(y+2,H-1));
+        var dr=a[0]-b[0],dg=a[1]-b[1],db=a[2]-b[2];
+        return Math.sqrt(dr*dr+dg*dg+db*db);
+      }
+      function colGrad(cx){var q=0,c=0,yy;for(yy=Math.round(fT+(fB-fT)*.3);yy<fT+(fB-fT)*.7;yy+=3){q+=gAt(cx,yy,true);c++}return q/c}
+      function rowGrad(cy){var q=0,c=0,xx;for(xx=Math.round(fL+(fR-fL)*.3);xx<fL+(fR-fL)*.7;xx+=3){q+=gAt(xx,cy,false);c++}return q/c}
+      function scanMax(from,to,step,fn){var bi=-1,bv=-1,i2,v;for(i2=from;step>0?i2<to:i2>to;i2+=step){v=fn(i2);if(v>bv){bv=v;bi=i2}}return {i:bi,v:bv}}
+      function avgOf(from,to,step,fn){var q=0,c=0,i2;for(i2=from;step>0?i2<to:i2>to;i2+=step){q+=fn(i2);c++}return c>0?q/c:0}
+      var cw=fR-fL,chh=fB-fT;
+      var rL=scanMax(Math.round(fL+cw*.02),Math.round(fL+cw*.22),1,colGrad);
+      var rR=scanMax(Math.round(fR-cw*.02),Math.round(fR-cw*.22),-1,colGrad);
+      var rT=scanMax(Math.round(fT+chh*.02),Math.round(fT+chh*.20),1,rowGrad);
+      var rB=scanMax(Math.round(fB-chh*.02),Math.round(fB-chh*.20),-1,rowGrad);
+      // 피크가 평균의 1.8배 이상일 때만 신뢰, 아니면 비율 기본값
+      var aL=avgOf(Math.round(fL+cw*.02),Math.round(fL+cw*.22),1,colGrad);
+      var aR=avgOf(Math.round(fR-cw*.02),Math.round(fR-cw*.22),-1,colGrad);
+      var aT=avgOf(Math.round(fT+chh*.02),Math.round(fT+chh*.20),1,rowGrad);
+      var aB=avgOf(Math.round(fB-chh*.02),Math.round(fB-chh*.20),-1,rowGrad);
+      L.il=((rL.i>0&&rL.v>aL*1.8)?rL.i:fL+cw*.10)/W;
+      L.ir=((rR.i>0&&rR.v>aR*1.8)?rR.i:fR-cw*.10)/W;
+      L.it=((rT.i>0&&rT.v>aT*1.8)?rT.i:fT+chh*.09)/H;
+      L.ib=((rB.i>0&&rB.v>aB*1.8)?rB.i:fB-chh*.09)/H;
+      for(i=0;i<KEYS.length;i++){clampLine(L,KEYS[i])}
+    }else if(!silent){alert('배경과 카드의 경계를 찾지 못했습니다.\n카드보다 확실히 밝거나 어두운 단색 배경(예: 흰 종이 위 어두운 카드, 검은 매트 위 밝은 카드)에서 정면으로 찍으면 인식률이 크게 올라갑니다.')}
+  }catch(err){if(!silent){alert('자동 감지에 실패했습니다. 선을 직접 맞춰주세요.')}}
+  st().detected=true;
+  draw();calc();
+}
+
+// ── 업로드 ──────────────────────────────
+function handleFiles(files){
+  if(!files||!files.length)return;
+  var arr=[],i;for(i=0;i<files.length&&i<2;i++){arr.push(files[i])}
+  if(arr.length===2){
+    // 2장: 1번째 앞면, 2번째 뒷면
+    loadInto('front',arr[0],function(){
+      loadInto('back',arr[1],function(){
+        cur='front';enterStage();
+      });
+    });
+  }else{
+    // 1장: 현재 면이 비어있으면 현재 면, 아니면 빈 면으로
+    var target=cur;
+    if($('ccStage').style.display!=='none'&&st().img&&otherEmpty()){target=(cur==='front'?'back':'front')}
+    loadInto(target,arr[0],function(){cur=target;enterStage()});
+  }
+}
+function enterStage(){
+  $('ccUploadCard').style.display='none';
+  $('ccStage').style.display='block';
+  refreshSeg();showSide();
+  if(st().img)autoDetect(true);
+  updateCombined();
+}
+
+$('ccPick').addEventListener('click',function(e){e.preventDefault();$('ccFile').click()});
+$('ccCam').addEventListener('click',function(e){e.preventDefault();$('ccFileCam').click()});
+$('ccFile').addEventListener('change',function(){handleFiles(this.files);this.value=''});
+$('ccFileCam').addEventListener('change',function(){handleFiles(this.files);this.value=''});
+var drop=$('ccDrop');
+drop.addEventListener('click',function(){$('ccFile').click()});
+drop.addEventListener('dragover',function(e){e.preventDefault();drop.className='hot'});
+drop.addEventListener('dragleave',function(){drop.className=''});
+drop.addEventListener('drop',function(e){e.preventDefault();drop.className='';handleFiles(e.dataTransfer.files)});
+
+// 이 면 사진 올리기 / 바꾸기 (단일 파일 → 현재 면)
+$('ccFileSide').addEventListener('change',function(){
+  var f=this.files[0];this.value='';
+  if(!f)return;
+  loadInto(cur,f,function(){showSide();autoDetect(true);refreshSeg();updateCombined()});
+});
+$('ccAddSide').addEventListener('click',function(e){e.preventDefault();$('ccFileSide').click()});
+$('ccReplace').addEventListener('click',function(e){e.preventDefault();$('ccFileSide').click()});
+
+// ── 면 전환 / 교체 ──────────────────────
+function switchSide(sd){
+  if(cur===sd)return;
+  cur=sd;refreshSeg();showSide();
+}
+$('ccFront').addEventListener('click',function(e){e.preventDefault();switchSide('front')});
+$('ccBack').addEventListener('click',function(e){e.preventDefault();switchSide('back')});
+$('ccSwap').addEventListener('click',function(e){
+  e.preventDefault();
+  var tmp=S.front;S.front=S.back;S.back=tmp;
+  refreshSeg();showSide();updateCombined();
+});
+
+$('ccAuto').addEventListener('click',function(e){e.preventDefault();autoDetect(false)});
+$('ccReset').addEventListener('click',function(e){e.preventDefault();if(warpMode)stopWarp();st().L=defL();sel=null;$('ccSelName').textContent='선택 없음';draw();calc()});
+$('ccNew').addEventListener('click',function(e){
+  e.preventDefault();
+  S.front={img:null,W:0,H:0,L:defL(),res:null};
+  S.back={img:null,W:0,H:0,L:defL(),res:null};
+  cur='front';hideLoupe();
+  $('ccStage').style.display='none';$('ccUploadCard').style.display='block';
+  $('ccCombined').style.display='none';
+});
+
+window.addEventListener('resize',function(){if(st().img){fit();draw()}});
+window.addEventListener('orientationchange',function(){setTimeout(function(){if(st().img){fit();draw()}},250)});
+})();
+</script>
+</div>
+</body>
+</html>
