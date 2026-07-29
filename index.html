@@ -909,126 +909,183 @@ function autoDetect(silent){
     var oc=document.createElement('canvas');oc.width=W;oc.height=H;
     var octx=oc.getContext('2d');octx.drawImage(s.img,0,0,W,H);
     var d=octx.getImageData(0,0,W,H).data;
-    function px(x,y){var p=(y*W+x)*4;return [d[p],d[p+1],d[p+2]]}
-    // ① 배경 통계: 네 변 바깥쪽 3px 띠에서 표본 추출 (평균 + 표준편차)
-    var samples=[],x,y,i;
-    for(x=0;x<W;x+=4){samples.push(px(x,1));samples.push(px(x,H-2))}
-    for(y=0;y<H;y+=4){samples.push(px(1,y));samples.push(px(W-2,y))}
-    var mr=0,mg=0,mb=0;
-    for(i=0;i<samples.length;i++){mr+=samples[i][0];mg+=samples[i][1];mb+=samples[i][2]}
-    mr/=samples.length;mg/=samples.length;mb/=samples.length;
-    var vs=0;
-    for(i=0;i<samples.length;i++){
-      var dr=samples[i][0]-mr,dg=samples[i][1]-mg,db=samples[i][2]-mb;
-      vs+=Math.sqrt(dr*dr+dg*dg+db*db);
+    var gray=new Float32Array(W*H),i,x,y;
+    for(i=0;i<W*H;i++){gray[i]=d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114}
+    function G(x2,y2){return gray[y2*W+x2]}
+    // ── ① 스크린샷 검은띠/균일줄 제거 ──
+    var t=0,b=H,l=0,r=W,ch=true;
+    function uniRow(y2){
+      var n=0,sm=0,sq=0,dark=0,x2;
+      for(x2=l;x2<r;x2+=2){var v=G(x2,y2);n++;sm+=v;sq+=v*v;if(v<32)dark++}
+      if(n<4)return false;
+      var m=sm/n,st2=Math.sqrt(Math.max(0,sq/n-m*m));
+      return st2<9||dark/n>0.85;
     }
-    var bgStd=vs/samples.length;
-    var T=Math.max(26, bgStd*2.6); // 적응형 임계값
-    function diff(x,y){
-      var p=px(x,y);
-      var dr=p[0]-mr,dg=p[1]-mg,db=p[2]-mb;
-      return Math.sqrt(dr*dr+dg*dg+db*db);
+    function uniCol(x2){
+      var n=0,sm=0,sq=0,dark=0,y2;
+      for(y2=t;y2<b;y2+=2){var v=G(x2,y2);n++;sm+=v;sq+=v*v;if(v<32)dark++}
+      if(n<4)return false;
+      var m=sm/n,st2=Math.sqrt(Math.max(0,sq/n-m*m));
+      return st2<9||dark/n>0.85;
     }
-    // ② 카드 화소 비율 기반 스캔: 해당 열/행에서 배경과 다른 화소가 55% 이상 + 2연속이면 경계
-    function colScore(x){var c=0,n=0,yy;for(yy=Math.round(H*.2);yy<H*.8;yy+=2){n++;if(diff(x,yy)>T)c++}return c/n}
-    function rowScore(y){var c=0,n=0,xx;for(xx=Math.round(W*.2);xx<W*.8;xx+=2){n++;if(diff(xx,y)>T)c++}return c/n}
-    function scanEdge(from,to,step,fn,thr){
-      var run=0,i,t2=thr||0.55;
-      for(i=from;step>0?i<to:i>to;i+=step){
-        if(fn(i)>t2){run++;if(run>=2)return i-step}else{run=0}
+    while(ch){
+      ch=false;
+      while(t<H*0.45&&uniRow(t)){t++;ch=true}
+      while(b>H*0.55&&uniRow(b-1)){b--;ch=true}
+      while(l<W*0.45&&uniCol(l)){l++;ch=true}
+      while(r>W*0.55&&uniCol(r-1)){r--;ch=true}
+    }
+    var w=r-l,h=b-t;
+    // ── ② 방향별 그라디언트 프로파일 ──
+    var yb0=t+Math.round(h*0.30),yb1=t+Math.round(h*0.70);
+    var xb0=l+Math.round(w*0.30),xb1=l+Math.round(w*0.70);
+    var colG=new Float32Array(w),rowG=new Float32Array(h);
+    for(x=l+1;x<r-1;x++){
+      var sm2=0,c2=0,y3;
+      for(y3=yb0;y3<yb1;y3+=2){sm2+=Math.abs(G(x+1,y3)-G(x-1,y3));c2++}
+      colG[x-l]=c2>0?sm2/c2:0;
+    }
+    for(y=t+1;y<b-1;y++){
+      var sm3=0,c3=0,x3;
+      for(x3=xb0;x3<xb1;x3+=2){sm3+=Math.abs(G(x3,y+1)-G(x3,y-1));c3++}
+      rowG[y-t]=c3>0?sm3/c3:0;
+    }
+    function smooth3(a){
+      var o=new Float32Array(a.length),i2;
+      for(i2=1;i2<a.length-1;i2++)o[i2]=(a[i2-1]+a[i2]+a[i2+1])/3;
+      o[0]=a[0];o[a.length-1]=a[a.length-1];
+      return o;
+    }
+    colG=smooth3(colG);rowG=smooth3(rowG);
+    // ── ③ 방향별 후보 피크 상위 4개 ──
+    function peaks(sig,lo,hi){
+      var cand=[],i2,j2;
+      for(i2=lo;i2<hi;i2++){cand.push([i2,sig[i2]])}
+      cand.sort(function(a2,b2){return b2[1]-a2[1]});
+      var out=[];
+      for(i2=0;i2<cand.length&&out.length<4;i2++){
+        if(cand[i2][1]<5)break;
+        var okd=true;
+        for(j2=0;j2<out.length;j2++){if(Math.abs(cand[i2][0]-out[j2][0])<8){okd=false;break}}
+        if(okd)out.push(cand[i2]);
       }
-      return -1;
+      return out;
     }
-    var fL=scanEdge(1,Math.round(W*.45),1,colScore);
-    var fR=scanEdge(W-2,Math.round(W*.55),-1,colScore);
-    var fT=scanEdge(1,Math.round(H*.45),1,rowScore);
-    var fB=scanEdge(H-2,Math.round(H*.55),-1,rowScore);
+    var Lc=peaks(colG,Math.round(w*0.01),Math.round(w*0.48));
+    var Rc=peaks(colG,Math.round(w*0.52),Math.round(w*0.99));
+    var Tc=peaks(rowG,Math.round(h*0.01),Math.round(h*0.48));
+    var Bc=peaks(rowG,Math.round(h*0.52),Math.round(h*0.99));
+    var CARDP=63/88;
+    var best=null,gmax=0,ci;
+    var alls=[Lc,Rc,Tc,Bc];
+    for(ci=0;ci<4;ci++){var cc=alls[ci],j3;for(j3=0;j3<cc.length;j3++)if(cc[j3][1]>gmax)gmax=cc[j3][1]}
+    // ── ④ 81+가지 조합 중 카드 비율·중심·강도 최적 조합 ──
+    var a1,a2,a3,a4;
+    if(Lc.length&&Rc.length&&Tc.length&&Bc.length&&gmax>0){
+      for(a1=0;a1<Lc.length;a1++)for(a2=0;a2<Rc.length;a2++){
+        var pl=Lc[a1][0],pr=Rc[a2][0],cw=pr-pl;
+        if(cw<w*0.25)continue;
+        for(a3=0;a3<Tc.length;a3++)for(a4=0;a4<Bc.length;a4++){
+          var pt=Tc[a3][0],pb=Bc[a4][0],chh=pb-pt;
+          if(chh<h*0.25)continue;
+          var asp=cw/chh;
+          var pen=Math.min(Math.abs(Math.log(asp/CARDP)),Math.abs(Math.log(asp*CARDP)));
+          if(pen>0.20)continue;
+          var strength=(Lc[a1][1]+Rc[a2][1]+Tc[a3][1]+Bc[a4][1])/(4*gmax);
+          var cen=Math.sqrt(Math.pow((pl+pr)/2/w-0.5,2)+Math.pow((pt+pb)/2/h-0.5,2));
+          var area=cw*chh/(w*h);
+          var score=strength-3.0*pen-1.2*cen+0.35*area;
+          if(!best||score>best.sc)best={sc:score,pl:pl,pr:pr,pt:pt,pb:pb};
+        }
+      }
+    }
     var L=s.L;
-    if(fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
-      // ── 자동 원근: 4변을 직선 피팅해 꼭짓점 검출, 기울어져 있으면 자동으로 펴기 (1회) ──
+    if(best){
+      // 절대(검출공간) 좌표
+      var fL=l+best.pl,fR=l+best.pr,fT=t+best.pt,fB=t+best.pb;
+      var cardW2=fR-fL,cardH2=fB-fT;
+      // ── ⑤ 자동 원근: 검출 경계 주변에서 라인 피팅 → 꼭짓점 ──
       if(!s.autoWarped){
         try{
-          function edgeScanX(y0,y1,fromX,dir){ // 각 행에서 경계 x 좌표 수집
-            var pts=[],yy,xx,run;
+          var m0=Math.round(cardH2*0.15),m1=Math.round(cardW2*0.15);
+          var rad=Math.max(4,Math.round(Math.max(cardW2,cardH2)*0.05));
+          function refineV(xc,y0,y1){
+            var pts=[],yy,xx,bx,bv;
             for(yy=y0;yy<y1;yy+=4){
-              run=0;
-              for(xx=fromX;dir>0?xx<W-1:xx>0;xx+=dir){
-                if(diff(xx,yy)>T){run++;if(run>=2){pts.push({a:yy,b:xx-dir});break}}else{run=0}
+              bx=-1;bv=-1;
+              for(xx=Math.max(1,xc-rad);xx<Math.min(W-1,xc+rad);xx++){
+                var v2=Math.abs(G(xx+1,yy)-G(xx-1,yy));
+                if(v2>bv){bv=v2;bx=xx}
               }
+              if(bx>0)pts.push({a:yy,b:bx});
             }
             return pts;
           }
-          function edgeScanY(x0,x1,fromY,dir){
-            var pts=[],xx,yy,run;
+          function refineH(yc,x0,x1){
+            var pts=[],xx,yy,by,bv;
             for(xx=x0;xx<x1;xx+=4){
-              run=0;
-              for(yy=fromY;dir>0?yy<H-1:yy>0;yy+=dir){
-                if(diff(xx,yy)>T){run++;if(run>=2){pts.push({a:xx,b:yy-dir});break}}else{run=0}
+              by=-1;bv=-1;
+              for(yy=Math.max(1,yc-rad);yy<Math.min(H-1,yc+rad);yy++){
+                var v3=Math.abs(G(xx,yy+1)-G(xx,yy-1));
+                if(v3>bv){bv=v3;by=yy}
               }
+              if(by>0)pts.push({a:xx,b:by});
             }
             return pts;
           }
-          function fitLine(pts){ // b = m*a + c 최소제곱 + 아웃라이어 1회 제거
+          function fitLine(pts){
             function fit(ps){
-              var n=ps.length,sa=0,sb=0,sab=0,saa=0,i2;
-              for(i2=0;i2<n;i2++){sa+=ps[i2].a;sb+=ps[i2].b;sab+=ps[i2].a*ps[i2].b;saa+=ps[i2].a*ps[i2].a}
+              var n=ps.length,sa=0,sb2=0,sab=0,saa=0,i4;
+              for(i4=0;i4<n;i4++){sa+=ps[i4].a;sb2+=ps[i4].b;sab+=ps[i4].a*ps[i4].b;saa+=ps[i4].a*ps[i4].a}
               var den=n*saa-sa*sa;
               if(Math.abs(den)<1e-9)return null;
-              var m=(n*sab-sa*sb)/den,c2=(sb-m*sa)/n;
-              return {m:m,c:c2};
+              var m=(n*sab-sa*sb2)/den;
+              return {m:m,c:(sb2-m*sa)/n};
             }
             if(pts.length<6)return null;
             var f1=fit(pts);if(!f1)return null;
             var res=pts.map(function(p){return Math.abs(p.b-(f1.m*p.a+f1.c))});
-            var sorted=res.slice().sort(function(a,b){return a-b});
-            var med=sorted[Math.floor(sorted.length/2)];
-            var kept=pts.filter(function(p,i2){return res[i2]<=Math.max(3,med*3)});
+            var so=res.slice().sort(function(x4,y4){return x4-y4});
+            var med=so[Math.floor(so.length/2)];
+            var kept=pts.filter(function(p,i4){return res[i4]<=Math.max(3,med*3)});
             if(kept.length<6)return f1;
             return fit(kept)||f1;
           }
-          var m0=Math.round((fB-fT)*0.12), m1=Math.round((fR-fL)*0.12);
-          var lnL=fitLine(edgeScanX(fT+m0,fB-m0,Math.max(1,fL-Math.round(W*0.1)),1));   // x=m*y+c
-          var lnR=fitLine(edgeScanX(fT+m0,fB-m0,Math.min(W-2,fR+Math.round(W*0.1)),-1));
-          var lnT=fitLine(edgeScanY(fL+m1,fR-m1,Math.max(1,fT-Math.round(H*0.1)),1));   // y=m*x+c
-          var lnB=fitLine(edgeScanY(fL+m1,fR-m1,Math.min(H-2,fB+Math.round(H*0.1)),-1));
+          var lnL=fitLine(refineV(fL,fT+m0,fB-m0));
+          var lnR=fitLine(refineV(fR,fT+m0,fB-m0));
+          var lnT=fitLine(refineH(fT,fL+m1,fR-m1));
+          var lnB=fitLine(refineH(fB,fL+m1,fR-m1));
           if(lnL&&lnR&&lnT&&lnB){
-            function xsect(v,h2){ // v: x=mv*y+cv, h2: y=mh*x+ch
-              var x=(v.m*h2.c+v.c)/(1-v.m*h2.m);
-              return {x:x,y:h2.m*x+h2.c};
+            function xsect(v4,h4){
+              var x5=(v4.m*h4.c+v4.c)/(1-v4.m*h4.m);
+              return {x:x5,y:h4.m*x5+h4.c};
             }
             var cTL=xsect(lnL,lnT),cTR=xsect(lnR,lnT),cBR=xsect(lnR,lnB),cBL=xsect(lnL,lnB);
-            var cardW2=fR-fL,cardH2=fB-fT;
-            var skew=Math.max(
-              Math.abs(cTL.x-cBL.x),Math.abs(cTR.x-cBR.x))/cardW2;
-            skew=Math.max(skew,Math.max(Math.abs(cTL.y-cTR.y),Math.abs(cBL.y-cBR.y))/cardH2);
-            s.lastCorners=[
-              {x:cTL.x/W,y:cTL.y/H},{x:cTR.x/W,y:cTR.y/H},
-              {x:cBR.x/W,y:cBR.y/H},{x:cBL.x/W,y:cBL.y/H}
-            ];
-            // 상식 검증: 피팅된 꼭짓점이 스캔 경계 모서리에서 카드의 10% 이상 벗어나면 오검출 → 보정 생략
             var lim=Math.max(cardW2,cardH2)*0.10;
             var sane=Math.abs(cTL.x-fL)<lim&&Math.abs(cTL.y-fT)<lim
                    &&Math.abs(cTR.x-fR)<lim&&Math.abs(cTR.y-fT)<lim
                    &&Math.abs(cBR.x-fR)<lim&&Math.abs(cBR.y-fB)<lim
                    &&Math.abs(cBL.x-fL)<lim&&Math.abs(cBL.y-fB)<lim;
-            if(!sane)s.lastCorners=null;
-            if(sane&&skew>0.012){
-              s.autoWarped=true;
-              doWarp(s.lastCorners); // 비동기: 보정 후 재감지로 이어짐
-              return;
-            }
+            var skew=Math.max(Math.abs(cTL.x-cBL.x),Math.abs(cTR.x-cBR.x))/cardW2;
+            skew=Math.max(skew,Math.max(Math.abs(cTL.y-cTR.y),Math.abs(cBL.y-cBR.y))/cardH2);
+            if(sane){
+              s.lastCorners=[
+                {x:cTL.x/W,y:cTL.y/H},{x:cTR.x/W,y:cTR.y/H},
+                {x:cBR.x/W,y:cBR.y/H},{x:cBL.x/W,y:cBL.y/H}
+              ];
+              if(skew>0.012){
+                s.autoWarped=true;
+                doWarp(s.lastCorners);
+                return;
+              }
+            }else{s.lastCorners=null}
           }
         }catch(e2){}
         s.autoWarped=true;
       }
-      // ── 자동 크롭 (보정 안 한 경우에만): "카드가 조금이라도 있는" 느슨한 경계(15%) + 넉넉한 여백 ──
+      // ── ⑥ 자동 크롭 (보정 안 한 경우): 검출 박스 + 10% 여백 ──
       if(!s.cropped){
-        var gL=scanEdge(1,Math.round(W*.45),1,colScore,0.15);
-        var gR=scanEdge(W-2,Math.round(W*.55),-1,colScore,0.15);
-        var gT=scanEdge(1,Math.round(H*.45),1,rowScore,0.15);
-        var gB=scanEdge(H-2,Math.round(H*.55),-1,rowScore,0.15);
-        if(gL<0)gL=fL;if(gR<0)gR=fR;if(gT<0)gT=fT;if(gB<0)gB=fB;
-        var olN=Math.min(gL,fL)/W,orN=Math.max(gR,fR)/W,otN=Math.min(gT,fT)/H,obN=Math.max(gB,fB)/H;
+        var olN=fL/W,orN=fR/W,otN=fT/H,obN=fB/H;
         var cwN=orN-olN,chN=obN-otN;
         var padX=cwN*0.10,padY=chN*0.10;
         var cx0=Math.max(0,olN-padX),cx1=Math.min(1,orN+padX);
@@ -1047,34 +1104,40 @@ function autoDetect(silent){
         }
         s.cropped=true;
       }
+      // ── ⑦ 외곽선 확정 + 안쪽 경계 그라디언트 탐색 ──
       L.ol=fL/W;L.or_=fR/W;L.ot=fT/H;L.ob=fB/H;
-      // ③ 안쪽 테두리: RGB 그라디언트(3px 평활) 최대 지점, 카드 안쪽 2~22% 구간
-      function gAt(x,y,vert){
-        var a=vert?px(Math.max(x-2,0),y):px(x,Math.max(y-2,0));
-        var b=vert?px(Math.min(x+2,W-1),y):px(x,Math.min(y+2,H-1));
-        var dr=a[0]-b[0],dg=a[1]-b[1],db=a[2]-b[2];
-        return Math.sqrt(dr*dr+dg*dg+db*db);
+      function colGrad2(cx){
+        var q=0,c4=0,yy2;
+        for(yy2=Math.round(fT+cardH2*.3);yy2<fT+cardH2*.7;yy2+=3){
+          q+=Math.abs(G(Math.min(cx+2,W-1),yy2)-G(Math.max(cx-2,0),yy2));c4++;
+        }
+        return c4>0?q/c4:0;
       }
-      function colGrad(cx){var q=0,c=0,yy;for(yy=Math.round(fT+(fB-fT)*.3);yy<fT+(fB-fT)*.7;yy+=3){q+=gAt(cx,yy,true);c++}return q/c}
-      function rowGrad(cy){var q=0,c=0,xx;for(xx=Math.round(fL+(fR-fL)*.3);xx<fL+(fR-fL)*.7;xx+=3){q+=gAt(xx,cy,false);c++}return q/c}
-      function scanMax(from,to,step,fn){var bi=-1,bv=-1,i2,v;for(i2=from;step>0?i2<to:i2>to;i2+=step){v=fn(i2);if(v>bv){bv=v;bi=i2}}return {i:bi,v:bv}}
-      function avgOf(from,to,step,fn){var q=0,c=0,i2;for(i2=from;step>0?i2<to:i2>to;i2+=step){q+=fn(i2);c++}return c>0?q/c:0}
-      var cw=fR-fL,chh=fB-fT;
-      var rL=scanMax(Math.round(fL+cw*.02),Math.round(fL+cw*.22),1,colGrad);
-      var rR=scanMax(Math.round(fR-cw*.02),Math.round(fR-cw*.22),-1,colGrad);
-      var rT=scanMax(Math.round(fT+chh*.02),Math.round(fT+chh*.20),1,rowGrad);
-      var rB=scanMax(Math.round(fB-chh*.02),Math.round(fB-chh*.20),-1,rowGrad);
-      // 피크가 평균의 1.8배 이상일 때만 신뢰, 아니면 비율 기본값
-      var aL=avgOf(Math.round(fL+cw*.02),Math.round(fL+cw*.22),1,colGrad);
-      var aR=avgOf(Math.round(fR-cw*.02),Math.round(fR-cw*.22),-1,colGrad);
-      var aT=avgOf(Math.round(fT+chh*.02),Math.round(fT+chh*.20),1,rowGrad);
-      var aB=avgOf(Math.round(fB-chh*.02),Math.round(fB-chh*.20),-1,rowGrad);
-      L.il=((rL.i>0&&rL.v>aL*1.8)?rL.i:fL+cw*.10)/W;
-      L.ir=((rR.i>0&&rR.v>aR*1.8)?rR.i:fR-cw*.10)/W;
-      L.it=((rT.i>0&&rT.v>aT*1.8)?rT.i:fT+chh*.09)/H;
-      L.ib=((rB.i>0&&rB.v>aB*1.8)?rB.i:fB-chh*.09)/H;
+      function rowGrad2(cy){
+        var q=0,c5=0,xx2;
+        for(xx2=Math.round(fL+cardW2*.3);xx2<fL+cardW2*.7;xx2+=3){
+          q+=Math.abs(G(xx2,Math.min(cy+2,H-1))-G(xx2,Math.max(cy-2,0)));c5++;
+        }
+        return c5>0?q/c5:0;
+      }
+      function scanMax(from,to,step,fn){var bi=-1,bv=-1,i5,v5;for(i5=from;step>0?i5<to:i5>to;i5+=step){v5=fn(i5);if(v5>bv){bv=v5;bi=i5}}return {i:bi,v:bv}}
+      function avgOf(from,to,step,fn){var q2=0,c6=0,i6;for(i6=from;step>0?i6<to:i6>to;i6+=step){q2+=fn(i6);c6++}return c6>0?q2/c6:0}
+      var rL2=scanMax(Math.round(fL+cardW2*.02),Math.round(fL+cardW2*.22),1,colGrad2);
+      var rR2=scanMax(Math.round(fR-cardW2*.02),Math.round(fR-cardW2*.22),-1,colGrad2);
+      var rT2=scanMax(Math.round(fT+cardH2*.02),Math.round(fT+cardH2*.20),1,rowGrad2);
+      var rB2=scanMax(Math.round(fB-cardH2*.02),Math.round(fB-cardH2*.20),-1,rowGrad2);
+      var aL2=avgOf(Math.round(fL+cardW2*.02),Math.round(fL+cardW2*.22),1,colGrad2);
+      var aR2=avgOf(Math.round(fR-cardW2*.02),Math.round(fR-cardW2*.22),-1,colGrad2);
+      var aT2=avgOf(Math.round(fT+cardH2*.02),Math.round(fT+cardH2*.20),1,rowGrad2);
+      var aB2=avgOf(Math.round(fB-cardH2*.02),Math.round(fB-cardH2*.20),-1,rowGrad2);
+      L.il=((rL2.i>0&&rL2.v>aL2*1.8)?rL2.i:fL+cardW2*.10)/W;
+      L.ir=((rR2.i>0&&rR2.v>aR2*1.8)?rR2.i:fR-cardW2*.10)/W;
+      L.it=((rT2.i>0&&rT2.v>aT2*1.8)?rT2.i:fT+cardH2*.09)/H;
+      L.ib=((rB2.i>0&&rB2.v>aB2*1.8)?rB2.i:fB-cardH2*.09)/H;
       for(i=0;i<KEYS.length;i++){clampLine(L,KEYS[i])}
-    }else if(!silent){alert('배경과 카드의 경계를 찾지 못했습니다.\n카드보다 확실히 밝거나 어두운 단색 배경(예: 흰 종이 위 어두운 카드, 검은 매트 위 밝은 카드)에서 정면으로 찍으면 인식률이 크게 올라갑니다.')}
+    }else if(!silent){
+      alert('카드 경계를 찾지 못했습니다.\n카드가 화면 중앙에 오도록, 배경과 구분되게 찍으면 인식률이 올라갑니다. 선을 직접 맞춰주셔도 됩니다.');
+    }
   }catch(err){if(!silent){alert('자동 감지에 실패했습니다. 선을 직접 맞춰주세요.')}}
   st().detected=true;
   draw();calc();
