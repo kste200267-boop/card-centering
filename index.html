@@ -919,10 +919,10 @@ function autoDetect(silent){
     // ② 카드 화소 비율 기반 스캔: 해당 열/행에서 배경과 다른 화소가 55% 이상 + 2연속이면 경계
     function colScore(x){var c=0,n=0,yy;for(yy=Math.round(H*.2);yy<H*.8;yy+=2){n++;if(diff(x,yy)>T)c++}return c/n}
     function rowScore(y){var c=0,n=0,xx;for(xx=Math.round(W*.2);xx<W*.8;xx+=2){n++;if(diff(xx,y)>T)c++}return c/n}
-    function scanEdge(from,to,step,fn){
-      var run=0,i;
+    function scanEdge(from,to,step,fn,thr){
+      var run=0,i,t2=thr||0.55;
       for(i=from;step>0?i<to:i>to;i+=step){
-        if(fn(i)>0.55){run++;if(run>=2)return i-step}else{run=0}
+        if(fn(i)>t2){run++;if(run>=2)return i-step}else{run=0}
       }
       return -1;
     }
@@ -931,28 +931,6 @@ function autoDetect(silent){
     var fT=scanEdge(1,Math.round(H*.45),1,rowScore);
     var fB=scanEdge(H-2,Math.round(H*.55),-1,rowScore);
     var L=s.L;
-    // ── 자동 크롭: 카드가 화면의 일부만 차지하면 배경을 잘라냄 (1회) ──
-    if(!s.cropped&&fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
-      var olN=fL/W,orN=fR/W,otN=fT/H,obN=fB/H;
-      var cwN=orN-olN,chN=obN-otN;
-      var padX=cwN*0.08,padY=chN*0.08;
-      var cx0=Math.max(0,olN-padX),cx1=Math.min(1,orN+padX);
-      var cy0=Math.max(0,otN-padY),cy1=Math.min(1,obN+padY);
-      // 잘라낼 게 실질적으로 있을 때만 (한 변이라도 5% 이상 여백)
-      if(cx0>0.05||1-cx1>0.05||cy0>0.05||1-cy1>0.05){
-        var CW=Math.round((cx1-cx0)*s.W),CH=Math.round((cy1-cy0)*s.H);
-        var cc2=document.createElement('canvas');cc2.width=CW;cc2.height=CH;
-        cc2.getContext('2d').drawImage(s.img,cx0*s.W,cy0*s.H,CW,CH,0,0,CW,CH);
-        var im2=new Image();
-        im2.onload=function(){
-          s.img=im2;s.W=CW;s.H=CH;s.cropped=true;s.detected=false;
-          fit();autoDetect(true); // 크롭된 이미지에서 재감지
-        };
-        im2.src=cc2.toDataURL('image/png');
-        return; // 재감지에서 이어감
-      }
-      s.cropped=true;
-    }
     if(fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
       // ── 자동 원근: 4변을 직선 피팅해 꼭짓점 검출, 기울어져 있으면 자동으로 펴기 (1회) ──
       if(!s.autoWarped){
@@ -1014,7 +992,14 @@ function autoDetect(silent){
               {x:cTL.x/W,y:cTL.y/H},{x:cTR.x/W,y:cTR.y/H},
               {x:cBR.x/W,y:cBR.y/H},{x:cBL.x/W,y:cBL.y/H}
             ];
-            if(skew>0.012){
+            // 상식 검증: 피팅된 꼭짓점이 스캔 경계 모서리에서 카드의 10% 이상 벗어나면 오검출 → 보정 생략
+            var lim=Math.max(cardW2,cardH2)*0.10;
+            var sane=Math.abs(cTL.x-fL)<lim&&Math.abs(cTL.y-fT)<lim
+                   &&Math.abs(cTR.x-fR)<lim&&Math.abs(cTR.y-fT)<lim
+                   &&Math.abs(cBR.x-fR)<lim&&Math.abs(cBR.y-fB)<lim
+                   &&Math.abs(cBL.x-fL)<lim&&Math.abs(cBL.y-fB)<lim;
+            if(!sane)s.lastCorners=null;
+            if(sane&&skew>0.012){
               s.autoWarped=true;
               doWarp(s.lastCorners); // 비동기: 보정 후 재감지로 이어짐
               return;
@@ -1022,6 +1007,32 @@ function autoDetect(silent){
           }
         }catch(e2){}
         s.autoWarped=true;
+      }
+      // ── 자동 크롭 (보정 안 한 경우에만): "카드가 조금이라도 있는" 느슨한 경계(15%) + 넉넉한 여백 ──
+      if(!s.cropped){
+        var gL=scanEdge(1,Math.round(W*.45),1,colScore,0.15);
+        var gR=scanEdge(W-2,Math.round(W*.55),-1,colScore,0.15);
+        var gT=scanEdge(1,Math.round(H*.45),1,rowScore,0.15);
+        var gB=scanEdge(H-2,Math.round(H*.55),-1,rowScore,0.15);
+        if(gL<0)gL=fL;if(gR<0)gR=fR;if(gT<0)gT=fT;if(gB<0)gB=fB;
+        var olN=Math.min(gL,fL)/W,orN=Math.max(gR,fR)/W,otN=Math.min(gT,fT)/H,obN=Math.max(gB,fB)/H;
+        var cwN=orN-olN,chN=obN-otN;
+        var padX=cwN*0.10,padY=chN*0.10;
+        var cx0=Math.max(0,olN-padX),cx1=Math.min(1,orN+padX);
+        var cy0=Math.max(0,otN-padY),cy1=Math.min(1,obN+padY);
+        if(cx0>0.06||1-cx1>0.06||cy0>0.06||1-cy1>0.06){
+          var CW=Math.round((cx1-cx0)*s.W),CH=Math.round((cy1-cy0)*s.H);
+          var cc2=document.createElement('canvas');cc2.width=CW;cc2.height=CH;
+          cc2.getContext('2d').drawImage(s.img,cx0*s.W,cy0*s.H,CW,CH,0,0,CW,CH);
+          var im2=new Image();
+          im2.onload=function(){
+            s.img=im2;s.W=CW;s.H=CH;s.cropped=true;s.detected=false;
+            fit();autoDetect(true);
+          };
+          im2.src=cc2.toDataURL('image/png');
+          return;
+        }
+        s.cropped=true;
       }
       L.ol=fL/W;L.or_=fR/W;L.ot=fT/H;L.ob=fB/H;
       // ③ 안쪽 테두리: RGB 그라디언트(3px 평활) 최대 지점, 카드 안쪽 2~22% 구간
