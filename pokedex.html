@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="포켓몬 도감">
+<meta name="theme-color" content="#1e293b">
+<meta name="color-scheme" content="only light">
+<title>포켓몬 카드 박스 도감</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23ef4444'/><rect x='4' y='47' width='92' height='6' fill='%23111'/><path d='M4 50a46 46 0 0 0 92 0z' fill='white'/><circle cx='50' cy='50' r='14' fill='white' stroke='%23111' stroke-width='5'/></svg>">
+<style>
+:root{color-scheme:light;--bg:#f1f5f9;--card:#fff;--ink:#0f172a;--sub:#64748b;--line:#e2e8f0;--accent:#2563eb;--hot:#dc2626;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+/* top bar */
+#topbar{position:sticky;top:0;z-index:50;background:#1e293b;color:#fff;display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top))}
+#topbar button{background:rgba(255,255,255,.14);border:0;color:#fff;font-size:14px;padding:7px 12px;border-radius:8px;cursor:pointer}
+#topbar button:active{background:rgba(255,255,255,.3)}
+#ttl{font-weight:700;font-size:15px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+main{max-width:1100px;margin:0 auto;padding:12px;padding-bottom:40px}
+.hidden{display:none!important}
+/* home */
+.hero{background:linear-gradient(135deg,#1e293b,#334155);color:#fff;border-radius:14px;padding:18px 16px;margin-bottom:12px}
+.hero h1{font-size:20px;margin-bottom:4px}
+.hero p{font-size:12px;color:#cbd5e1;line-height:1.6}
+.hbtns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.hbtns a,.hbtns button{flex:1;min-width:130px;text-align:center;background:#fbbf24;color:#78350f;font-weight:700;font-size:13px;padding:10px;border-radius:10px;text-decoration:none;border:0;cursor:pointer}
+.hbtns .ghost{background:rgba(255,255,255,.15);color:#fff}
+#q{width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:#fff}
+.menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.mitem{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;display:block;text-decoration:none;color:inherit;transition:transform .05s}
+.mitem:active{transform:scale(.98)}
+.mi-top{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.mi-top b{font-size:15px}
+.mi-top small{color:var(--sub);font-size:11px;white-space:nowrap}
+.mi-sub{font-size:11.5px;color:var(--sub);margin-top:4px;line-height:1.5}
+.mi-sub .ev{color:var(--accent);font-weight:700}
+.mi-sub .top{color:#334155}
+/* box view */
+.boxhead{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.boxhead h2{font-size:18px}
+.bh-sub{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.7}
+.rchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.rchip{font-size:11px;padding:3px 8px;border-radius:99px;border:1px solid var(--line);background:#f8fafc;cursor:pointer}
+.rchip.on{background:#1e293b;color:#fff;border-color:#1e293b}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:5px;text-align:center}
+.imgwrap{aspect-ratio:63/88;background:#f1f5f9;border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.imgwrap img{width:100%;height:100%;object-fit:contain}
+.cnum{font-size:10px;color:var(--sub);margin-top:4px}
+.badge{color:#fff;border-radius:4px;padding:0 5px;font-size:9.5px;font-weight:700}
+.cname{font-size:12px;font-weight:600;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cprice{font-size:12.5px;font-weight:700}
+.cprice.hot{color:var(--hot)}
+.avgb{font-size:8.5px;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:0 4px;vertical-align:middle}
+.setname{font-size:10px;color:var(--sub)}
+/* top5 */
+.evwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto}
+table.evt{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
+.evt th,.evt td{border:1px solid var(--line);padding:6px;text-align:center}
+.evt th{background:#1e293b;color:#fff;font-weight:600}
+.evt tr.t5{background:#fef9c3}
+.evt tr td:first-child{font-weight:700}
+.evt tr{cursor:pointer}
+.assume{font-size:11.5px;color:var(--sub);line-height:1.8;margin-top:10px}
+/* modal */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.mbox{background:#fff;border-radius:14px;max-width:480px;width:100%;padding:20px;max-height:80vh;overflow-y:auto}
+.mbox h3{margin-bottom:10px}
+.mbox p{font-size:13px;line-height:1.8;color:#334155;margin-bottom:10px}
+.mbox b{color:#0f172a}
+.mbox button{width:100%;padding:11px;border:0;border-radius:10px;background:#1e293b;color:#fff;font-size:14px;cursor:pointer;margin-top:6px}
+/* print mode */
+@media print{
+  #topbar,.noprintel{display:none!important}
+  body{background:#fff}
+  main{max-width:none;padding:0}
+  section.pbox{page-break-before:always}
+  .grid{grid-template-columns:repeat(5,1fr)!important;gap:6px}
+  .card{page-break-inside:avoid;border-color:#ddd}
+}
+@page{size:A4;margin:9mm}
+.printtip{background:#fffbe6;border:1px solid #f0c040;padding:10px 14px;border-radius:10px;font-size:12.5px;line-height:1.7;margin-bottom:12px}
+.pboxhead{border-bottom:3px solid #111;margin:10px 0 8px;padding-bottom:4px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pboxhead h2{font-size:16pt}
+.pboxhead div{font-size:9pt;color:#555;text-align:right}
+
+/* collection */
+.card{position:relative}
+.card.owned{border-color:#16a34a;box-shadow:0 0 0 2px #16a34a inset}
+.card.keeper{border-color:#d4af37;box-shadow:0 0 0 2px #d4af37 inset;background:linear-gradient(180deg,#fffdf2,#fff)}
+.card.owned.keeper{box-shadow:0 0 0 2px #16a34a inset,0 0 0 4px #d4af37}
+.starterbub{position:relative;margin:0 auto 4px;display:block;width:fit-content;background:#0ea5e9;color:#fff;font-size:9px;font-weight:700;border-radius:99px;padding:2px 8px}
+.starterbub:after{content:'';position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);border:4px solid transparent;border-top-color:#0ea5e9;border-bottom:0}
+.keepchip{position:absolute;top:4px;right:4px;background:linear-gradient(135deg,#d4af37,#f5d76e);color:#5b4a00;font-size:8.5px;font-weight:800;border-radius:99px;padding:1px 5px;z-index:2}
+.ownbar{display:flex;justify-content:center;gap:4px;margin-top:3px}
+.ownbar button{border:1px solid var(--line);background:#f8fafc;border-radius:6px;font-size:12px;width:26px;height:22px;line-height:1;cursor:pointer;padding:0}
+.ownbar .qty{font-size:11px;font-weight:700;min-width:18px;align-self:center}
+.ownbar .cost{width:auto;font-size:10px;padding:0 5px}
+.ownchip{position:absolute;top:4px;left:4px;background:#16a34a;color:#fff;font-size:9px;font-weight:700;border-radius:99px;padding:1px 6px;z-index:2}
+.mysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat .v{font-size:17px;font-weight:800;margin-top:2px}
+.stat .lbl{font-size:11px;color:var(--sub)}
+.stat.up .v{color:#16a34a}.stat.down .v{color:#dc2626}
+.setrow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+.setrow .t{display:flex;justify-content:space-between;font-size:13.5px;align-items:baseline}
+.setrow .t small{color:var(--sub)}
+.pbar{height:7px;background:#e2e8f0;border-radius:99px;margin:7px 0 4px;overflow:hidden}
+.pbar>div{height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:99px}
+.setrow .sub{font-size:11px;color:var(--sub);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.investbox{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:11px 13px;margin-bottom:10px;font-size:12.5px}
+.investbox b{font-size:13px}
+.investbox .row{display:flex;gap:6px;margin-top:8px}
+.investbox input{flex:1;padding:8px;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;min-width:0}
+.investbox button{padding:8px 12px;border:0;border-radius:8px;background:#16a34a;color:#fff;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.ilist{font-size:11.5px;color:#166534;margin-top:6px;line-height:1.7}
+.ilist span{cursor:pointer;color:#dc2626;margin-left:4px}
+.ledger{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px}
+.lrow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:7px 4px;border-bottom:1px dashed var(--line);cursor:pointer}
+.lrow:last-child{border-bottom:0}
+.lrow.ltot{font-size:13.5px;background:#f8fafc;cursor:default;border-top:2px solid var(--line)}
+.sgrp{margin-bottom:14px}
+.sgrp-h{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:800;color:#334155;padding:6px 2px;border-bottom:2px solid #334155;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.sgrp-h span:last-child{font-size:11px;font-weight:600;color:#64748b}
+.setrow.dim{padding:8px 13px;opacity:.65}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.thumb{position:relative;flex:0 0 64px;width:64px;aspect-ratio:63/88;border-radius:6px;overflow:hidden;background:#f1f5f9;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb .gr{position:absolute;top:2px;left:2px;background:#7c3aed;color:#fff;font-size:8px;font-weight:700;border-radius:3px;padding:0 3px}
+.thumb .tp{position:absolute;bottom:0;left:0;right:0;background:rgba(15,23,42,.72);color:#fff;font-size:9px;text-align:center;padding:1px 0}
+.thumb.more{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#64748b}
+.dday{margin-bottom:6px}
+.dday-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;color:#0f172a;padding:6px 2px 3px;border-bottom:1px solid var(--line)}
+.dday-r{display:flex;justify-content:space-between;font-size:11.5px;color:#475569;padding:2px 6px}
+.mybtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mybtns button{flex:1;min-width:120px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12.5px;cursor:pointer}
+footer{margin-top:24px;font-size:11px;color:var(--sub);text-align:center;line-height:1.8}
+</style></head><body>
+
+<div id="topbar">
+  <button id="btnBack" onclick="goBack()">← 뒤로</button>
+  <div id="ttl">포켓몬 카드 박스 도감</div>
+  <button onclick="location.hash=''">🏠 홈</button>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;border-bottom:1px solid #26313f;background:#12161c">
+  <a href="./index.html" style="font-size:13px;font-weight:700;color:#93a1b3;background:#1b222c;border:1px solid #2c3644;border-radius:9px;padding:7px 14px;text-decoration:none">🎯 센터링 계산기</a>
+  <span style="font-size:13px;font-weight:800;color:#0c1116;background:#39c5cf;border-radius:9px;padding:8px 14px">📖 포켓몬 도감</span>
+  <a href="./boxbreak.html" style="font-size:13px;font-weight:700;color:#93a1b3;background:#1b222c;border:1px solid #2c3644;border-radius:9px;padding:7px 14px;text-decoration:none">🎁 박스깡 시뮬레이터</a>
+  <span style="flex:1"></span>
+  <button type="button" onclick="pkExport()" style="font-size:12px;padding:6px 12px">💾 보유 내보내기</button>
+  <button type="button" onclick="document.getElementById('pkImpFile').click()" style="font-size:12px;padding:6px 12px">📥 가져오기</button>
+  <input type="file" id="pkImpFile" accept=".json" style="display:none" onchange="pkImport(this)">
+</div>
+<script>
+function pkExport(){
+  try{
+    var d=localStorage.getItem('pkmn_col_v1')||'{}';
+    var a=document.createElement('a');
+    a.download='pokedex-owned-backup.json';
+    a.href='data:application/json;charset=utf-8,'+encodeURIComponent(d);
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){alert('내보내기 실패: '+e.message)}
+}
+function pkImport(inp){
+  var f=inp.files[0];inp.value='';
+  if(!f)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      JSON.parse(e.target.result); // 형식 검증
+      localStorage.setItem('pkmn_col_v1',e.target.result);
+      alert('보유 기록을 가져왔습니다. 새로고침합니다.');
+      location.reload();
+    }catch(err){alert('올바른 백업 파일이 아닙니다.')}
+  };
+  r.readAsText(f);
+}
+</script>
+<main id="app"></main>
+
+<div id="modal" class="hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="mbox">
+    <h3>📱 바로가기(홈 화면) 추가 방법</h3>
+    <p><b>안드로이드 (Chrome/삼성인터넷):</b> 이 파일을 연 상태에서 브라우저 메뉴(⋮) → <b>홈 화면에 추가</b> (또는 '페이지 추가'). 아이콘이 홈 화면에 생겨 앱처럼 열 수 있어요.</p>
+    <p><b>아이폰/아이패드 (Safari):</b> 공유 버튼(□↑) → <b>홈 화면에 추가</b>.</p>
+    <p><b>컴퓨터 (Chrome/Edge):</b> 메뉴(⋮) → <b>저장 및 공유 → 바로가기 만들기</b> (Edge는 '앱 → 이 사이트를 앱으로 설치'). 바탕화면에 아이콘이 생깁니다.</p>
+    <p style="color:#92400e">💡 파일을 휴대폰에서 쓰려면: 카카오톡 '나에게 보내기'나 메일로 이 HTML 파일을 보내 휴대폰에 저장한 뒤 브라우저로 열면 됩니다. 열 때마다 같은 파일을 열도록 다운로드 폴더에 두세요.</p>
+    <button onclick="document.getElementById('modal').classList.add('hidden')">닫기</button>
+  </div>
+</div>
+
+<script id="data" type="application/json">[{"name": "와일드포스", "code": "BS2024004", "date": "2024-03-22", "boxPrice": 44500, "newPrice": 54720, "total": 98, "ev": 48693, "rarityStats": {"RR": {"n": 6, "avg": 1447, "max": 3500}, "AR": {"n": 12, "avg": 5390, "max": 11780}, "SR": {"n": 9, "avg": 11794, "max": 65000}, "SAR": {"n": 5, "avg": 21675, "max": 29800}, "UR": {"n": 3, "avg": 29800, "max": 40000}, "ACE": {"n": 3, "avg": 2100, "max": 4000}}, "top1": {"num": "088", "base": "071", "name": "팬텀 ex", "rarity": "SR", "price": 65000}, "cards": [["005", "071", "토대부기 ex", "RR", 700, null], ["012", "071", "꿰뚫는화염 ex", "RR", 1100, null], ["024", "071", "굽이치는물결 ex", "RR", 3500, null], ["025", "071", "바닥트리오 ex", "RR", 700, null], ["047", "071", "팬텀 ex", "RR", 1500, 5139], ["051", "071", "고동치는달", "R", 3500, null], ["052", "071", "코라이돈", "R", 2000, null], ["053", "071", "날뛰는우레 ex", "RR", 1180, null], ["057", "071", "노고고치", "R", 2000, null], ["061", "071", "각성의 드럼", "ACE", 1500, null], ["062", "071", "절친 포핀", "U", 700, null], ["065", "071", "맥시멈 벨트", "ACE", 800, null], ["071", "071", "네오 어퍼 에너지", "ACE", 4000, null], ["072", "071", "수풀부기", "AR", 3000, 4860], ["073", "071", "누니머기", "AR", 4400, 4734], ["074", "071", "동미러", "AR", 5000, 4208], ["075", "071", "란쿨루스", "AR", 2000, 2813], ["076", "071", "날개치는머리", "AR", 11780, 8683], ["077", "071", "시라칸", "AR", 3300, null], ["078", "071", "만마드", "AR", 5000, 4600], ["079", "071", "아보크", "AR", 3000, 4790], ["080", "071", "고오스", "AR", 10000, 21450], ["081", "071", "페라페", "AR", 3200, 4484], ["082", "071", "치라미", "AR", 10000, 8934], ["083", "071", "치라치노", "AR", 4000, 6102], ["084", "071", "토대부기 ex", "SR", 2000, 2855], ["085", "071", "꿰뚫는화염 ex", "SR", 2100, 2625], ["086", "071", "굽이치는물결 ex", "SR", 5645, 4811], ["087", "071", "바닥트리오 ex", "SR", 2000, 4780], ["088", "071", "팬텀 ex", "SR", 65000, 47970], ["089", "071", "날뛰는우레 ex", "SR", 6900, 5718], ["090", "071", "비파", "SR", 2500, null], ["091", "071", "유빈의 확신", "SR", 5000, null], ["092", "071", "탐험가의 선도", "SR", 15000, null], ["093", "071", "꿰뚫는화염 ex", "SAR", 15375, 20134], ["094", "071", "굽이치는물결 ex", "SAR", 26700, null], ["095", "071", "날뛰는우레 ex", "SAR", 29800, 38350], ["096", "071", "비파", "SAR", 12000, 12041], ["097", "071", "유빈의 확신", "SAR", 24500, 24745], ["098", "071", "꿰뚫는화염 ex", "UR", 34800, 21593], ["099", "071", "굽이치는물결 ex", "UR", 14600, 9050], ["100", "071", "날뛰는우레 ex", "UR", 40000, null]]}, {"name": "사이버저지", "code": "BS2024005", "date": "2024-03-22", "boxPrice": 35100, "newPrice": null, "total": 98, "ev": 42939, "rarityStats": {"RR": {"n": 6, "avg": 2046, "max": 7775}, "AR": {"n": 12, "avg": 3033, "max": 4500}, "SR": {"n": 9, "avg": 6611, "max": 14000}, "SAR": {"n": 5, "avg": 31420, "max": 41950}, "UR": {"n": 3, "avg": 23600, "max": 42350}, "ACE": {"n": 3, "avg": 1733, "max": 3000}}, "top1": {"num": "098", "base": "071", "name": "무쇠잎새 ex", "rarity": "UR", "price": 42350}, "cards": [["016", "071", "무쇠잎새 ex", "RR", 7775, null], ["022", "071", "어흥염 ex", "RR", 900, null], ["023", "071", "피카츄", "C", 5000, null], ["036", "071", "무쇠감투 ex", "RR", 900, null], ["041", "071", "무쇠암석 ex", "RR", 1200, null], ["042", "071", "키키링 ex", "RR", 500, null], ["044", "071", "핫삼 ex", "RR", 1000, null], ["061", "071", "리부트 포드", "ACE", 3000, null], ["062", "071", "프라임 캐처", "ACE", 700, null], ["066", "071", "히어로 망토", "ACE", 1500, null], ["072", "071", "다탱구", "AR", 2000, null], ["073", "071", "사철록", "AR", 3000, null], ["074", "071", "바라철록", "AR", 3400, null], ["075", "071", "냐오불", "AR", 4000, null], ["076", "071", "전지충이", "AR", 1500, null], ["077", "071", "무쇠가시", "AR", 4500, null], ["078", "071", "에블리", "AR", 4000, null], ["079", "071", "몰드류", "AR", 2500, null], ["080", "071", "메타그로스", "AR", 3500, null], ["081", "071", "멜탄", "AR", 3000, null], ["082", "071", "내루미", "AR", 3000, null], ["083", "071", "할비롱", "AR", 2000, null], ["084", "071", "무쇠잎새 ex", "SR", 2300, null], ["085", "071", "어흥염 ex", "SR", 4000, null], ["086", "071", "무쇠감투 ex", "SR", 2300, null], ["087", "071", "무쇠암석 ex", "SR", 2300, null], ["088", "071", "키키링 ex", "SR", 13000, null], ["089", "071", "핫삼 ex", "SR", 8900, null], ["090", "071", "벨의 진심", "SR", 7000, null], ["091", "071", "세이지", "SR", 5700, null], ["092", "071", "암호마니아의 해독", "SR", 14000, null], ["093", "071", "무쇠잎새 ex", "SAR", 7250, null], ["094", "071", "무쇠감투 ex", "SAR", 41950, null], ["095", "071", "무쇠암석 ex", "SAR", 36900, null], ["096", "071", "벨의 진심", "SAR", 36000, null], ["097", "071", "세이지", "SAR", 35000, null], ["098", "071", "무쇠잎새 ex", "UR", 42350, null], ["099", "071", "무쇠감투 ex", "UR", 14750, null], ["100", "071", "무쇠암석 ex", "UR", 13700, null]]}, {"name": "크림슨헤이즈", "code": "BS2024007", "date": "2024-05-10", "boxPrice": 44000, "newPrice": null, "total": 96, "ev": 69891, "rarityStats": {"RR": {"n": 6, "avg": 2017, "max": 4500}, "AR": {"n": 12, "avg": 7386, "max": 45000}, "SR": {"n": 10, "avg": 11711, "max": 50000}, "SAR": {"n": 5, "avg": 49880, "max": 126000}, "UR": {"n": 3, "avg": 24233, "max": 44000}, "ACE": {"n": 3, "avg": 3933, "max": 5500}}, "top1": {"num": "090", "base": "066", "name": "개굴닌자 ex", "rarity": "SAR", "price": 126000}, "cards": [["009", "066", "그우린차 ex", "RR", 1500, null], ["013", "066", "마그카르고 ex", "RR", 500, null], ["021", "066", "글레이시아", "U", 2000, null], ["033", "066", "무쇠가시 ex", "RR", 4000, null], ["040", "066", "우렁찬꼬리 ex", "RR", 900, null], ["045", "066", "개굴닌자 ex", "RR", 4500, null], ["052", "066", "다투곰 붉은 달 ex", "RR", 700, null], ["055", "066", "언페어 스탬프", "ACE", 5500, null], ["058", "066", "하이퍼 아로마", "ACE", 4500, null], ["060", "066", "서바이브 깁스", "ACE", 1800, null], ["067", "066", "쁘사이저", "AR", 7500, 6221], ["068", "066", "차데스", "AR", 2400, 3013], ["069", "066", "코터스", "AR", 3000, 3600], ["070", "066", "초염몽", "AR", 3000, 4300], ["071", "066", "피오네", "AR", 2400, 3909], ["072", "066", "윽우지", "AR", 11830, null], ["073", "066", "일레도리자드", "AR", 2500, null], ["074", "066", "러브로스", "AR", 2500, null], ["075", "066", "히스이 가디", "AR", 2000, 5193], ["076", "066", "대코파스", "AR", 4500, null], ["077", "066", "과사삭벌레", "AR", 2000, 3443], ["078", "066", "이브이", "AR", 45000, 43199], ["079", "066", "그우린차 ex", "SR", 3500, 4116], ["080", "066", "마그카르고 ex", "SR", 3000, 4818], ["081", "066", "무쇠가시 ex", "SR", 8500, 7855], ["082", "066", "우렁찬꼬리 ex", "SR", 2000, 3051], ["083", "066", "개굴닌자 ex", "SR", 20830, 14272], ["084", "066", "다투곰 붉은 달 ex", "SR", 5300, null], ["085", "066", "관리인", "SR", 9000, 7111], ["086", "066", "세류", "SR", 9000, null], ["087", "066", "수련의 돌봄", "SR", 50000, 29466], ["088", "066", "오엽", "SR", 5980, 6315], ["089", "066", "그우린차 ex", "SAR", 15500, 15275], ["090", "066", "개굴닌자 ex", "SAR", 126000, 145390], ["091", "066", "다투곰 붉은 달 ex", "SAR", 20900, 24093], ["092", "066", "세류", "SAR", 67000, 92300], ["093", "066", "수련의 돌봄", "SAR", 20000, 22005], ["094", "066", "다투곰 붉은 달 ex", "UR", 15700, 14458], ["095", "066", "긴급 보드", "UR", 44000, 26200], ["096", "066", "루미너스 에너지", "UR", 13000, 8593]]}, {"name": "변환의 가면", "code": "BS2024008", "date": "2024-06-14", "boxPrice": 56910, "newPrice": null, "total": 133, "ev": 68154, "rarityStats": {"RR": {"n": 8, "avg": 1200, "max": 2000}, "AR": {"n": 12, "avg": 4733, "max": 11000}, "SR": {"n": 11, "avg": 9523, "max": 30600}, "SAR": {"n": 6, "avg": 86233, "max": 250000}, "UR": {"n": 3, "avg": 54667, "max": 99000}, "ACE": {"n": 3, "avg": 3600, "max": 5500}}, "top1": {"num": "129", "base": "101", "name": "시유", "rarity": "SAR", "price": 250000}, "cards": [["016", "101", "오거폰 벽록의 가면 ex", "RR", 1900, null], ["022", "101", "오거폰 화덕의 가면 ex", "RR", 750, null], ["036", "101", "돌핀맨 ex", "RR", 2000, null], ["038", "101", "오거폰 우물의 가면 ex", "RR", 600, null], ["041", "101", "렌트라 ex", "RR", 950, null], ["065", "101", "오거폰 주춧돌의 가면 ex", "RR", 1000, null], ["081", "101", "드래펄트 ex", "RR", 1900, null], ["085", "101", "해피너스 ex", "RR", 500, null], ["092", "101", "시크릿박스", "ACE", 5500, null], ["093", "101", "포켓몬 회수 사이클론", "ACE", 4500, null], ["099", "101", "재밍타워", "U", 2000, null], ["101", "101", "레거시 에너지", "ACE", 800, null], ["102", "101", "해루미", "AR", 3500, null], ["103", "101", "과미르", "AR", 5000, null], ["104", "101", "눈여아", "AR", 6900, null], ["105", "101", "찌리비", "AR", 1900, null], ["106", "101", "치렁", "AR", 3000, null], ["107", "101", "이야후", "AR", 8500, null], ["108", "101", "기로치", "AR", 4000, null], ["109", "101", "으랏차", "AR", 3000, null], ["110", "101", "조타구", "AR", 3500, null], ["111", "101", "갱도라", "AR", 3500, null], ["112", "101", "싸리용", "AR", 3000, null], ["113", "101", "럭키", "AR", 11000, null], ["114", "101", "오거폰 벽록의 가면 ex", "SR", 8000, null], ["115", "101", "오거폰 화덕의 가면 ex", "SR", 9500, null], ["116", "101", "돌핀맨 ex", "SR", 9000, null], ["117", "101", "오거폰 우물의 가면 ex", "SR", 5000, null], ["118", "101", "렌트라 ex", "SR", 2900, null], ["119", "101", "오거폰 주춧돌의 가면 ex", "SR", 7300, null], ["120", "101", "드래펄트 ex", "SR", 30600, null], ["121", "101", "해피너스 ex", "SR", 4950, null], ["122", "101", "시유", "SR", 9500, null], ["123", "101", "카지", "SR", 6000, null], ["124", "101", "팔자크", "SR", 12000, null], ["125", "101", "오거폰 벽록의 가면 ex", "SAR", 36000, null], ["126", "101", "오거폰 화덕의 가면 ex", "SAR", 18500, null], ["127", "101", "오거폰 우물의 가면 ex", "SAR", 49000, null], ["128", "101", "오거폰 주춧돌의 가면 ex", "SAR", 28900, null], ["129", "101", "시유", "SAR", 250000, null], ["130", "101", "카지", "SAR", 135000, null], ["131", "101", "오거폰 벽록의 가면 ex", "UR", 20000, null], ["132", "101", "개조해머", "UR", 45000, null], ["133", "101", "절친 포핀", "UR", 99000, null]]}, {"name": "나이트원더러", "code": "BS2024011", "date": "2024-08-09", "boxPrice": 34650, "newPrice": null, "total": 93, "ev": 47978, "rarityStats": {"RR": {"n": 6, "avg": 1629, "max": 3800}, "AR": {"n": 12, "avg": 4558, "max": 9800}, "SR": {"n": 10, "avg": 9329, "max": 28000}, "SAR": {"n": 5, "avg": 18840, "max": 35000}, "UR": {"n": 2, "avg": 16000, "max": 17700}, "ACE": {"n": 3, "avg": 4500, "max": 5500}}, "top1": {"num": "091", "base": "064", "name": "카시오페아", "rarity": "SAR", "price": 35000}, "cards": [["012", "064", "킹드라 ex", "RR", 3800, null], ["015", "064", "부르르룸 ex", "RR", 950, null], ["020", "064", "야느와르몽", "R", 2500, null], ["036", "064", "조타구 ex", "RR", 1200, null], ["037", "064", "이야후 ex", "RR", 510, null], ["038", "064", "기로치 ex", "RR", 2490, null], ["039", "064", "복숭악동 ex", "RR", 825, null], ["054", "064", "데인저러스 광선", "ACE", 5000, null], ["055", "064", "밤의 들것", "U", 3500, null], ["056", "064", "포켓바이털A", "ACE", 3000, null], ["063", "064", "뉴트럴센터", "ACE", 5500, null], ["065", "064", "카푸브루루", "AR", 3800, null], ["066", "064", "헬가", "AR", 4500, null], ["067", "064", "쏘드라", "AR", 4800, null], ["068", "064", "해골몽", "AR", 5000, null], ["069", "064", "미라몽", "AR", 4500, null], ["070", "064", "야느와르몽", "AR", 9800, null], ["071", "064", "크레세리아", "AR", 3000, null], ["072", "064", "조로아", "AR", 6800, null], ["073", "064", "끼리동", "AR", 2000, null], ["074", "064", "액슨도", "AR", 5000, null], ["075", "064", "페르시온", "AR", 3000, null], ["076", "064", "이븐곰", "AR", 2500, null], ["077", "064", "킹드라 ex", "SR", 11000, null], ["078", "064", "부르르룸 ex", "SR", 2000, null], ["079", "064", "조타구 ex", "SR", 4200, null], ["080", "064", "이야후 ex", "SR", 1190, null], ["081", "064", "기로치 ex", "SR", 17800, null], ["082", "064", "복숭악동 ex", "SR", 4600, null], ["083", "064", "도희의 비기", "SR", 7995, null], ["084", "064", "아크로마의 집념", "SR", 28000, null], ["085", "064", "카시오페아", "SR", 2500, null], ["086", "064", "크세로시키의 속셈", "SR", 14000, null], ["087", "064", "조타구 ex", "SAR", 28900, null], ["088", "064", "이야후 ex", "SAR", 10000, null], ["089", "064", "기로치 ex", "SAR", 3500, null], ["090", "064", "복숭악동 ex", "SAR", 16800, null], ["091", "064", "카시오페아", "SAR", 35000, null], ["092", "064", "복숭악동 ex", "UR", 14300, null], ["093", "064", "대지의 그릇", "UR", 17700, null]]}, {"name": "스텔라미라클", "code": "BS2024012", "date": "2024-08-09", "boxPrice": 48000, "newPrice": null, "total": 134, "ev": 63273, "rarityStats": {"RR": {"n": 8, "avg": 2923, "max": 12500}, "AR": {"n": 12, "avg": 2933, "max": 6500}, "SR": {"n": 12, "avg": 10188, "max": 32000}, "SAR": {"n": 6, "avg": 47417, "max": 175000}, "UR": {"n": 3, "avg": 44333, "max": 69000}, "ACE": {"n": 3, "avg": 4333, "max": 5500}}, "top1": {"num": "132", "base": "102", "name": "타로", "rarity": "SAR", "price": 175000}, "cards": [["012", "102", "과미드라 ex", "RR", 1000, null], ["018", "102", "에이스번 ex", "RR", 2000, null], ["019", "102", "라프라스 ex", "RR", 12500, null], ["033", "102", "전툴라 ex", "RR", 1000, null], ["046", "102", "바우첼 ex", "RR", 580, null], ["054", "102", "요가램 ex", "RR", 2500, null], ["074", "102", "꿈트렁 ex", "RR", 2000, null], ["077", "102", "야부엉", "R", 2800, null], ["088", "102", "테라파고스 ex", "RR", 1800, null], ["092", "102", "디럭스봄", "ACE", 3000, null], ["093", "102", "반짝이는 결정", "ACE", 5500, null], ["101", "102", "위대한 거목", "ACE", 4500, null], ["103", "102", "레디안", "AR", 2400, null], ["104", "102", "릴링", "AR", 2500, null], ["105", "102", "폭거북스", "AR", 1000, null], ["106", "102", "래비풋", "AR", 3800, null], ["107", "102", "모단단게", "AR", 1200, null], ["108", "102", "파쪼옥", "AR", 6500, null], ["109", "102", "제라오라", "AR", 3500, null], ["110", "102", "마빌크", "AR", 3000, null], ["111", "102", "요가랑", "AR", 3000, null], ["112", "102", "꼴깍몬", "AR", 3000, null], ["113", "102", "브리두라스", "AR", 2300, null], ["114", "102", "야부엉", "AR", 3000, null], ["115", "102", "과미드라 ex", "SR", 18590, null], ["116", "102", "에이스번 ex", "SR", 9050, null], ["117", "102", "라프라스 ex", "SR", 8650, null], ["118", "102", "전툴라 ex", "SR", 5000, null], ["119", "102", "바우첼 ex", "SR", 1900, null], ["120", "102", "요가램 ex", "SR", 2000, null], ["121", "102", "꿈트렁 ex", "SR", 18570, null], ["122", "102", "테라파고스 ex", "SR", 3000, null], ["123", "102", "곤포", "SR", 5000, null], ["124", "102", "브라이어", "SR", 6000, null], ["125", "102", "타로", "SR", 12500, null], ["126", "102", "하솔", "SR", 32000, null], ["127", "102", "과미드라 ex", "SAR", 28000, null], ["128", "102", "전툴라 ex", "SAR", 19000, null], ["129", "102", "바우첼 ex", "SAR", 10000, null], ["130", "102", "테라파고스 ex", "SAR", 17500, null], ["131", "102", "브라이어", "SAR", 35000, null], ["132", "102", "타로", "SAR", 175000, null], ["133", "102", "테라파고스 ex", "UR", 24000, null], ["134", "102", "용기의부적", "UR", 40000, null], ["135", "102", "제로의 대공동", "UR", 69000, null]]}, {"name": "낙원드래고나", "code": "BS2024016", "date": "2024-10-11", "boxPrice": 39450, "newPrice": null, "total": 94, "ev": 41119, "rarityStats": {"RR": {"n": 6, "avg": 1137, "max": 2100}, "AR": {"n": 12, "avg": 4523, "max": 19680}, "SR": {"n": 10, "avg": 7630, "max": 22500}, "SAR": {"n": 5, "avg": 32096, "max": 120000}, "UR": {"n": 3, "avg": 22330, "max": 35000}, "ACE": {"n": 3, "avg": 1097, "max": 1300}}, "top1": {"num": "090", "base": "064", "name": "루티아의 어필", "rarity": "SAR", "price": 120000}, "cards": [["011", "064", "블랙큐레무 ex", "RR", 1000, null], ["015", "064", "웨이니발", "U", 2500, null], ["019", "064", "라티아스 ex", "RR", 2100, null], ["027", "064", "플라이곤 ex", "RR", 1000, null], ["030", "064", "랜드로스", "R", 3275, null], ["037", "064", "브리두라스 ex", "RR", 1030, null], ["040", "064", "알로라 나시 ex", "RR", 800, null], ["051", "064", "모토마 ex", "RR", 890, null], ["054", "064", "메가톤 블로어", "ACE", 690, null], ["056", "064", "에너지 전송 PRO", "ACE", 1300, null], ["061", "064", "루티아의 어필", "U", 75000, null], ["064", "064", "리치 에너지", "ACE", 1300, null], ["065", "064", "아라리", "AR", 4800, null], ["066", "064", "마셰이드", "AR", 3200, null], ["067", "064", "캐스퐁 태양의 모습", "AR", 4200, null], ["068", "064", "치갈기", "AR", 2000, null], ["069", "064", "우락고래", "AR", 5000, null], ["070", "064", "라티오스", "AR", 6500, null], ["071", "064", "비브라바", "AR", 1000, null], ["072", "064", "때때무노", "AR", 1800, null], ["073", "064", "무장조", "AR", 2000, null], ["074", "064", "애프룡", "AR", 1000, null], ["075", "064", "단지래플", "AR", 19680, null], ["076", "064", "워글", "AR", 3100, null], ["077", "064", "블랙큐레무 ex", "SR", 22500, null], ["078", "064", "라티아스 ex", "SR", 4000, null], ["079", "064", "플라이곤 ex", "SR", 5000, null], ["080", "064", "브리두라스 ex", "SR", 5000, null], ["081", "064", "알로라 나시 ex", "SR", 1500, null], ["082", "064", "모토마 ex", "SR", 4900, null], ["083", "064", "드라세나", "SR", 1000, null], ["084", "064", "루티아의 어필", "SR", 20000, null], ["085", "064", "서퍼", "SR", 2500, null], ["086", "064", "제빈", "SR", 9900, null], ["087", "064", "라티아스 ex", "SAR", 78000, null], ["088", "064", "브리두라스 ex", "SAR", 3500, null], ["089", "064", "알로라 나시 ex", "SAR", 19000, null], ["090", "064", "루티아의 어필", "SAR", 120000, null], ["091", "064", "제빈", "SAR", 16000, null], ["092", "064", "알로라 나시 ex", "UR", 35000, null], ["093", "064", "카운터 게인", "UR", 7000, null], ["094", "064", "제트 에너지", "UR", 24990, null]]}, {"name": "초전브레이커", "code": "BS2024017", "date": "2024-11-08", "boxPrice": 45500, "newPrice": null, "total": 138, "ev": 47785, "rarityStats": {"RR": {"n": 8, "avg": 1079, "max": 2500}, "AR": {"n": 12, "avg": 2687, "max": 12000}, "SR": {"n": 11, "avg": 13388, "max": 120000}, "SAR": {"n": 6, "avg": 52690, "max": 101000}, "UR": {"n": 3, "avg": 33933, "max": 58000}, "ACE": {"n": 3, "avg": 1400, "max": 1500}}, "top1": {"num": "122", "base": "106", "name": "피카츄 ex", "rarity": "SR", "price": 120000}, "cards": [["003", "106", "아이앤트 ex", "RR", 880, null], ["023", "106", "스코빌런 ex", "RR", 600, null], ["026", "106", "밀로틱 ex", "RR", 700, null], ["033", "106", "피카츄 ex", "RR", 2500, null], ["041", "106", "카푸꼬꼬꼭", "R", 10000, null], ["057", "106", "모래성이당 ex", "RR", 950, null], ["063", "106", "팔데아 켄타로스", "U", 2480, null], ["072", "106", "삼삼드래 ex", "RR", 1200, null], ["081", "106", "싸리용 ex", "RR", 1100, null], ["084", "106", "게을킹 ex", "RR", 700, null], ["093", "106", "테라파고스", "R", 2000, null], ["095", "106", "미라클인터컴", "ACE", 1200, null], ["096", "106", "스크램블 스위치", "ACE", 1500, null], ["101", "106", "희망의 애뮬렛", "ACE", 1500, null], ["107", "106", "비비용", "AR", 500, null], ["108", "106", "활화르바", "AR", 1500, null], ["109", "106", "파라블레이즈", "AR", 2000, null], ["110", "106", "빈티나", "AR", 1390, null], ["111", "106", "대굴레오", "AR", 1700, null], ["112", "106", "레어코일", "AR", 12000, null], ["113", "106", "메더", "AR", 3900, null], ["114", "106", "엠라이트", "AR", 2000, null], ["115", "106", "코코리", "AR", 1000, null], ["116", "106", "알로라 닥트리오", "AR", 1350, null], ["117", "106", "게을로", "AR", 1400, null], ["118", "106", "켈리몬", "AR", 3500, null], ["119", "106", "아이앤트 ex", "SR", 1300, null], ["120", "106", "스코빌런 ex", "SR", 1000, null], ["121", "106", "밀로틱 ex", "SR", 1400, null], ["122", "106", "피카츄 ex", "SR", 120000, null], ["123", "106", "모래성이당 ex", "SR", 2000, null], ["124", "106", "삼삼드래 ex", "SR", 2990, null], ["125", "106", "싸리용 ex", "SR", 5300, null], ["126", "106", "게을킹 ex", "SR", 1780, null], ["127", "106", "규리의 눈빛", "SR", 6000, null], ["128", "106", "시아노", "SR", 4000, null], ["129", "106", "시트론의 재치", "SR", 1500, null], ["130", "106", "아이앤트 ex", "SAR", 14000, null], ["131", "106", "밀로틱 ex", "SAR", 59340, null], ["132", "106", "피카츄 ex", "SAR", 101000, null], ["133", "106", "삼삼드래 ex", "SAR", 38000, null], ["134", "106", "규리의 눈빛", "SAR", 79900, null], ["135", "106", "시트론의 재치", "SAR", 23900, null], ["136", "106", "피카츄 ex", "UR", 58000, null], ["137", "106", "밤의 들것", "UR", 30000, null], ["138", "106", "그래비티 마운틴", "UR", 13800, null]]}, {"name": "테라스탈 페스타 ex", "code": "BS2024019", "date": "2024-12-20", "boxPrice": 40000, "newPrice": null, "total": 128, "ev": 73600, "rarityStats": {"RR": {"n": 33, "avg": 2733, "max": 23000}, "SR": {"n": 12, "avg": 12175, "max": 35000}, "SAR": {"n": 33, "avg": 29815, "max": 188000}, "UR": {"n": 5, "avg": 58320, "max": 128000}, "ACE": {"n": 14, "avg": 1346, "max": 5000}}, "top1": {"num": "217", "base": "187", "name": "블래키 ex", "rarity": "SAR", "price": 188000}, "cards": [["003", "187", "리피아 ex", "RR", 5000, null], ["010", "187", "과미드라 ex", "RR", 1200, null], ["014", "187", "베라카스", "M", 4000, null], ["016", "187", "무쇠잎새 ex", "RR", 1000, null], ["019", "187", "그우린차 ex", "RR", 900, null], ["020", "187", "오거폰 벽록의 가면 ex", "RR", 1900, null], ["021", "187", "부스터", "N", 2000, null], ["022", "187", "부스터 ex", "RR", 7000, null], ["026", "187", "오거폰 화덕의 가면 ex", "RR", 1200, null], ["027", "187", "꿰뚫는화염 ex", "RR", 1100, null], ["030", "187", "샤미드", "N", 2000, null], ["031", "187", "샤미드 ex", "RR", 2800, null], ["036", "187", "밀로틱", "M", 4645, null], ["037", "187", "눈꼬마", "M", 8470, null], ["040", "187", "글레이시아", "M", 3000, null], ["041", "187", "글레이시아 ex", "RR", 23000, null], ["046", "187", "돌핀맨 ex", "RR", 3000, null], ["049", "187", "굽이치는물결 ex", "RR", 1600, null], ["050", "187", "오거폰 우물의 가면 ex", "RR", 1000, null], ["051", "187", "쥬피썬더 (마스터볼미러)", "M", 26000, 26000], ["054", "187", "무쇠손 ex", "RR", 600, null], ["056", "187", "무쇠가시 ex", "RR", 1200, null], ["063", "187", "에브이 ex", "RR", 1490, null], ["066", "187", "야느와르몽", "N", 2500, null], ["069", "187", "님피아 ex", "RR", 800, null], ["070", "187", "파라블레이즈", "M", 4200, null], ["072", "187", "날개치는머리", "N", 3500, null], ["074", "187", "무쇠무인 ex", "RR", 600, null], ["078", "187", "무쇠감투 ex", "RR", 500, null], ["088", "187", "모래털가죽 ex", "RR", 3000, null], ["091", "187", "오거폰 주춧돌의 가면 ex", "RR", 600, null], ["092", "187", "블래키", "N", 20800, null], ["093", "187", "블래키 ex", "RR", 1500, null], ["097", "187", "조로아크", "M", 53170, null], ["099", "187", "사나운버섯", "N", 2000, null], ["100", "187", "고동치는달", "N", 2500, null], ["101", "187", "고동치는달 ex", "RR", 1000, null], ["102", "187", "조타구 ex", "RR", 1100, null], ["103", "187", "이야후 ex", "RR", 800, null], ["104", "187", "기로치 ex", "RR", 6000, null], ["105", "187", "복숭악동 ex", "RR", 800, null], ["112", "187", "두랄루돈", "M", 7000, null], ["117", "187", "타부자고 ex", "RR", 1200, null], ["118", "187", "드라꼰", "M", 6000, null], ["120", "187", "드래펄트 ex", "RR", 800, null], ["123", "187", "미라이돈", "N", 2000, null], ["124", "187", "날뛰는우레 ex", "RR", 5000, null], ["125", "187", "이브이 (포켓볼미러)", "M", 15000, 15000], ["126", "187", "이브이 ex", "RR", 11000, null], ["130", "187", "노고고치", "M", 9900, null], ["130", "187", "노고고치", "N", 4000, null], ["133", "187", "버프론", "M", 3900, null], ["134", "187", "다투곰 붉은 달 ex", "RR", 1000, null], ["136", "187", "테라파고스 ex", "RR", 500, null], ["139", "187", "낚싯대MAX", "ACE", 700, null], ["140", "187", "대지의 그릇", "N", 3000, null], ["142", "187", "밤의 들것", "ACE", 5000, null], ["143", "187", "수퍼 에너지 회수", "N", 3000, null], ["145", "187", "절친 포핀", "N", 5000, null], ["146", "187", "카운터 캐처", "ACE", 300, null], ["148", "187", "테크노레이더", "ACE", 1200, null], ["149", "187", "트레져 가젯", "ACE", 500, null], ["150", "187", "포켓몬 회수 사이클론", "ACE", 1000, null], ["151", "187", "프라임 캐처", "ACE", 4000, null], ["152", "187", "기술머신 데볼루션", "ACE", 2000, null], ["153", "187", "기술머신 에볼루션", "N", 2000, null], ["155", "187", "럭셔리망토", "N", 2500, null], ["156", "187", "맥시멈 벨트", "ACE", 1000, null], ["157", "187", "반짝이는 결정", "ACE", 500, null], ["159", "187", "부스트에너지 미래", "ACE", 500, null], ["166", "187", "브라이어", "N", 2000, null], ["168", "187", "시유", "N", 2000, null], ["171", "187", "올림박사의 기백", "N", 2000, null], ["173", "187", "청목의 수완", "N", 2000, null], ["178", "187", "팔데아의 동료들", "M", 2000, null], ["179", "187", "하솔", "N", 5000, null], ["180", "187", "뉴트럴센터", "ACE", 850, null], ["184", "187", "축제회장", "ACE", 800, null], ["185", "187", "레거시 에너지", "ACE", 500, null], ["187", "187", "제트 에너지", "ACE", null, null], ["188", "187", "네리네", "SR", 15000, null], ["189", "187", "레포르", "SR", 12000, null], ["190", "187", "멜로코", "SR", 35000, null], ["191", "187", "비파", "SR", 16500, null], ["192", "187", "오르티가", "SR", 6100, null], ["193", "187", "청목의 수완", "SR", 6700, null], ["194", "187", "추명", "SR", 12400, null], ["195", "187", "추명", "SR", 4800, null], ["196", "187", "콜사", "SR", 6100, null], ["197", "187", "타임", "SR", 2500, null], ["198", "187", "팔데아의 동료들", "SR", 18000, null], ["199", "187", "피나", "SR", 11000, null], ["200", "187", "리피아 ex", "SAR", 36000, 54267], ["201", "187", "오거폰 벽록의 가면 ex", "SAR", 11000, null], ["202", "187", "부스터 ex", "SAR", 28000, 38493], ["203", "187", "파라블레이즈 ex", "SAR", 45000, 36500], ["204", "187", "오거폰 화덕의 가면 ex", "SAR", 45000, null], ["205", "187", "샤미드 ex", "SAR", 35000, 46235], ["206", "187", "글레이시아 ex", "SAR", 31000, 47700], ["207", "187", "돌핀맨 ex", "SAR", 4000, 9896], ["208", "187", "오거폰 우물의 가면 ex", "SAR", 9000, null], ["209", "187", "쥬피썬더 ex", "SAR", 42000, 46956], ["210", "187", "무쇠손 ex", "SAR", 11800, null], ["211", "187", "에브이 ex", "SAR", 59000, 63800], ["212", "187", "님피아 ex", "SAR", 99000, 114495], ["213", "187", "무쇠무인 ex", "SAR", 19800, null], ["214", "187", "무쇠감투 ex", "SAR", 5000, null], ["215", "187", "모래털가죽 ex", "SAR", 8000, null], ["216", "187", "오거폰 주춧돌의 가면 ex", "SAR", 29000, null], ["217", "187", "블래키 ex", "SAR", 188000, 257996], ["218", "187", "고동치는달 ex", "SAR", 39800, 39115], ["219", "187", "복숭악동 ex", "SAR", 11800, null], ["220", "187", "타부자고 ex", "SAR", 9000, 10611], ["221", "187", "드래펄트 ex", "SAR", 4000, 14488], ["222", "187", "날뛰는우레 ex", "SAR", 10000, 13393], ["223", "187", "이브이 ex", "SAR", 20000, 31385], ["224", "187", "이브이 ex", "SAR", 77000, 52500], ["225", "187", "다투곰 붉은 달 ex", "SAR", 11400, 12665], ["226", "187", "테라파고스 ex", "SAR", 18400, null], ["227", "187", "네리네", "SAR", 7950, 10268], ["228", "187", "도희의 비기", "SAR", 20000, 14942], ["229", "187", "제빈", "SAR", 9500, 10742], ["230", "187", "카지", "SAR", 15000, 14493], ["231", "187", "타로", "SAR", 18450, 14286], ["232", "187", "하솔", "SAR", 6000, null], ["233", "187", "무쇠잎새 ex", "UR", 49000, null], ["234", "187", "오거폰 벽록의 가면 ex", "UR", 51600, null], ["235", "187", "굽이치는물결 ex", "UR", 40000, null], ["236", "187", "피카츄 ex", "UR", 128000, 105930], ["237", "187", "테라파고스 ex", "UR", 23000, null]]}, {"name": "배틀파트너즈", "code": "BS2025001", "date": "2025-01-24", "boxPrice": 70000, "newPrice": null, "total": 132, "ev": 47306, "rarityStats": {"RR": {"n": 8, "avg": 975, "max": 1900}, "AR": {"n": 12, "avg": 7119, "max": 30025}, "SR": {"n": 11, "avg": 9946, "max": 45000}, "SAR": {"n": 6, "avg": 34983, "max": 70000}, "UR": {"n": 3, "avg": 11600, "max": 20000}}, "top1": {"num": "126", "base": "100", "name": "릴리에의 삐삐 ex", "rarity": "SAR", "price": 70000}, "cards": [["017", "100", "볼케니온 ex", "RR", 600, null], ["030", "100", "모야모의 찌리배리 ex", "RR", 1000, null], ["032", "100", "모야모의 찌리비크", "R", 2800, null], ["033", "100", "릴리에의 삐삐 ex", "RR", 800, null], ["042", "100", "릴리에의 에리본", "U", 39000, null], ["046", "100", "맘모꾸리 ex", "RR", 800, null], ["061", "100", "N의 조로아크 ex", "RR", 1900, null], ["069", "100", "호브의 자시안 ex", "RR", 1200, null], ["072", "100", "보만다 ex", "RR", 900, null], ["075", "100", "호브의 잠만보", "R", 3000, null], ["079", "100", "노고고치 ex", "RR", 600, null], ["086", "100", "호브의 배우르", "R", 2500, null], ["096", "100", "웅의 스카우트", "U", 3800, null], ["098", "100", "누룩스시티", "U", 3500, null], ["101", "100", "마라카치", "AR", 3000, 2809], ["102", "100", "프리져", "AR", 9900, 9143], ["103", "100", "고래왕", "AR", 3000, 5112], ["104", "100", "모야모의 찌리비크", "AR", 2000, 3464], ["105", "100", "릴리에의 에리본", "AR", 22500, 14043], ["106", "100", "꾸꾸리", "AR", 1500, null], ["107", "100", "루가루암", "AR", 1500, 2850], ["108", "100", "N의 조로아", "AR", 6300, 5425], ["109", "100", "N의 레시라무", "AR", 30025, 21922], ["110", "100", "다꼬리", "AR", 3000, 4020], ["111", "100", "음뱃", "AR", 1200, 2350], ["112", "100", "호브의 우르", "AR", 1500, 2717], ["113", "100", "볼케니온 ex", "SR", 1850, null], ["114", "100", "모야모의 찌리배리 ex", "SR", 4000, 4450], ["115", "100", "릴리에의 삐삐 ex", "SR", 18370, 13861], ["116", "100", "맘모꾸리 ex", "SR", 2490, 4262], ["117", "100", "N의 조로아크 ex", "SR", 5900, 6359], ["118", "100", "호브의 자시안 ex", "SR", 3500, null], ["119", "100", "보만다 ex", "SR", 800, 2843], ["120", "100", "노고고치 ex", "SR", 1500, null], ["121", "100", "무서운 청년", "SR", 11000, 7425], ["122", "100", "아이리스의 투지", "SR", 45000, null], ["123", "100", "웅의 스카우트", "SR", 15000, 10293], ["124", "100", "볼케니온 ex", "SAR", 33900, 23943], ["125", "100", "모야모의 찌리배리 ex", "SAR", 64500, 50436], ["126", "100", "릴리에의 삐삐 ex", "SAR", 70000, 85750], ["127", "100", "N의 조로아크 ex", "SAR", 23000, 33431], ["128", "100", "호브의 자시안 ex", "SAR", 7000, 12642], ["129", "100", "보만다 ex", "SAR", 11500, 26624], ["130", "100", "모야모의 찌리배리 ex", "UR", 20000, 15453], ["131", "100", "N의 조로아크 ex", "UR", 11000, 7600], ["132", "100", "스파이크 에너지", "UR", 3800, 4595]]}, {"name": "열풍의 아레나", "code": "BS2025005", "date": "2025-04-25", "boxPrice": 44490, "newPrice": null, "total": 92, "ev": 49882, "rarityStats": {"RR": {"n": 6, "avg": 767, "max": 1000}, "AR": {"n": 12, "avg": 9283, "max": 39500}, "SR": {"n": 9, "avg": 7449, "max": 20750}, "SAR": {"n": 5, "avg": 29860, "max": 75000}, "UR": {"n": 3, "avg": 21300, "max": 46900}}, "top1": {"num": "087", "base": "063", "name": "난천의 한카리아스 ex", "rarity": "SAR", "price": 75000}, "cards": [["003", "063", "메가자리 ex", "RR", 500, null], ["017", "063", "심향의 블레이범", "R", 2000, null], ["020", "063", "심향의 칠색조 ex", "RR", 900, null], ["026", "063", "이슬의 갸라도스", "R", 3975, null], ["032", "063", "어써러셔 ex", "RR", 1000, null], ["035", "063", "에레키블 ex", "RR", 500, null], ["044", "063", "난천의 한카리아스 ex", "RR", 1000, null], ["052", "063", "페퍼의 마피티프 ex", "RR", 700, null], ["064", "063", "왕자리", "AR", 4800, null], ["065", "063", "난천의 로즈레이드", "AR", 5000, null], ["066", "063", "쉐이미", "AR", 3900, null], ["067", "063", "암팰리스", "AR", 8000, null], ["068", "063", "과미드라", "AR", 1400, null], ["069", "063", "날쌩마", "AR", 1600, null], ["070", "063", "심향의 블레이범", "AR", 5750, null], ["071", "063", "이슬의 고라파덕", "AR", 39500, null], ["072", "063", "이슬의 라프라스", "AR", 29350, null], ["073", "063", "썬더라이", "AR", 1100, null], ["074", "063", "로토무", "AR", 10000, null], ["075", "063", "페퍼의 요씽리스", "AR", 1000, null], ["076", "063", "메가자리 ex", "SR", 1200, null], ["077", "063", "심향의 칠색조 ex", "SR", 5000, null], ["078", "063", "어써러셔 ex", "SR", 1190, null], ["079", "063", "에레키블 ex", "SR", 20750, null], ["080", "063", "난천의 한카리아스 ex", "SR", 12500, null], ["081", "063", "페퍼의 마피티프 ex", "SR", 1400, null], ["082", "063", "MC의 호응유도", "SR", 5000, null], ["083", "063", "심향의 모험", "SR", 5000, null], ["084", "063", "저지맨", "SR", 15000, null], ["085", "063", "메가자리 ex", "SAR", 3500, null], ["086", "063", "심향의 칠색조 ex", "SAR", 20000, null], ["087", "063", "난천의 한카리아스 ex", "SAR", 75000, null], ["088", "063", "페퍼의 마피티프 ex", "SAR", 14800, null], ["089", "063", "심향의 모험", "SAR", 36000, null], ["090", "063", "심향의 칠색조 ex", "UR", 8000, null], ["091", "063", "난천의 한카리아스 ex", "UR", 46900, null], ["092", "063", "누룩스시티", "UR", 9000, null]]}, {"name": "로켓단의 영광", "code": "BS2025006", "date": "2025-05-23", "boxPrice": 59150, "newPrice": null, "total": 129, "ev": 66436, "rarityStats": {"RR": {"n": 8, "avg": 1101, "max": 2000}, "AR": {"n": 12, "avg": 4092, "max": 9500}, "SR": {"n": 13, "avg": 15588, "max": 75000}, "SAR": {"n": 6, "avg": 106500, "max": 380000}, "UR": {"n": 3, "avg": 25833, "max": 33000}}, "top1": {"num": "125", "base": "098", "name": "로켓단의 뮤츠 ex", "rarity": "SAR", "price": 380000}, "cards": [["009", "098", "로켓단의 트래피더", "R", 3500, null], ["012", "098", "올리르바 ex", "RR", 1305, null], ["015", "098", "로켓단의 파이어 ex", "RR", 900, null], ["020", "098", "번치코", "R", 2000, null], ["022", "098", "로켓단의 프리져", "R", 3000, null], ["032", "098", "우락고래 ex", "RR", 800, null], ["039", "098", "로켓단의 뮤츠 ex", "RR", 2000, null], ["040", "098", "로켓단의 마자용", "R", 2500, null], ["055", "098", "레지락 ex", "RR", 700, null], ["063", "098", "로켓단의 니드킹 ex", "RR", 1000, null], ["066", "098", "로켓단의 크로뱃 ex", "RR", 1400, null], ["079", "098", "로켓단의 페르시온 ex", "RR", 700, null], ["087", "098", "로켓단의 깜짝봄", "U", 4500, null], ["088", "098", "로켓단의 리시버", "U", 2000, null], ["091", "098", "로켓단의 람다", "U", 3000, null], ["092", "098", "로켓단의 랜스", "U", 2500, null], ["093", "098", "로켓단의 비주기", "U", 3000, null], ["096", "098", "로켓단의 감시탑", "U", 2500, null], ["097", "098", "로켓단의 팩토리", "U", 2500, null], ["099", "098", "로켓단의 트래피더", "AR", 6800, null], ["100", "098", "로켓단의 헬가", "AR", 7800, null], ["101", "098", "번치코", "AR", 9500, null], ["102", "098", "진주몽", "AR", 1500, null], ["103", "098", "로켓단의 마자용", "AR", 3500, null], ["104", "098", "로켓단의 이올브", "AR", 1000, null], ["105", "098", "로켓단의 또도가스", "AR", 1500, null], ["106", "098", "로켓단의 니로우", "AR", 4500, null], ["107", "098", "자마젠타", "AR", 2000, null], ["108", "098", "로켓단의 레트라", "AR", 3500, null], ["109", "098", "로켓단의 나옹", "AR", 3000, null], ["110", "098", "캥카", "AR", 4500, null], ["111", "098", "올리르바 ex", "SR", 2400, null], ["112", "098", "로켓단의 파이어 ex", "SR", 3500, null], ["113", "098", "우락고래 ex", "SR", 1500, null], ["114", "098", "로켓단의 뮤츠 ex", "SR", 10000, null], ["115", "098", "레지락 ex", "SR", 75000, null], ["116", "098", "로켓단의 니드킹 ex", "SR", 5000, null], ["117", "098", "로켓단의 크로뱃 ex", "SR", 7900, null], ["118", "098", "로켓단의 페르시온 ex", "SR", 6950, null], ["119", "098", "로켓단의 람다", "SR", 22000, null], ["120", "098", "로켓단의 랜스", "SR", 15000, null], ["121", "098", "로켓단의 비주기", "SR", 30000, null], ["122", "098", "로켓단의 아테나", "SR", 8400, null], ["123", "098", "로켓단의 아폴로", "SR", 15000, null], ["124", "098", "로켓단의 파이어 ex", "SAR", 30000, null], ["125", "098", "로켓단의 뮤츠 ex", "SAR", 380000, null], ["126", "098", "로켓단의 니드킹 ex", "SAR", 9000, null], ["127", "098", "로켓단의 크로뱃 ex", "SAR", 18000, null], ["128", "098", "로켓단의 비주기", "SAR", 133000, null], ["129", "098", "로켓단의 아테나", "SAR", 69000, null], ["130", "098", "로켓단의 뮤츠 ex", "UR", 33000, null], ["131", "098", "로켓단의 크로뱃 ex", "UR", 19500, null], ["132", "098", "재밍타워", "UR", 25000, null]]}, {"name": "블랙볼트", "code": "BS2025007", "date": "2025-07-25", "boxPrice": 42500, "newPrice": 52000, "total": 174, "ev": 77354, "rarityStats": {"RR": {"n": 6, "avg": 783, "max": 1000}, "AR": {"n": 72, "avg": 5856, "max": 60000}, "SR": {"n": 8, "avg": 4174, "max": 6900}, "SAR": {"n": 7, "avg": 16271, "max": 54000}, "BWR": {"n": 1, "avg": 141000, "max": 141000}}, "top1": {"num": "174", "base": "086", "name": "제크로무 ex", "rarity": "BWR", "price": 141000}, "cards": [["003", "086", "샤로다 ex", "RR", 1000, null], ["031", "086", "큐레무 ex", "RR", 500, null], ["037", "086", "제크로무 ex", "RR", 500, null], ["047", "086", "메로엣타 ex", "RR", 1000, null], ["049", "086", "몰드류 ex", "RR", 1000, null], ["069", "086", "게노세크트 ex", "RR", 700, null], ["082", "086", "풍선", "U", 3000, null], ["083", "086", "N의 방안", "U", 3500, null], ["087", "086", "주리비얀", "AR", 5000, null], ["088", "086", "샤비", "AR", 6950, null], ["089", "086", "야나프", "AR", 3000, null], ["090", "086", "야나키", "AR", 5000, null], ["091", "086", "치릴리", "AR", 7500, null], ["092", "086", "드레디어", "AR", 7000, null], ["093", "086", "마라카치", "AR", 2000, null], ["094", "086", "딱정곤", "AR", 3500, null], ["095", "086", "깜놀버슬", "AR", 4000, null], ["096", "086", "뽀록나", "AR", 4500, null], ["097", "086", "비크티니", "AR", 16500, null], ["098", "086", "달막화", "AR", 2500, null], ["099", "086", "불비달마", "AR", 3500, null], ["100", "086", "불켜미", "AR", 4500, null], ["101", "086", "램프라", "AR", 12000, null], ["102", "086", "샹델라", "AR", 15000, null], ["103", "086", "활화르바", "AR", 6000, null], ["104", "086", "불카모스", "AR", 4400, null], ["105", "086", "앗차프", "AR", 3990, null], ["106", "086", "앗차키", "AR", 2500, null], ["107", "086", "동챙이", "AR", 3500, null], ["108", "086", "두까비", "AR", 1800, null], ["109", "086", "두빅굴", "AR", 60000, null], ["110", "086", "프로토가", "AR", 3400, null], ["111", "086", "늑골라", "AR", 2500, null], ["112", "086", "맘복치", "AR", 3500, null], ["113", "086", "코고미", "AR", 6000, null], ["114", "086", "툰베어", "AR", 3500, null], ["115", "086", "프리지오", "AR", 2500, null], ["116", "086", "에몽가", "AR", 12000, null], ["117", "086", "저리어", "AR", 3500, null], ["118", "086", "저리릴", "AR", 2400, null], ["119", "086", "저리더프", "AR", 6500, null], ["120", "086", "볼트로스", "AR", 10000, null], ["121", "086", "몽나", "AR", 9900, null], ["122", "086", "몽얌나", "AR", 2000, null], ["123", "086", "유니란", "AR", 6000, null], ["124", "086", "듀란", "AR", 3990, null], ["125", "086", "란쿨루스", "AR", 2800, null], ["126", "086", "리그레", "AR", 5500, null], ["127", "086", "벰크", "AR", 4500, null], ["128", "086", "골비람", "AR", 3500, null], ["129", "086", "골루그", "AR", 3500, null], ["130", "086", "두더류", "AR", 4000, null], ["131", "086", "으랏차", "AR", 5500, null], ["132", "086", "토쇠골", "AR", 5000, null], ["133", "086", "노보청", "AR", 2500, null], ["134", "086", "던지미", "AR", 2500, null], ["135", "086", "돌살이", "AR", 4500, null], ["136", "086", "암팰리스", "AR", 3400, null], ["137", "086", "랜드로스", "AR", 3000, null], ["138", "086", "마디네", "AR", 3500, null], ["139", "086", "휠구", "AR", 5000, null], ["140", "086", "펜드라", "AR", 4000, null], ["141", "086", "깜눈크", "AR", 1000, null], ["142", "086", "악비르", "AR", 2400, null], ["143", "086", "악비아르", "AR", 7000, null], ["144", "086", "벌차이", "AR", 5500, null], ["145", "086", "버랜지나", "AR", 5500, null], ["146", "086", "슈바르고", "AR", 5000, null], ["147", "086", "자망칼", "AR", 3500, null], ["148", "086", "절각참", "AR", 3400, null], ["149", "086", "코바르온", "AR", 12500, null], ["150", "086", "터검니", "AR", 5500, null], ["151", "086", "액슨도", "AR", 2500, null], ["152", "086", "액스라이즈", "AR", 4500, null], ["153", "086", "콩둘기", "AR", 6500, null], ["154", "086", "유토브", "AR", 3800, null], ["155", "086", "켄호로우", "AR", 9000, null], ["156", "086", "다부니", "AR", 6000, null], ["157", "086", "치라미", "AR", 8000, null], ["158", "086", "치라치노", "AR", 5000, null], ["159", "086", "샤로다 ex", "SR", 1800, null], ["160", "086", "큐레무 ex", "SR", 2400, null], ["161", "086", "제크로무 ex", "SR", 6900, null], ["162", "086", "메로엣타 ex", "SR", 6000, null], ["163", "086", "몰드류 ex", "SR", 1390, null], ["164", "086", "게노세크트 ex", "SR", 5900, null], ["165", "086", "N의 방안", "SR", 5000, null], ["166", "086", "주리", "SR", 4000, null], ["167", "086", "샤로다 ex", "SAR", 12000, null], ["168", "086", "큐레무 ex", "SAR", 11000, null], ["169", "086", "제크로무 ex", "SAR", 54000, null], ["170", "086", "메로엣타 ex", "SAR", 4000, null], ["171", "086", "몰드류 ex", "SAR", 9900, null], ["172", "086", "게노세크트 ex", "SAR", 7000, null], ["173", "086", "N의 방안", "SAR", 16000, null], ["174", "086", "제크로무 ex", "BWR", 141000, null]]}, {"name": "화이트플레어", "code": "BS2025008", "date": "2025-07-25", "boxPrice": 42500, "newPrice": 52000, "total": 174, "ev": 75312, "rarityStats": {"RR": {"n": 6, "avg": 748, "max": 1000}, "AR": {"n": 72, "avg": 4524, "max": 19000}, "SR": {"n": 8, "avg": 4940, "max": 17000}, "SAR": {"n": 7, "avg": 48346, "max": 78000}, "BWR": {"n": 1, "avg": 165000, "max": 165000}}, "top1": {"num": "174", "base": "086", "name": "레시라무 ex", "rarity": "BWR", "price": 165000}, "cards": [["005", "086", "엘풍 ex", "RR", 500, null], ["017", "086", "레시라무 ex", "RR", 500, null], ["027", "086", "케르디오 ex", "RR", 1000, null], ["042", "086", "탱탱겔 ex", "RR", 1000, null], ["051", "086", "테라키온", "R", 2000, null], ["062", "086", "삼삼드래 ex", "RR", 990, null], ["075", "086", "버프론 ex", "RR", 500, null], ["079", "086", "에너지 회수", "U", 3500, null], ["085", "086", "투희", "U", 4000, null], ["087", "086", "두르보", "AR", 3000, null], ["088", "086", "두르쿤", "AR", 4000, null], ["089", "086", "모아머", "AR", 6000, null], ["090", "086", "소미안", "AR", 1500, null], ["091", "086", "사철록", "AR", 5500, null], ["092", "086", "바라철록", "AR", 3400, null], ["093", "086", "쪼마리", "AR", 2000, null], ["094", "086", "어지리더", "AR", 3000, null], ["095", "086", "비리디온", "AR", 3500, null], ["096", "086", "뚜꾸리", "AR", 6000, null], ["097", "086", "차오꿀", "AR", 3450, null], ["098", "086", "염무왕", "AR", 4000, null], ["099", "086", "바오프", "AR", 3000, null], ["100", "086", "바오키", "AR", 3250, null], ["101", "086", "앤티골", "AR", 1480, null], ["102", "086", "수댕이", "AR", 18000, null], ["103", "086", "쌍검자비", "AR", 6900, null], ["104", "086", "대검귀", "AR", 4000, null], ["105", "086", "배쓰나이", "AR", 4500, null], ["106", "086", "꼬지보리", "AR", 3500, null], ["107", "086", "스완나", "AR", 3990, null], ["108", "086", "바닐프티", "AR", 4000, null], ["109", "086", "바닐리치", "AR", 4000, null], ["110", "086", "배바닐라", "AR", 1900, null], ["111", "086", "줄뮤마", "AR", 6000, null], ["112", "086", "제브라이카", "AR", 2200, null], ["113", "086", "파쪼옥", "AR", 3500, null], ["114", "086", "전툴라", "AR", 2500, null], ["115", "086", "메더", "AR", 2200, null], ["116", "086", "또르박쥐", "AR", 3000, null], ["117", "086", "맘박쥐", "AR", 3000, null], ["118", "086", "심보러", "AR", 3500, null], ["119", "086", "데스마스", "AR", 2500, null], ["120", "086", "데스니칸", "AR", 5300, null], ["121", "086", "고디탱", "AR", 4800, null], ["122", "086", "고디보미", "AR", 6000, null], ["123", "086", "고디모아젤", "AR", 4990, null], ["124", "086", "탱그릴", "AR", 9500, null], ["125", "086", "단굴", "AR", 5500, null], ["126", "086", "암트르", "AR", 2500, null], ["127", "086", "기가이어스", "AR", 3000, null], ["128", "086", "타격귀", "AR", 3990, null], ["129", "086", "아켄", "AR", 3000, null], ["130", "086", "아케오스", "AR", 4500, null], ["131", "086", "비조푸", "AR", 2900, null], ["132", "086", "비조도", "AR", 1400, null], ["133", "086", "테라키온", "AR", 2500, null], ["134", "086", "쌔비냥", "AR", 3000, null], ["135", "086", "레파르다스", "AR", 4000, null], ["136", "086", "곤율랭", "AR", 4000, null], ["137", "086", "곤율거니", "AR", 5000, null], ["138", "086", "깨봉이", "AR", 3900, null], ["139", "086", "더스트나", "AR", 3000, null], ["140", "086", "조로아", "AR", 19000, null], ["141", "086", "조로아크", "AR", 14900, null], ["142", "086", "모노두", "AR", 4400, null], ["143", "086", "디헤드", "AR", 3000, null], ["144", "086", "철시드", "AR", 2500, null], ["145", "086", "너트령", "AR", 2000, null], ["146", "086", "기어르", "AR", 3990, null], ["147", "086", "기기어르", "AR", 3000, null], ["148", "086", "기기기어르", "AR", 2000, null], ["149", "086", "아이앤트", "AR", 6500, null], ["150", "086", "크리만", "AR", 3700, null], ["151", "086", "보르쥐", "AR", 2500, null], ["152", "086", "보르그", "AR", 3000, null], ["153", "086", "요테리", "AR", 6500, null], ["154", "086", "하데리어", "AR", 3000, null], ["155", "086", "바랜드", "AR", 3200, null], ["156", "086", "수리둥보", "AR", 5000, null], ["157", "086", "워글", "AR", 3500, null], ["158", "086", "토네로스", "AR", 19000, null], ["159", "086", "엘풍 ex", "SR", 1200, null], ["160", "086", "레시라무 ex", "SR", 6000, null], ["161", "086", "케르디오 ex", "SR", 1900, null], ["162", "086", "탱탱겔 ex", "SR", 3500, null], ["163", "086", "삼삼드래 ex", "SR", 3000, null], ["164", "086", "버프론 ex", "SR", 1000, null], ["165", "086", "어릿광대", "SR", 5920, null], ["166", "086", "투희", "SR", 17000, null], ["167", "086", "엘풍 ex", "SAR", 76420, null], ["168", "086", "레시라무 ex", "SAR", 59000, null], ["169", "086", "케르디오 ex", "SAR", 78000, null], ["170", "086", "탱탱겔 ex", "SAR", 5000, null], ["171", "086", "삼삼드래 ex", "SAR", 27000, null], ["172", "086", "버프론 ex", "SAR", 15000, null], ["173", "086", "투희", "SAR", 78000, null], ["174", "086", "레시라무 ex", "BWR", 165000, null]]}, {"name": "메가브레이브", "code": "BS2025009", "date": "2025-09-26", "boxPrice": 40950, "newPrice": null, "total": 89, "ev": 32033, "rarityStats": {"RR": {"n": 5, "avg": 1410, "max": 2500}, "AR": {"n": 12, "avg": 2167, "max": 5000}, "SR": {"n": 11, "avg": 5991, "max": 36000}, "SAR": {"n": 5, "avg": 37200, "max": 70000}, "MUR": {"n": 1, "avg": 13800, "max": 13800}}, "top1": {"num": "090", "base": "063", "name": "릴리에의 결심", "rarity": "SAR", "price": 70000}, "cards": [["003", "063", "메가이상해꽃 ex", "RR", 1500, null], ["013", "063", "메가폭타 ex", "RR", 1050, null], ["029", "063", "메가루카리오 ex", "RR", 2500, null], ["038", "063", "메가앱솔 ex", "RR", 1000, null], ["045", "063", "메가입치트 ex", "RR", 1000, null], ["064", "063", "이상해씨", "AR", 5000, null], ["065", "063", "이상해풀", "AR", 2400, null], ["066", "063", "나시", "AR", 1000, null], ["067", "063", "식스테일", "AR", 4000, null], ["068", "063", "리오르", "AR", 4000, null], ["069", "063", "마샤도", "AR", 3500, null], ["070", "063", "콜로솔트", "AR", 1000, null], ["071", "063", "화강돌", "AR", 1000, null], ["072", "063", "땃쭈르", "AR", 900, null], ["073", "063", "강철톤", "AR", 1000, null], ["074", "063", "깨비참", "AR", 1200, null], ["075", "063", "형사구스", "AR", 1000, null], ["076", "063", "메가이상해꽃 ex", "SR", 4000, null], ["077", "063", "메가폭타 ex", "SR", 2000, null], ["078", "063", "메가루카리오 ex", "SR", 6000, null], ["079", "063", "메가앱솔 ex", "SR", 2200, null], ["080", "063", "메가입치트 ex", "SR", 1700, null], ["081", "063", "밤의 들것", "SR", 3400, null], ["082", "063", "파워프로틴", "SR", 2500, null], ["083", "063", "파이팅공", "SR", 2500, null], ["084", "063", "풍선", "SR", 3600, null], ["085", "063", "릴리에의 결심", "SR", 36000, null], ["086", "063", "마티스의 거래", "SR", 2000, null], ["087", "063", "메가이상해꽃 ex", "SAR", 48000, null], ["088", "063", "메가루카리오 ex", "SAR", 44000, null], ["089", "063", "메가앱솔 ex", "SAR", 18000, null], ["090", "063", "릴리에의 결심", "SAR", 70000, null], ["091", "063", "마티스의 거래", "SAR", 6000, null], ["092", "063", "메가루카리오 ex", "MUR", 13800, null]]}, {"name": "메가심포니아", "code": "BS2025010", "date": "2025-09-26", "boxPrice": 42200, "newPrice": 48270, "total": 91, "ev": 26640, "rarityStats": {"RR": {"n": 5, "avg": 900, "max": 1200}, "AR": {"n": 12, "avg": 1341, "max": 2500}, "SR": {"n": 11, "avg": 4009, "max": 8900}, "SAR": {"n": 5, "avg": 24200, "max": 49000}, "MUR": {"n": 1, "avg": 210000, "max": 210000}}, "top1": {"num": "092", "base": "063", "name": "메가가디안 ex", "rarity": "MUR", "price": 210000}, "cards": [["018", "063", "메가눈설왕 ex", "RR", 1000, null], ["020", "063", "블로스터", "R", 7525, null], ["032", "063", "메가썬더볼트 ex", "RR", 1200, null], ["042", "063", "메가가디안 ex", "RR", 600, null], ["049", "063", "메가라티아스 ex", "RR", 500, null], ["051", "063", "메가캥카 ex", "RR", 1200, null], ["064", "063", "단단지", "AR", 1000, null], ["065", "063", "아이스크", "AR", 1200, null], ["066", "063", "레오꼬", "AR", 1500, null], ["067", "063", "눈쓰개", "AR", 1000, null], ["068", "063", "블로스터", "AR", 1200, null], ["069", "063", "인텔리레온", "AR", 800, null], ["070", "063", "목도리키텔", "AR", 1300, null], ["071", "063", "후딘", "AR", 2500, null], ["072", "063", "껍질몬", "AR", 995, null], ["073", "063", "묘두기", "AR", 1200, null], ["074", "063", "딜리버드", "AR", 2000, null], ["075", "063", "포곰곰", "AR", 1400, null], ["076", "063", "메가눈설왕 ex", "SR", 2000, null], ["077", "063", "메가썬더볼트 ex", "SR", 2200, null], ["078", "063", "메가가디안 ex", "SR", 7000, null], ["079", "063", "메가라티아스 ex", "SR", 7500, null], ["080", "063", "메가캥카 ex", "SR", 3500, null], ["081", "063", "메가시그널", "SR", 2000, null], ["082", "063", "이상한사탕", "SR", 3000, null], ["083", "063", "절친 포핀", "SR", 4000, null], ["084", "063", "민진의 헤아림", "SR", 2000, null], ["085", "063", "아세로라의 장난", "SR", 8900, null], ["086", "063", "미스터리 가든", "SR", 2000, null], ["087", "063", "메가가디안 ex", "SAR", 49000, null], ["088", "063", "메가라티아스 ex", "SAR", 21000, null], ["089", "063", "메가캥카 ex", "SAR", 11000, null], ["090", "063", "민진의 헤아림", "SAR", 20000, null], ["091", "063", "아세로라의 장난", "SAR", 20000, null], ["092", "063", "메가가디안 ex", "MUR", 210000, null]]}, {"name": "인페르노X", "code": "BS2025014", "date": "2025-11-28", "boxPrice": 76550, "newPrice": null, "total": 116, "ev": 69703, "rarityStats": {"RR": {"n": 8, "avg": 1625, "max": 3800}, "AR": {"n": 12, "avg": 3808, "max": 8900}, "SR": {"n": 17, "avg": 6002, "max": 30000}, "SAR": {"n": 6, "avg": 67250, "max": 270000}, "MUR": {"n": 1, "avg": 758000, "max": 758000}}, "top1": {"num": "116", "base": "080", "name": "메가리자몽X ex", "rarity": "MUR", "price": 758000}, "cards": [["004", "080", "메가헤라크로스 ex", "RR", 800, null], ["013", "080", "메가리자몽X ex", "RR", 3800, null], ["018", "080", "춤추새 ex", "RR", 1500, null], ["029", "080", "로토무 ex", "RR", 1500, null], ["036", "080", "무우마직 ex", "RR", 1500, null], ["051", "080", "메가샤크니아 ex", "RR", 1200, null], ["058", "080", "엠페르트 ex", "RR", 1500, null], ["072", "080", "메가이어롭 ex", "RR", 1200, null], ["078", "080", "빛나", "U", 2400, null], ["081", "080", "로파파", "AR", 2000, null], ["082", "080", "콩알뚜기", "AR", 4000, null], ["083", "080", "카르본", "AR", 2500, null], ["084", "080", "쥬레곤", "AR", 790, null], ["085", "080", "팽도리", "AR", 4000, null], ["086", "080", "멍파치", "AR", 3500, null], ["087", "080", "자시안", "AR", 2000, null], ["088", "080", "플라이곤", "AR", 2000, null], ["089", "080", "스트린더", "AR", 7500, null], ["090", "080", "토게데마루", "AR", 8900, null], ["091", "080", "푸크린", "AR", 7500, null], ["092", "080", "겟핸보숭", "AR", 1000, null], ["093", "080", "메가헤라크로스 ex", "SR", 990, null], ["094", "080", "메가리자몽X ex", "SR", 30000, null], ["095", "080", "춤추새 ex", "SR", 20750, null], ["096", "080", "로토무 ex", "SR", 1900, null], ["097", "080", "무우마직 ex", "SR", 3000, null], ["098", "080", "메가샤크니아 ex", "SR", 4000, null], ["099", "080", "엠페르트 ex", "SR", 2500, null], ["100", "080", "메가이어롭 ex", "SR", 3000, null], ["101", "080", "포켓몬 교체", "SR", 4000, null], ["102", "080", "히트 버너", "SR", 3500, null], ["103", "080", "성스러운 부적", "SR", 3000, null], ["104", "080", "펑크멧", "SR", 2500, null], ["105", "080", "불놀이꾼", "SR", 5400, null], ["106", "080", "블래리의 한 수", "SR", 4000, null], ["107", "080", "빛나", "SR", 8000, null], ["108", "080", "배틀 콜로세움", "SR", 3500, null], ["109", "080", "이그니션 에너지", "SR", 2000, null], ["110", "080", "메가리자몽X ex", "SAR", 270000, null], ["111", "080", "춤추새 ex", "SAR", 33000, null], ["112", "080", "로토무 ex", "SAR", 14000, null], ["113", "080", "메가샤크니아 ex", "SAR", 23500, null], ["114", "080", "메가이어롭 ex", "SAR", 15000, null], ["115", "080", "빛나", "SAR", 48000, null], ["116", "080", "메가리자몽X ex", "MUR", 758000, null]]}, {"name": "MEGA 드림 ex", "code": "BS2025015", "date": "2026 (KR)", "boxPrice": 32060, "newPrice": 127880, "total": 93, "ev": 95537, "rarityStats": {"RR": {"n": 26, "avg": 1682, "max": 6750}, "AR": {"n": 20, "avg": 5933, "max": 22000}, "SR": {"n": 9, "avg": 12133, "max": 56800}, "SAR": {"n": 17, "avg": 58994, "max": 250000}, "MA": {"n": 10, "avg": 20700, "max": 125000}}, "top1": {"num": "240", "base": "193", "name": "메가팬텀 ex", "rarity": "SAR", "price": 250000}, "cards": [["003", "193", "메가자리 ex", "RR", 500, null], ["017", "193", "오거폰 벽록의 가면 ex", "RR", 2000, null], ["021", "193", "심향의 칠색조 ex", "RR", 1000, null], ["029", "193", "레시라무 ex", "RR", 1390, null], ["031", "193", "파라블레이즈 ex", "RR", 2000, null], ["032", "193", "고라파덕", "N", 3000, null], ["036", "193", "메가눈여아 ex", "RR", 2000, null], ["039", "193", "N의 배바닐라", "N", 14490, null], ["044", "193", "피카츄 ex", "RR", 6750, null], ["049", "193", "메가저리더프 ex", "RR", 1500, null], ["051", "193", "제크로무 ex", "RR", 1500, null], ["055", "193", "제라오라", "N", 14490, null], ["057", "193", "모야모의 찌리배리 ex", "RR", 1000, null], ["060", "193", "릴리에의 삐삐 ex", "RR", 1500, null], ["063", "193", "로켓단의 뮤츠 ex", "RR", 2500, null], ["071", "193", "메가가디안 ex", "RR", 2000, null], ["075", "193", "라티아스 ex", "RR", 1500, null], ["081", "193", "이야후", "N", 2050, null], ["092", "193", "메가루카리오 ex", "RR", 2500, null], ["094", "193", "메가루차불 ex", "RR", 1200, null], ["101", "193", "로켓단의 크로뱃 ex", "RR", 1000, null], ["110", "193", "메가곤율거니 ex", "RR", 1200, null], ["111", "193", "N의 조로아", "N", 3000, null], ["112", "193", "N의 조로아크 ex", "RR", 1500, null], ["114", "193", "기로치 ex", "RR", 1500, null], ["119", "193", "게노세크트 ex", "RR", 800, null], ["122", "193", "브리두라스 ex", "RR", 1200, null], ["123", "193", "호브의 자시안 ex", "RR", 1200, null], ["126", "193", "메가망나뇽 ex", "RR", 2500, null], ["134", "193", "드래펄트 ex", "RR", 1500, null], ["145", "193", "테라파고스 ex", "RR", 500, null], ["151", "193", "밤의 들것", "N", 3500, null], ["155", "193", "절친 포핀", "N", 4000, null], ["168", "193", "로켓단의 람다", "N", 3000, null], ["170", "193", "로켓단의 비주기", "N", 3000, null], ["179", "193", "카나리", "N", 3000, null], ["180", "193", "투희", "N", 4000, null], ["194", "193", "뷰티플라이", "AR", 5000, null], ["195", "193", "독케일", "AR", 1500, null], ["196", "193", "꼬몽울", "AR", 10780, null], ["197", "193", "금선의 마그카르고", "AR", 2000, null], ["198", "193", "둔타", "AR", 1500, null], ["199", "193", "고라파덕", "AR", 22000, null], ["200", "193", "눈꼬마", "AR", 4000, null], ["201", "193", "일레도리자드", "AR", 1500, null], ["202", "193", "무우마", "AR", 3000, null], ["203", "193", "토게키스", "AR", 5000, null], ["204", "193", "호브의 오롱털", "AR", 2000, null], ["205", "193", "로켓단의 따라큐", "AR", 6000, null], ["206", "193", "로켓단의 닥트리오", "AR", 3000, null], ["207", "193", "요가램", "AR", 7500, null], ["208", "193", "난천의 화강돌", "AR", 9885, null], ["209", "193", "가라르 삐끼구리", "AR", 2000, null], ["210", "193", "N의 제크로무", "AR", 18000, null], ["211", "193", "드라꼰", "AR", 5000, null], ["212", "193", "두라쟁", "AR", 6000, null], ["213", "193", "로토무", "AR", 3000, null], ["214", "193", "N의 포인트업", "SR", 3000, null], ["215", "193", "로켓단의 리시버", "SR", 2500, null], ["216", "193", "하이퍼볼", "SR", 2500, null], ["217", "193", "로켓단의 리시버", "SR", 4000, null], ["218", "193", "카운터 게인", "SR", 2000, null], ["219", "193", "버베나와 헬레나", "SR", 32000, null], ["220", "193", "카나리", "SR", 56800, null], ["221", "193", "태권왕의 수련", "SR", 4000, null], ["222", "193", "재밍타워", "SR", 2400, null], ["223", "193", "메가리자몽X ex", "MA", 125000, null], ["224", "193", "메가눈여아 ex", "MA", 6000, null], ["225", "193", "메가저리더프 ex", "MA", 5000, null], ["226", "193", "메가가디안 ex", "MA", 12000, null], ["227", "193", "메가디안시 ex", "MA", 7000, null], ["228", "193", "메가루카리오 ex", "MA", 10000, null], ["229", "193", "메가루차불 ex", "MA", 4000, null], ["230", "193", "메가팬텀 ex", "MA", 24000, null], ["231", "193", "메가곤율거니 ex", "MA", 3000, null], ["232", "193", "메가망나뇽 ex", "MA", 11000, null], ["233", "193", "메가눈여아 ex", "SAR", 10000, null], ["234", "193", "피카츄 ex", "SAR", 160000, null], ["235", "193", "메가저리더프 ex", "SAR", 15000, null], ["236", "193", "모야모의 찌리배리 ex", "SAR", 35000, null], ["237", "193", "로켓단의 뮤츠 ex", "SAR", 8900, null], ["238", "193", "메가디안시 ex", "SAR", 29750, null], ["239", "193", "메가루차불 ex", "SAR", 15900, null], ["240", "193", "메가팬텀 ex", "SAR", 250000, null], ["241", "193", "메가곤율거니 ex", "SAR", 12000, null], ["242", "193", "N의 조로아크 ex", "SAR", 57450, null], ["243", "193", "마리의 오롱털 ex", "SAR", 60000, null], ["244", "193", "기로치", "SAR", 45000, null], ["245", "193", "성호의 메타그로스 ex", "SAR", 24000, null], ["246", "193", "메가망나뇽 ex", "SAR", 190000, null], ["247", "193", "서퍼", "SAR", 14900, null], ["248", "193", "아이리스의 투지", "SAR", 30000, null], ["249", "193", "카나리", "SAR", 45000, null]]}, {"name": "니힐제로", "code": "BS2026002", "date": "2026-03-13", "boxPrice": 45900, "newPrice": 41700, "total": 115, "ev": 53690, "rarityStats": {"RR": {"n": 8, "avg": 2125, "max": 7500}, "AR": {"n": 12, "avg": 6513, "max": 11870}, "SR": {"n": 18, "avg": 8660, "max": 38000}, "SAR": {"n": 6, "avg": 39300, "max": 75000}, "MUR": {"n": 1, "avg": 54000, "max": 54000}}, "top1": {"num": "115", "base": "080", "name": "명희의 격려", "rarity": "SAR", "price": 75000}, "cards": [["012", "080", "모크나이퍼 ex", "RR", 1200, null], ["016", "080", "염뉴트 ex", "RR", 800, null], ["021", "080", "메가아쿠스타 ex", "RR", 1500, null], ["030", "080", "메가픽시 ex", "RR", 1500, null], ["046", "080", "메가지가르데 ex", "RR", 1800, null], ["052", "080", "이벨타르 ex", "RR", 900, null], ["054", "080", "메가무장조 ex", "RR", 1800, null], ["061", "080", "나옹 ex", "RR", 7500, null], ["081", "080", "분떠도리", "AR", 1000, null], ["082", "080", "나몰빼미", "AR", 2000, null], ["083", "080", "파이어로", "AR", 2980, null], ["084", "080", "아마루르가", "AR", 10780, null], ["085", "080", "데덴네", "AR", 3000, null], ["086", "080", "삐삐", "AR", 9300, null], ["087", "080", "냐스퍼", "AR", 11870, null], ["088", "080", "대코파스", "AR", 9175, null], ["089", "080", "티고라스", "AR", 10780, null], ["090", "080", "드래피온", "AR", 11870, null], ["091", "080", "쌍검킬", "AR", 4200, null], ["092", "080", "레트라", "AR", 1200, null], ["093", "080", "모크나이퍼 ex", "SR", 11850, null], ["094", "080", "염뉴트 ex", "SR", 2000, null], ["095", "080", "메가아쿠스타 ex", "SR", 6900, null], ["096", "080", "메가픽시 ex", "SR", 2400, null], ["097", "080", "메가지가르데 ex", "SR", 4000, null], ["098", "080", "이벨타르 ex", "SR", 30000, null], ["099", "080", "메가무장조 ex", "SR", 4300, null], ["100", "080", "나옹 ex", "SR", 19450, null], ["101", "080", "성스러운분말", "SR", 1000, null], ["102", "080", "에너지 리사이클", "SR", 2000, null], ["103", "080", "원더패치", "SR", 2000, null], ["104", "080", "포켓패드", "SR", 6000, null], ["105", "080", "명희의 격려", "SR", 38000, null], ["106", "080", "유카리", "SR", 5980, null], ["107", "080", "이노", "SR", 6800, null], ["108", "080", "타라곤", "SR", 6500, null], ["109", "080", "미르시티", "SR", 2200, null], ["110", "080", "활력의 숲", "SR", 4500, null], ["111", "080", "메가아쿠스타 ex", "SAR", 15000, null], ["112", "080", "메가픽시 ex", "SAR", 55900, null], ["113", "080", "메가지가르데 ex", "SAR", 25000, null], ["114", "080", "나옹 ex", "SAR", 30000, null], ["115", "080", "명희의 격려", "SAR", 75000, null], ["116", "080", "유카리", "SAR", 34900, null], ["117", "080", "메가지가르데 ex", "MUR", 54000, null]]}, {"name": "닌자스피너", "code": "BS2026003", "date": "2026-03-13", "boxPrice": 46000, "newPrice": 39220, "total": 120, "ev": 76456, "rarityStats": {"RR": {"n": 8, "avg": 2216, "max": 3875}, "AR": {"n": 12, "avg": 6293, "max": 17560}, "SR": {"n": 15, "avg": 7100, "max": 31900}, "SAR": {"n": 6, "avg": 28775, "max": 95000}, "MUR": {"n": 1, "avg": 962000, "max": 962000}}, "top1": {"num": "120", "base": "083", "name": "메가개굴닌자 ex", "rarity": "MUR", "price": 962000}, "cards": [["003", "083", "독침붕 ex", "RR", 3875, null], ["015", "083", "메가화염레오 ex", "RR", 1200, null], ["022", "083", "메가개굴닌자 ex", "RR", 3300, null], ["035", "083", "메가플라엣테 ex", "RR", 1200, null], ["041", "083", "펌킨인 ex", "RR", 1200, null], ["059", "083", "메타그로스", "U", 8470, null], ["062", "083", "코바르온 ex", "RR", 3450, null], ["063", "083", "메가드래캄 ex", "RR", 2450, null], ["071", "083", "치라치노 ex", "RR", 1050, null], ["084", "083", "도치마론", "AR", 500, null], ["085", "083", "푸호꼬", "AR", 2750, null], ["086", "083", "개구마르", "AR", 3000, null], ["087", "083", "개굴반장", "AR", 10150, null], ["088", "083", "전룡", "AR", 11000, null], ["089", "083", "제르네아스", "AR", 1000, null], ["090", "083", "점토도리", "AR", 1000, null], ["091", "083", "크로뱃", "AR", 2000, null], ["092", "083", "메탕구", "AR", 12820, null], ["093", "083", "미끄네일", "AR", 2000, null], ["094", "083", "켄타로스", "AR", 17560, null], ["095", "083", "보르그", "AR", 11730, null], ["096", "083", "독침붕 ex", "SR", 7000, null], ["097", "083", "메가화염레오 ex", "SR", 10250, null], ["098", "083", "메가개굴닌자 ex", "SR", 31900, null], ["099", "083", "메가플라엣테 ex", "SR", 3500, null], ["100", "083", "펌킨인 ex", "SR", 7000, null], ["101", "083", "코바르온 ex", "SR", 4500, null], ["102", "083", "메가드래캄 ex", "SR", 10500, null], ["103", "083", "치라치노 ex", "SR", 3000, null], ["104", "083", "에너지 회수", "SR", 2500, null], ["105", "083", "점보 아이스", "SR", 2800, null], ["106", "083", "스페셜 레드카드", "SR", null, null], ["107", "083", "도구 스크래퍼", "SR", null, null], ["108", "083", "AZ의 평온", "SR", 8500, null], ["109", "083", "지프", "SR", 7750, null], ["110", "083", "보미카의 연주", "SR", 2000, null], ["111", "083", "마티에르", "SR", 3000, null], ["112", "083", "파도타기 해변", "SR", null, null], ["113", "083", "프리즘타워", "SR", 2300, null], ["114", "083", "메가개굴닌자 ex", "SAR", 95000, null], ["115", "083", "메가플라엣테 ex", "SAR", 5500, null], ["116", "083", "메가드래캄 ex", "SAR", 9000, null], ["117", "083", "치라치노 ex", "SAR", 16500, null], ["118", "083", "AZ의 평온", "SAR", 36900, null], ["119", "083", "보미카의 연주", "SAR", 9750, null], ["120", "083", "메가개굴닌자 ex", "MUR", 962000, null]]}, {"name": "어비스아이", "code": "BS2026004", "date": "2026-06-26", "boxPrice": 45000, "newPrice": null, "total": 118, "ev": 49037, "rarityStats": {"RR": {"n": 8, "avg": 2031, "max": 3500}, "AR": {"n": 12, "avg": 3817, "max": 8000}, "SR": {"n": 18, "avg": 7631, "max": 21000}, "SAR": {"n": 6, "avg": 40833, "max": 124000}, "MUR": {"n": 1, "avg": 201000, "max": 201000}}, "top1": {"num": "118", "base": "081", "name": "메가다크라이 ex", "rarity": "MUR", "price": 201000}, "cards": [["002", "081", "턱지충이", "C", 2000, null], ["004", "081", "라란티스 ex", "RR", 1250, null], ["015", "081", "고래왕 ex", "RR", 1100, null], ["026", "081", "메가제라오라 ex", "RR", 2500, null], ["036", "081", "메가샹델라 ex", "RR", 2100, null], ["043", "081", "램펄드 ex", "RR", 2200, null], ["046", "081", "메가다크라이 ex", "RR", 2000, null], ["053", "081", "모르페코 ex", "RR", 1600, null], ["059", "081", "방패톱스", "C", 4500, null], ["063", "081", "메가몰드류 ex", "RR", 3500, null], ["067", "081", "타입:널", "C", 2000, null], ["077", "081", "무쿠", "U", 6250, null], ["081", "081", "섀도에너지", "R", 8990, null], ["082", "081", "짜랑랑", "AR", 3000, null], ["083", "081", "카디나르마", "AR", 3000, null], ["084", "081", "콘치", "AR", 5500, null], ["085", "081", "누리레느", "AR", 2000, null], ["086", "081", "썬더볼트", "AR", 2900, null], ["087", "081", "야도란", "AR", 8000, null], ["088", "081", "타타륜", "AR", 4000, null], ["089", "081", "폭슬라이", "AR", 3900, null], ["090", "081", "자루도", "AR", 2500, null], ["091", "081", "바리톱스", "AR", 3500, null], ["092", "081", "왕큰부리", "AR", 3500, null], ["093", "081", "실버디", "AR", 4000, null], ["094", "081", "라란티스 ex", "SR", 5900, null], ["095", "081", "고래왕 ex", "SR", 6900, null], ["096", "081", "메가제라오라 ex", "SR", 7900, null], ["097", "081", "메가샹델라 ex", "SR", 2500, null], ["098", "081", "램펄드 ex", "SR", 7000, null], ["099", "081", "메가다크라이 ex", "SR", 6000, null], ["100", "081", "모르페코 ex", "SR", 3500, null], ["101", "081", "메가몰드류 ex", "SR", 8200, null], ["102", "081", "다크벨", "SR", 4000, null], ["103", "081", "아이언 디펜드업", "SR", 8550, null], ["104", "081", "에너지 갈아 달기", "SR", 7500, null], ["105", "081", "크래시 해머", "SR", 7500, null], ["106", "081", "브레이브뱅글", "SR", 4000, null], ["107", "081", "호쾌봄", "SR", 15900, null], ["108", "081", "글라디오의 결전", "SR", 11000, null], ["109", "081", "녹청파의 조무래기", "SR", 3000, null], ["110", "081", "무쿠", "SR", 7000, null], ["111", "081", "이슬의 기력", "SR", 21000, null], ["112", "081", "메가제라오라 ex", "SAR", 18000, null], ["113", "081", "메가샹델라 ex", "SAR", 16000, null], ["114", "081", "메가다크라이 ex", "SAR", 124000, null], ["115", "081", "모르페코 ex", "SAR", 19000, null], ["116", "081", "글라디오의 결전", "SAR", 11000, null], ["117", "081", "무쿠", "SAR", 57000, null], ["118", "081", "메가다크라이 ex", "MUR", 201000, null]]}, {"name": "스칼렛 ex", "code": "BS2023006", "date": "2023-04-14", "boxPrice": 68900, "newPrice": null, "old": true, "total": 108, "ev": 50818, "rarityStats": {}, "top1": {"name": "가디안 ex", "rarity": "SAR", "price": 122450}, "cards": [["079", "078", "올리뇨", "AR", 1500, null], ["080", "078", "카디나르마", "AR", 4000, null], ["081", "078", "바다그다", "AR", 6500, null], ["082", "078", "어써러셔", "AR", 3000, null], ["083", "078", "랄토스", "AR", 5000, null], ["084", "078", "킬리아", "AR", 6500, null], ["085", "078", "쫀도기", "AR", 4500, null], ["086", "078", "리오르", "AR", 7000, null], ["087", "078", "깜눈크", "AR", 4500, null], ["088", "078", "절벼게", "AR", 2500, null], ["089", "078", "대도각참", "AR", 3500, null], ["090", "078", "찌르꼬", "AR", 3500, null], ["091", "078", "갸라도스 ex", "SR", 9020, null], ["092", "078", "가디안 ex", "SR", 10000, null], ["093", "078", "위대한엄니 ex", "SR", 2000, null], ["094", "078", "코라이돈 ex", "SR", 7900, null], ["095", "078", "독개굴 ex", "SR", 2300, null], ["096", "078", "퍼퓨돈 ex", "SR", 1970, null], ["097", "078", "모란", "SR", 20000, null], ["098", "078", "박사의 연구", "SR", 16000, null], ["099", "078", "스타단의 조무래기", "SR", 22000, null], ["100", "078", "지니어", "SR", 24000, null], ["101", "078", "가디안 ex", "SAR", 122450, null], ["102", "078", "위대한엄니 ex", "SAR", 2500, null], ["103", "078", "코라이돈 ex", "SAR", 48160, null], ["104", "078", "모란", "SAR", 49000, null], ["105", "078", "지니어", "SAR", 55000, null], ["106", "078", "코라이돈 ex", "UR", 30460, null], ["107", "078", "네스트볼", "UR", 25000, null], ["108", "078", "기본 격투 에너지", "UR", 14000, null]]}, {"name": "트리플렛비트", "code": "BS2023010", "date": "2023-06-15", "boxPrice": 43667, "newPrice": null, "old": true, "total": 105, "ev": 39650, "rarityStats": {}, "top1": {"name": "운향", "rarity": "UR", "price": 99000}, "cards": [["074", "073", "트로피우스", "AR", 1200, null], ["075", "073", "나오하", "AR", 31700, null], ["076", "073", "나로테", "AR", 1830, null], ["077", "073", "화염레오", "AR", 1700, null], ["078", "073", "뜨아거", "AR", 9900, null], ["079", "073", "악뜨거", "AR", 3800, null], ["080", "073", "잉어킹", "AR", 52000, null], ["081", "073", "꾸왁스", "AR", 5500, null], ["082", "073", "아꾸왁", "AR", 1200, null], ["083", "073", "무우마직", "AR", 4000, null], ["084", "073", "팔데아 켄타로스", "AR", 1880, null], ["085", "073", "팔데아 우파", "AR", 2200, null], ["086", "073", "마스카나 ex", "SR", 4300, null], ["087", "073", "라우드본 ex", "SR", 1900, null], ["088", "073", "웨이니발 ex", "SR", 2000, null], ["089", "073", "데덴네 ex", "SR", 7000, null], ["090", "073", "루가루암 ex", "SR", 1200, null], ["091", "073", "팔데아 토오 ex", "SR", 1650, null], ["092", "073", "보스의 지령", "SR", 33000, null], ["093", "073", "비상", "SR", 25000, null], ["094", "073", "운향", "SR", 33000, null], ["095", "073", "클라벨", "SR", 1800, null], ["096", "073", "마스카나 ex", "SAR", 9500, null], ["097", "073", "라우드본 ex", "SAR", 25000, null], ["098", "073", "웨이니발 ex", "SAR", 24700, null], ["099", "073", "보스의 지령", "SAR", 14500, null], ["100", "073", "운향", "SAR", 40000, null], ["101", "073", "마스카나 ex", "UR", 27900, null], ["102", "073", "라우드본 ex", "UR", 12350, null], ["103", "073", "웨이니발 ex", "UR", 25400, null], ["104", "073", "보스의 지령", "UR", 75000, null], ["105", "073", "운향", "UR", 99000, null]]}, {"name": "클레이버스트", "code": "BS2023012", "date": "2023-06-15", "boxPrice": 59900, "newPrice": null, "old": true, "total": 99, "ev": 58782, "rarityStats": {}, "top1": {"name": "모야모", "rarity": "SAR", "price": 158000}, "cards": [["072", "071", "헤라크로스", "AR", 5500, null], ["073", "071", "불화살빈", "AR", 2500, null], ["074", "071", "라이츄", "AR", 12500, null], ["075", "071", "모래꿍", "AR", 300, null], ["076", "071", "어리짱", "AR", 6000, null], ["077", "071", "벼리짱", "AR", 7500, null], ["078", "071", "베베솔트", "AR", 4500, null], ["079", "071", "마기라스", "AR", 8000, null], ["080", "071", "태깅구르", "AR", 2500, null], ["081", "071", "파밀리쥐", "AR", 4800, null], ["082", "071", "꼬이밍고", "AR", 1500, null], ["083", "071", "키키링", "AR", 4800, null], ["084", "071", "쏘콘 ex", "SR", 2300, null], ["085", "071", "위유이 ex", "SR", 3880, null], ["086", "071", "찌리배리 ex", "SR", 18570, null], ["087", "071", "두드리짱 ex", "SR", 3500, null], ["088", "071", "딩루 ex", "SR", 11000, null], ["089", "071", "음번 ex", "SR", 18570, null], ["090", "071", "모야모", "SR", 45000, null], ["091", "071", "사구아로", "SR", 8000, null], ["092", "071", "위유이 ex", "SAR", 19950, null], ["093", "071", "두드리짱 ex", "SAR", 29000, null], ["094", "071", "딩루 ex", "SAR", 27000, null], ["095", "071", "모야모", "SAR", 158000, null], ["096", "071", "사구아로", "SAR", 55000, null], ["097", "071", "딩루 ex", "UR", 14800, null], ["098", "071", "수퍼 에너지 회수", "UR", 75000, null], ["099", "071", "기본 풀 에너지", "UR", 13700, null]]}, {"name": "포켓몬 카드 151", "code": "BS2023014", "date": "2023-08-10", "boxPrice": 299000, "newPrice": null, "old": true, "total": 356, "ev": 93024, "rarityStats": {}, "top1": {"name": "뮤 ex", "rarity": "SAR", "price": 324285}, "cards": [["166", "165", "이상해씨", "AR", 10000, null], ["167", "165", "이상해풀", "AR", 11000, null], ["168", "165", "파이리", "AR", 15000, null], ["169", "165", "리자드", "AR", 15000, null], ["170", "165", "꼬부기", "AR", 13500, null], ["171", "165", "어니부기", "AR", 13000, null], ["172", "165", "캐터피", "AR", 4500, null], ["173", "165", "피카츄", "AR", 23750, null], ["174", "165", "니드킹", "AR", 4500, null], ["175", "165", "고라파덕", "AR", 9000, null], ["176", "165", "슈륙챙이", "AR", 2000, null], ["177", "165", "근육몬", "AR", 7500, null], ["178", "165", "덩쿠리", "AR", 3000, null], ["179", "165", "마임맨", "AR", 5700, null], ["180", "165", "암나이트", "AR", 5900, null], ["181", "165", "잠만보", "AR", 6500, null], ["182", "165", "신뇽", "AR", 18000, null], ["183", "165", "뮤츠", "AR", 24000, null], ["184", "165", "이상해꽃 ex", "SR", 8400, null], ["185", "165", "리자몽 ex", "SR", 40000, null], ["186", "165", "거북왕 ex", "SR", 10000, null], ["187", "165", "아보크 ex", "SR", 4300, null], ["188", "165", "나인테일 ex", "SR", 6800, null], ["189", "165", "푸크린 ex", "SR", 3900, null], ["190", "165", "후딘 ex", "SR", 4500, null], ["191", "165", "딱구리 ex", "SR", 2500, null], ["192", "165", "캥카 ex", "SR", 3400, null], ["193", "165", "루주라 ex", "SR", 3900, null], ["194", "165", "썬더 ex", "SR", 4500, null], ["195", "165", "뮤 ex", "SR", 4500, null], ["196", "165", "남나리의 도움", "SR", 19000, null], ["197", "165", "민화의 초대", "SR", 16000, null], ["198", "165", "비주기의 카리스마", "SR", 25000, null], ["199", "165", "이수재의 전송", "SR", 5855, null], ["200", "165", "이상해꽃 ex", "SAR", 61000, null], ["201", "165", "리자몽 ex", "SAR", 230000, null], ["202", "165", "거북왕 ex", "SAR", 70000, null], ["203", "165", "후딘 ex", "SAR", 34000, null], ["204", "165", "썬더 ex", "SAR", 29000, null], ["205", "165", "뮤 ex", "SAR", 324285, null], ["206", "165", "민화의 초대", "SAR", 110000, null], ["207", "165", "비주기의 카리스마", "SAR", 75000, null], ["208", "165", "뮤 ex", "UR", 29000, null], ["209", "165", "포켓몬 교체", "UR", 72000, null], ["210", "165", "기본 초 에너지", "UR", 9900, null]]}, {"name": "레이징서프", "code": "BS2023020", "date": "2023-11-09", "boxPrice": 59800, "newPrice": null, "old": true, "total": 92, "ev": 65135, "rarityStats": {}, "top1": {"name": "파라솔 아가씨", "rarity": "SAR", "price": 158000}, "cards": [["063", "062", "눈꼬마", "AR", 2300, null], ["064", "062", "타만타", "AR", 35000, null], ["065", "062", "플러시", "AR", 5000, null], ["066", "062", "마이농", "AR", 5000, null], ["067", "062", "파쪼옥", "AR", 3000, null], ["068", "062", "모으령", "AR", 3500, null], ["069", "062", "그란돈", "AR", 2500, null], ["070", "062", "메테노", "AR", 3000, null], ["071", "062", "이벨타르", "AR", 8500, null], ["072", "062", "너트령", "AR", 2000, null], ["073", "062", "킬가르도", "AR", 2000, null], ["074", "062", "모토마", "AR", 2500, null], ["075", "062", "눈여아 ex", "SR", 3500, null], ["076", "062", "한카리아스 ex", "SR", 5000, null], ["077", "062", "카푸꼬꼬꼭 ex", "SR", 2500, null], ["078", "062", "후파 ex", "SR", 9000, null], ["079", "062", "타부자고 ex", "SR", 2400, null], ["080", "062", "떨구새 ex", "SR", 1200, null], ["081", "062", "망초", "SR", 28000, null], ["082", "062", "청목", "SR", 9000, null], ["083", "062", "칠리", "SR", 3000, null], ["084", "062", "파라솔 아가씨", "SR", 55000, null], ["085", "062", "한카리아스 ex", "SAR", 135000, null], ["086", "062", "카푸꼬꼬꼭 ex", "SAR", 18000, null], ["087", "062", "타부자고 ex", "SAR", 14900, null], ["088", "062", "칠리", "SAR", 33000, null], ["089", "062", "파라솔 아가씨", "SAR", 158000, null], ["090", "062", "한카리아스 ex", "UR", 24900, null], ["091", "062", "비치코트", "UR", 55000, null], ["092", "062", "리버설 에너지", "UR", 30000, null]]}, {"name": "샤이니트레저 ex", "code": "BS2024001", "date": "2024-01-25", "boxPrice": 138900, "newPrice": null, "old": true, "total": 360, "ev": 135843, "rarityStats": {}, "top1": {"name": "뮤 ex", "rarity": "SAR", "price": 650000}, "cards": [["316", "190", "퍼퓨돈", "S", 3850, null], ["317", "190", "두리쥐", "S", 12800, null], ["318", "190", "파밀리쥐", "S", 1300, null], ["319", "190", "꼬이밍고", "S", 4500, null], ["320", "190", "쏘콘 ex", "SSR", 5000, null], ["321", "190", "마스카나 ex", "SSR", 12000, null], ["322", "190", "육파리 ex", "SSR", 5000, null], ["323", "190", "클레스퍼트라 ex", "SSR", 8000, null], ["324", "190", "라우드본 ex", "SSR", 6500, null], ["325", "190", "웨이니발 ex", "SSR", 10000, null], ["326", "190", "후딘 ex", "SSR", 5000, null], ["327", "190", "뮤 ex", "SSR", 150000, 95993], ["328", "190", "가디안 ex", "SSR", 17000, null], ["329", "190", "킬라플로르 ex", "SSR", 7500, null], ["330", "190", "위대한엄니 ex", "SSR", 5000, null], ["331", "190", "리자몽 ex", "SSR", 27000, null], ["332", "190", "팔데아 토오 ex", "SSR", 5000, null], ["333", "190", "무쇠바퀴 ex", "SSR", 5000, null], ["336", "190", "푸크린 ex", "SSR", 6000, null], ["337", "190", "시비꼬 ex", "SSR", 6500, null], ["338", "190", "바닥트리오", "AR", 6500, null], ["339", "190", "돌핀맨", "AR", 9000, null], ["340", "190", "빠모", "AR", 19900, null], ["341", "190", "따라큐", "AR", 25000, null], ["342", "190", "네르케", "SR", 3300, null], ["343", "190", "네모", "SR", 9950, null], ["344", "190", "저지맨", "SR", 3500, null], ["345", "190", "팔데아의 학생", "SR", 18900, null], ["346", "190", "팔데아의 학생", "SR", 25000, null], ["347", "190", "뮤 ex", "SAR", 650000, 554691], ["348", "190", "가디안 ex", "SAR", 109000, null], ["349", "190", "리자몽 ex", "SAR", 199000, 283971], ["350", "190", "네르케", "SAR", 45000, null], ["351", "190", "네모", "SAR", 7500, null], ["352", "190", "모란", "SAR", 50000, null], ["353", "190", "모야모", "SAR", 145000, null], ["354", "190", "페퍼", "SAR", 36900, null], ["355", "190", "총지엔 ex", "UR", 12000, null], ["356", "190", "위유이 ex", "UR", 14000, null], ["357", "190", "파오젠 ex", "UR", 20000, null], ["358", "190", "미라이돈 ex", "UR", 37500, null], ["359", "190", "딩루 ex", "UR", 9700, null], ["360", "190", "코라이돈 ex", "UR", 29900, null]]}, {"name": "이브이 히어로즈", "code": "BS2021010", "date": "2021-07", "boxPrice": 158000, "newPrice": null, "old": true, "swsh": true, "total": 101, "ev": 0, "rarityStats": {}, "top1": {"name": "블래키 VMAX (SA)", "rarity": "HR", "price": 549000}, "cards": [["070", "069", "리피아 V", "SR", 6000, null], ["071", "069", "리피아 V (SA)", "SR", 21000, null], ["072", "069", "부스터 V", "SR", 6500, null], ["073", "069", "부스터 V (SA)", "SR", 58000, null], ["074", "069", "샤미드 V", "SR", 18900, null], ["075", "069", "샤미드 V (SA)", "SR", 18900, null], ["076", "069", "글레이시아 V", "SR", 22000, null], ["077", "069", "글레이시아 V (SA)", "SR", 50000, null], ["078", "069", "쥬피썬더 V", "SR", 10000, null], ["079", "069", "쥬피썬더 V (SA)", "SR", 13500, null], ["080", "069", "에브이 V", "SR", 22700, null], ["081", "069", "에브이 V (SA)", "SR", 18000, null], ["082", "069", "님피아 V", "SR", 60000, null], ["083", "069", "님피아 V (SA)", "SR", 43000, null], ["084", "069", "블래키 V", "SR", 17410, null], ["085", "069", "블래키 V (SA)", "SR", 57000, null], ["086", "069", "아로마 아가씨", "SR", 25000, null], ["087", "069", "마쿠와", "SR", 9900, null], ["088", "069", "리피아 VMAX", "HR", 35640, null], ["089", "069", "리피아 VMAX (SA)", "HR", 175000, null], ["090", "069", "글레이시아 VMAX", "HR", 29900, null], ["091", "069", "글레이시아 VMAX (SA)", "HR", 45000, null], ["092", "069", "님피아 VMAX", "HR", 255000, null], ["093", "069", "님피아 VMAX (SA)", "HR", 180000, null], ["094", "069", "블래키 VMAX", "HR", 27000, null], ["095", "069", "블래키 VMAX (SA)", "HR", 549000, null], ["096", "069", "아로마 아가씨", "HR", 3000, null], ["097", "069", "마쿠와", "HR", null, null], ["098", "069", "인텔리레온", "UR", 12000, null], ["099", "069", "야청의 휴식", "UR", null, null], ["100", "069", "일렉트릭제너레이터", "UR", null, null], ["101", "069", "기본 악 에너지", "UR", null, null]]}, {"name": "퓨전아츠", "code": "BS2021018", "date": "2021-09", "boxPrice": 106000, "newPrice": null, "old": true, "swsh": true, "total": 129, "ev": 0, "rarityStats": {}, "top1": {"name": "뮤 VMAX", "rarity": "HR", "price": 175000}, "cards": [["101", "100", "달코퀸 V", "SR", 6000, null], ["102", "100", "샹델라 V", "SR", 4400, null], ["103", "100", "모단단게 V", "SR", 3000, null], ["104", "100", "펄스멍 V", "SR", 3000, null], ["105", "100", "뮤 V", "SR", 12950, null], ["106", "100", "뮤 V (SA)", "SR", 40000, null], ["107", "100", "후파 V", "SR", 14000, null], ["108", "100", "게노세크트 V", "SR", 18000, null], ["109", "100", "게노세크트 V (SA)", "SR", 34900, null], ["110", "100", "요씽리스 V", "SR", 13000, null], ["111", "100", "요씽리스 V (SA)", "SR", 23650, null], ["112", "100", "댄서", "SR", 2000, null], ["113", "100", "카밀레의 반짝임", "SR", 3000, null], ["114", "100", "팟과 덴트와 콘", "SR", 3500, null], ["115", "100", "혁진", "SR", 15000, null], ["116", "100", "샹델라 VMAX", "HR", 20000, null], ["117", "100", "펄스멍 VMAX", "HR", null, null], ["118", "100", "뮤 VMAX", "HR", 175000, null], ["119", "100", "뮤 VMAX (교차진화)", "HR", null, null], ["120", "100", "요씽리스 VMAX", "HR", 65000, null], ["121", "100", "댄서", "HR", 25000, null], ["122", "100", "카밀레의 반짝임", "HR", 40000, null], ["123", "100", "팟과 덴트와 콘", "HR", 18400, null], ["124", "100", "혁진", "HR", 13000, null], ["125", "100", "보송송", "UR", 14000, null], ["126", "100", "파워태블릿", "UR", 9000, null], ["127", "100", "트레이닝 코트", "UR", 10200, null], ["128", "100", "기본 풀 에너지", "UR", 15000, null], ["129", "100", "기본 불꽃 에너지", "UR", 28000, null]]}, {"name": "VMAX 클라이맥스", "code": "BS2022001", "date": "2021-12", "boxPrice": 429400, "newPrice": null, "old": true, "swsh": true, "total": 287, "ev": 0, "rarityStats": {}, "top1": {"name": "피카츄 VMAX", "rarity": "CSR", "price": 198000}, "cards": [["185", "184", "눈설왕", "CHR", 5000, null], ["186", "184", "애프룡", "CHR", 4800, null], ["187", "184", "리자몽", "CHR", 35000, null], ["188", "184", "부스터", "CHR", 15800, null], ["189", "184", "샤미드", "CHR", 6900, null], ["190", "184", "킹드라", "CHR", 6000, null], ["191", "184", "대포무노", "CHR", 5000, null], ["192", "184", "모스노우", "CHR", 9800, null], ["193", "184", "쥬피썬더", "CHR", 7000, null], ["194", "184", "보송송", "CHR", 10000, null], ["195", "184", "제크로무", "CHR", 7500, null], ["196", "184", "가디안", "CHR", 4800, null], ["197", "184", "다크펫", "CHR", 5800, null], ["198", "184", "야느와르몽", "CHR", 6800, null], ["199", "184", "칼라마네로", "CHR", 4800, null], ["200", "184", "데덴네", "CHR", 13800, null], ["201", "184", "마휘핑", "CHR", 3000, null], ["202", "184", "암멍이", "CHR", 8000, null], ["203", "184", "내던숭이", "CHR", 5900, null], ["204", "184", "대여르", "CHR", 11800, null], ["205", "184", "아리아도스", "CHR", 8800, null], ["206", "184", "헬가", "CHR", 4800, null], ["207", "184", "가라르 가로막구리", "CHR", 6000, null], ["208", "184", "동탁군", "CHR", 2900, null], ["209", "184", "크리만", "CHR", 4800, null], ["210", "184", "이브이", "CHR", 10500, null], ["211", "184", "캐스퐁", "CHR", 3000, null], ["212", "184", "하랑우탄", "CHR", 9900, null], ["213", "184", "귀뚤톡크 V", "CSR", 7700, null], ["214", "184", "이올브 V", "CSR", 47900, null], ["215", "184", "이올브 VMAX", "CSR", 40000, null], ["216", "184", "번치코 V", "CSR", 1200, null], ["217", "184", "번치코 VMAX", "CSR", 60000, null], ["218", "184", "다태우지네 V", "CSR", 7000, null], ["219", "184", "다태우지네 VMAX", "CSR", 20000, null], ["220", "184", "백마 버드렉스 V", "CSR", 14900, null], ["221", "184", "백마 버드렉스 VMAX", "CSR", 75000, null], ["222", "184", "피카츄 V", "CSR", 51000, null], ["223", "184", "피카츄 VMAX", "CSR", 198000, null], ["224", "184", "제라오라 V", "CSR", 29900, null], ["225", "184", "펄스멍 V", "CSR", 8700, null], ["228", "184", "블래키 VMAX", "CSR", 11000, null], ["229", "184", "무한다이노 V", "CSR", 60900, null], ["230", "184", "가라르 프리져 V", "CSR", 10000, null], ["231", "184", "님피아 V", "CSR", 28000, null], ["232", "184", "님피아 VMAX", "CSR", 50000, null], ["233", "184", "따라큐 V", "CSR", 26000, null], ["234", "184", "따라큐 VMAX", "CSR", 36000, null], ["235", "184", "흑마 버드렉스 V", "CSR", 70000, null], ["236", "184", "흑마 버드렉스 VMAX", "CSR", 10000, null], ["237", "184", "가라르 썬더 V", "CSR", 14900, null], ["238", "184", "일격 우라오스 V", "CSR", 38000, null], ["239", "184", "일격 우라오스 VMAX", "CSR", 45000, null], ["240", "184", "연격 우라오스 V", "CSR", 34900, null], ["241", "184", "연격 우라오스 VMAX", "CSR", 45000, null], ["242", "184", "가라르 파이어 V", "CSR", 6000, null], ["243", "184", "크로뱃 V", "CSR", 25000, null], ["244", "184", "블래키 V", "CSR", 65000, null], ["245", "184", "블래키 VMAX (SA)", "CSR", 90000, null], ["246", "184", "무한다이노 V (2)", "CSR", 60900, null], ["247", "184", "무한다이노 VMAX", "CSR", 63000, null], ["248", "184", "아머까오 V", "CSR", 65000, null], ["249", "184", "아머까오 VMAX", "CSR", 65000, null], ["250", "184", "자시안 V", "CSR", 47000, null], ["251", "184", "자마젠타 V", "CSR", 36900, null], ["252", "184", "레쿠쟈 VMAX", "CSR", 41000, null], ["253", "184", "두랄루돈 VMAX", "CSR", 44600, null], ["254", "184", "해피너스 V", "CSR", 6000, null], ["255", "184", "가라르의 동료들", "SR", 165800, null], ["256", "184", "금랑", "SR", 16950, null], ["257", "184", "두송", "SR", 2000, null], ["258", "184", "마스터", "SR", 3800, null], ["259", "184", "마스터드 연격의 태세", "SR", 3000, null], ["260", "184", "마스터드 일격의 태세", "SR", 5000, null], ["261", "184", "마쿠와", "SR", 9500, null], ["262", "184", "멜론", "SR", 22000, null], ["263", "184", "모험가의 발견", "SR", 5500, null], ["264", "184", "박사의 연구(주박사)", "SR", 25000, null], ["265", "184", "버넷박사", "SR", 15800, null], ["266", "184", "보스의 지령(플라드리)", "SR", null, null], ["267", "184", "소도와 실디", "SR", 15100, null], ["268", "184", "순무", "SR", 15000, null], ["269", "184", "아세로라의 예감", "SR", 176000, null], ["270", "184", "아킬", "SR", 2000, null], ["271", "184", "야청", "SR", 38900, null], ["272", "184", "어니언", "SR", 15000, null], ["273", "184", "우리", "SR", 37000, null], ["274", "184", "저지맨", "SR", 3500, null], ["275", "184", "채두", "SR", 17000, null], ["276", "184", "쿡", "SR", 8000, null], ["277", "184", "포플러", "SR", 4000, null], ["280", "184", "뮤 VMAX", "UR", 135000, null], ["282", "184", "일격 우라오스 VMAX", "UR", 27000, null], ["283", "184", "연격 우라오스 VMAX", "UR", 27000, null]]}, {"name": "백열의 아르카나", "code": "BS2022S11A", "date": "2022 (s11a)", "boxPrice": 0, "newPrice": null, "old": true, "swsh": true, "total": 94, "ev": 0, "rarityStats": {}, "top1": {"name": "샤로다 V", "rarity": "CSR", "price": 69654}, "cards": [["069", "068", "테르나", "CHR", 6000, null], ["070", "068", "밀로틱", "CHR", 15000, null], ["071", "068", "루주라", "CHR", 5000, null], ["072", "068", "가디안", "CHR", 45000, null], ["073", "068", "루브도", "CHR", 4000, null], ["074", "068", "파비코", "CHR", 8000, null], ["075", "068", "샤로다 V", "SR", 3000, null], ["076", "068", "레시라무 V", "SR", 4000, null], ["077", "068", "알로라 식스테일 V", "SR", 3000, null], ["078", "068", "입치트 V", "SR", 3000, null], ["079", "068", "마기아나 V", "SR", 3000, null], ["080", "068", "칠색조 V", "SR", 5000, null], ["081", "068", "세레나", "SR", 67050, null], ["082", "068", "기모노드레스", "SR", 18000, null], ["083", "068", "윤진", "SR", 5000, null], ["084", "068", "샤로다 V", "CSR", 69654, null], ["085", "068", "입치트 V", "CSR", 30000, null], ["086", "068", "샤로다 VSTAR", "HR", 8930, null], ["087", "068", "알로라 식스테일 VSTAR", "HR", 21432, null], ["088", "068", "입치트 VSTAR", "HR", 33934, null], ["089", "068", "세레나", "HR", 15172, null], ["090", "068", "기모노드레스", "HR", 25004, null], ["091", "068", "윤진", "HR", 9823, null]]}, {"name": "25주년 기념 컬렉션", "code": "BS2021015", "date": "2021-10", "boxPrice": 0, "newPrice": null, "old": true, "swsh": true, "total": 31, "ev": 0, "rarityStats": {}, "top1": {"name": "파도타기 피카츄 VMAX", "rarity": "RRR", "price": 40000}, "cards": [["001", "028", "피카츄", "AR", 27000, null], ["002", "028", "뮤", "N", 9800, null], ["003", "028", "박사의 연구(오박사)", "N", 3500, null], ["004", "028", "칠색조", "N", 2450, null], ["005", "028", "루기아", "N", 4000, null], ["006", "028", "그란돈", "N", 1900, null], ["007", "028", "가이오가", "N", 1650, null], ["008", "028", "디아루가", "N", 2500, null], ["009", "028", "펄기아", "N", null, null], ["010", "028", "레시라무", "N", 6000, null], ["011", "028", "제크로무", "N", null, null], ["012", "028", "제르네아스", "N", null, null], ["013", "028", "이벨타르", "N", null, null], ["014", "028", "코스모그", "N", null, null], ["015", "028", "코스모움", "N", null, null], ["016", "028", "솔가레오", "N", null, null], ["017", "028", "루나아라", "N", null, null], ["018", "028", "자시안 V", "RR", 4500, null], ["019", "028", "자마젠타 V", "RR", 5900, null], ["020", "028", "피카츄 V", "RR", 15000, null], ["023", "028", "파도타기 피카츄 V", "RR", 4000, null], ["024", "028", "파도타기 피카츄 VMAX", "RRR", 40000, null], ["025", "028", "피카츄 V-UNION", "RRR", 17000, null]]}, {"name": "드림리그", "code": "BS2019015", "date": "2019-11", "boxPrice": 0, "newPrice": null, "old": true, "swsh": true, "total": 75, "ev": 0, "rarityStats": {}, "top1": {"name": "라플레시아 GX", "rarity": "HR", "price": 185000}, "cards": [["050", "049", "코터스", "CHR", 39000, null], ["051", "049", "포푸니라", "CHR", 39800, null], ["052", "049", "팽도리", "CHR", 95000, null], ["053", "049", "약어리 (군집의 모습)", "CHR", null, null], ["054", "049", "피카츄", "CHR", 62000, null], ["055", "049", "코일", "CHR", 2000, null], ["056", "049", "또가스", "CHR", 50000, null], ["057", "049", "엘레이드", "CHR", null, null], ["058", "049", "따라큐", "CHR", 50000, null], ["059", "049", "몰드류", "CHR", 19500, null], ["060", "049", "강철톤", "CHR", 45000, null], ["061", "049", "바랜드", "CHR", 3000, null], ["062", "049", "라플레시아 GX", "SR", 22000, null], ["063", "049", "솔가레오&루나아라 GX", "SR", 90000, null], ["064", "049", "레시라무&제크로무 GX", "SR", null, null], ["065", "049", "실버디 GX", "SR", 128000, null], ["066", "049", "N의 각오", "SR", 135000, null], ["067", "049", "릴리에의 전력", "SR", 175000, null], ["068", "049", "명희", "SR", 49000, null], ["069", "049", "라플레시아 GX", "HR", 185000, null], ["070", "049", "솔가레오&루나아라 GX", "HR", 35000, null], ["071", "049", "레시라무&제크로무 GX", "HR", null, null], ["072", "049", "실버디 GX", "HR", 54200, null], ["073", "049", "수련의 낚싯대", "UR", null, null], ["074", "049", "릴리에의 인형", "UR", null, null], ["075", "049", "발전소", "UR", 29800, null]]}]</script>
+<script>
+const SETS = JSON.parse(document.getElementById('data').textContent);
+const OLD = [{"name": "미래의 일섬", "code": "SV4M", "date": "2023-11", "boxPrice": 59800, "ev": 66279, "ratio": 111, "top": "무쇠무인 ex SAR ₩159,000", "note": ""}, {"name": "레이징서프", "code": "SV3a", "date": "2023-10", "boxPrice": 59800, "ev": 65135, "ratio": 109, "top": "파라솔 아가씨 SAR ₩158,000", "note": ""}, {"name": "클레이버스트", "code": "SV2D", "date": "2023-04", "boxPrice": 59900, "ev": 58782, "ratio": 98, "top": "모야모 SAR ₩158,000", "note": ""}, {"name": "샤이니트레저 ex", "code": "SV4a", "date": "2024-01", "boxPrice": 138900, "ev": 135843, "ratio": 98, "top": "Mew ex SAR ₩498,000", "note": ""}, {"name": "트리플렛비트", "code": "SV1a", "date": "2023-03", "boxPrice": 43667, "ev": 39650, "ratio": 91, "top": "운향 UR ₩99,000", "note": ""}, {"name": "흑염의 지배자", "code": "SV3", "date": "2023-09", "boxPrice": 53000, "ev": 43680, "ratio": 82, "top": "리자몽 ex SAR ₩181,000", "note": ""}, {"name": "고대의 포효", "code": "SV4K", "date": "2023-11", "boxPrice": 61900, "ev": 48457, "ratio": 78, "top": "올림박사의 기백 SAR ₩49,800", "note": ""}, {"name": "스칼렛 ex", "code": "SV1S", "date": "2023-01", "boxPrice": 68900, "ev": 50818, "ratio": 74, "top": "가디안 ex SAR ₩122,450", "note": ""}, {"name": "바이올렛 ex", "code": "SV1V", "date": "2023-01", "boxPrice": 68900, "ev": 50298, "ratio": 73, "top": "미라이돈 ex UR ₩99,000", "note": "박스 시세 없음→스칼렛ex 동일 가정"}, {"name": "스노해저드", "code": "SV2P", "date": "2023-04", "boxPrice": 62000, "ev": 44320, "ratio": 71, "top": "총지엔 ex SAR ₩49,000", "note": ""}, {"name": "포켓몬 카드 151", "code": "SV2a", "date": "2023-06", "boxPrice": 299000, "ev": 93024, "ratio": 31, "top": "리자몽 ex SAR ₩230,000", "note": "미러(마스터볼 등) 기대값 +15,000 별도 가산(근사)"}];
+const CDN = 'https://cdn.collectory.cc/cards/kr';
+const CDN2 = 'https://cdn.collectory.cc/cards';
+const RCOLOR = {HR:'#e11d48',CSR:'#7c3aed',CHR:'#0d9488',RRR:'#6366f1',S:'#f472b6',SSR:'#db2777',RR:'#3b82f6',AR:'#10b981',SR:'#f59e0b',SAR:'#ef4444',UR:'#a855f7',MUR:'#a855f7',BWR:'#111827',MA:'#ec4899',ACE:'#0ea5e9',C:'#94a3b8',U:'#94a3b8',R:'#64748b',N:'#94a3b8',M:'#14b8a6'};
+const RLABEL = r => r==='M' ? '미러' : r;
+const won = n => (n===null||n===undefined) ? '시세없음' : '₩'+Number(n).toLocaleString('ko-KR');
+const app = document.getElementById('app');
+const ttl = document.getElementById('ttl');
+
+const IMGCFG = {
+  'BS2021010': {path:'kr/BS2021010', tries:['P_BR','P','P_B'], ver:'', alt:{path:'kr/BS2021010-kr', tries:['P_BR','P'], ver:''}},
+  'BS2026003': {path:'kr/SV-ninja', tries:['P_B','P','U_B'], ver:'?v=hr2'},
+  'BS2026002': {path:'kr/BS2026002', tries:['P','P_B','P_BR'], ver:''},
+  'BS2026004': {path:'kr/BS2026004', tries:['U_BR','P_BR','U_B','P'], ver:'', alt:{path:'jp/M5', tries:['P','U'], ver:'?v=hr'}},
+  'BS2025015': {path:'kr/BS2025015', tries:['P_B','P_BR','P'], ver:''},
+};
+const JPCODE = {BS2024004:'sv5K',BS2024005:'sv5M',BS2024007:'sv5a',BS2024008:'sv6',BS2024011:'sv6a',BS2024012:'sv7',BS2024016:'sv7a',BS2024017:'sv8',BS2024019:'sv8a',BS2025001:'sv9',BS2025005:'sv9a',BS2025006:'sv10',BS2025007:'sv11B',BS2025008:'sv11W',BS2025009:'M1L',BS2025010:'M1S',BS2025014:'M2',BS2025015:'M2a',BS2026002:'M3',BS2026003:'M4',BS2026004:'M5',BS2023006:'sv1S',BS2023010:'sv1a',BS2023012:'sv2D',BS2023014:'sv2a',BS2023020:'sv3a',BS2024001:'sv4a',BS2021010:'S6a',BS2021018:'S8',BS2022001:'S8b'};
+function jpFallbacks(setCode, num){
+  const jp = JPCODE[setCode]; if(!jp) return [];
+  const L = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/'+jp+'/'+jp+'_';
+  return [L+num+'_R_JP.png', L+String(parseInt(num,10))+'_R_JP.png', 'https://cdn.collectory.cc/cards/jp/'+jp+'/'+num+'.webp?v=hr'];
+}
+function candsFor(cfg, num, base, rar){
+  const unp = String(parseInt(num,10));
+  const F = {P_B:num+'_'+base, P:num, U_B:unp+'_'+base, P_BR:num+'_'+base+rar, U_BR:unp+'_'+base+rar, U:unp};
+  return cfg.tries.map(t=>CDN2+'/'+cfg.path+'/'+F[t]+'.webp'+cfg.ver);
+}
+function imgTag(setCode, c, eager){
+  const [num, base, name, rar] = c;
+  const unp = String(parseInt(num,10));
+  let urls;
+  const cfg = IMGCFG[setCode];
+  if (cfg) {
+    urls = candsFor(cfg, num, base, rar);
+    if (cfg.alt) urls = urls.concat(candsFor(cfg.alt, num, base, rar));
+    // generic fallbacks
+    urls.push(CDN+'/'+setCode+'/'+num+'_'+base+rar+'.webp', CDN+'/'+setCode+'/'+num+'.webp');
+    urls = urls.concat(jpFallbacks(setCode, num));
+  } else {
+    const cands = rar==='N'||rar==='M'
+      ? [num+'_'+base, num, num+'_'+base+rar, unp+'_'+base, unp]
+      : [num+'_'+base+rar, num, num+'_'+base, unp+'_'+base+rar, unp];
+    urls = cands.map(x=>CDN+'/'+setCode+'/'+x+'.webp').concat(jpFallbacks(setCode, num));
+  }
+  return '<img loading="'+(eager?'eager':'lazy')+'" referrerpolicy="no-referrer" src="'+urls[0]+'" data-alt=\''+JSON.stringify(urls.slice(1))+'\' onerror="imgFallback(this)" alt="">';
+}
+function imgFallback(img){
+  try{
+    const alts = JSON.parse(img.dataset.alt||'[]');
+    if(alts.length){ img.dataset.alt = JSON.stringify(alts.slice(1)); img.src = alts[0]; }
+    else { img.parentElement.innerHTML = '<span style="font-size:10px;color:#94a3b8">이미지<br>없음</span>'; }
+  }catch(e){}
+}
+/* ---------- collection storage ---------- */
+let MEM = {cards:{}, invest:{}, etc:[], sealed:{}};
+function loadCol(){ try{ const s = localStorage.getItem('pkmn_col_v1'); if(s) MEM = JSON.parse(s); MEM.etc = MEM.etc||[]; MEM.sealed = MEM.sealed||{}; }catch(e){} }
+function saveCol(){ try{ localStorage.setItem('pkmn_col_v1', JSON.stringify(MEM)); }catch(e){} }
+loadCol();
+const ckey = (code,c)=>code+'|'+c[0]+'|'+c[3];
+function costSum(e){ return (e.cost||0) + (e.lots||[]).reduce((a,l)=>a+(l.cost||0),0); }
+function gradeStr(e){ const gs=[e.grade,...(e.lots||[]).map(l=>l.grade)].filter(Boolean); return gs.length?gs.join('·'):''; }
+function getQ(code,c){ return (MEM.cards[ckey(code,c)]||{}).q||0; }
+function addQ(code,c,d){
+  const k = ckey(code,c); const e = MEM.cards[k]||{q:0,cost:0};
+  e.q = Math.max(0, e.q+d);
+  if(e.q===0) delete MEM.cards[k]; else MEM.cards[k]=e;
+  saveCol(); return e.q;
+}
+function setCost(code,c){
+  const k = ckey(code,c); const e = MEM.cards[k];
+  if(!e||!e.q){ alert('먼저 + 버튼으로 보유 등록을 해주세요'); return; }
+  if(e.lots && e.lots.length){
+    const act = prompt('1=구매기록(로트) 추가  2=시세/그레이딩 수정  3=로트 목록/삭제', '1');
+    if(act===null) return;
+    if(act==='1'){ addLot(code,c); return; }
+    if(act==='3'){
+      const list = e.lots.map((l,i)=>(i+1)+') '+won(l.cost)+(l.grade?' '+l.grade:'')+(l.date?' ('+l.date.slice(5)+')':'')).join('\n');
+      const d = prompt('삭제할 로트 번호 입력 (취소=닫기)\n'+list,'');
+      if(d){ const i = parseInt(d,10)-1; if(e.lots[i]){ e.lots.splice(i,1); saveCol(); render(); } }
+      return;
+    }
+  }
+  const v = prompt(c[2]+' ('+RLABEL(c[3])+') 구매 총액 (원)\n※ 박스 개봉으로 얻은 카드는 비워두세요 (박스 투자금에 포함)', e.cost||'');
+  if(v!==null){ const nv = parseInt(String(v).replace(/[^0-9]/g,''),10)||0; if(nv && !e.cost) e.cdate = new Date().toISOString().slice(0,10); e.cost = nv; }
+  const p = prompt('현재 시세 직접 입력 (원)\n비워두면 도감 시세('+won(priceOf(c))+')를 사용합니다', e.myPrice||'');
+  if(p!==null){ const n = parseInt(String(p).replace(/[^0-9]/g,''),10)||0; if(n) e.myPrice = n; else delete e.myPrice; }
+  if(HIGHR[c[3]]){
+    const g = prompt('그레이딩 등급 (예: BGS 9, PSA 10)\n그레이딩 안 했으면 비워두세요', e.grade||'');
+    if(g!==null){ if(g.trim()) e.grade = g.trim(); else delete e.grade; }
+  }
+  const lg = prompt('언어판: 비우면 한글판 / JP=일본판 / CN=중국판', e.lang||'');
+  if(lg!==null){ const L=lg.trim().toUpperCase(); if(L==='JP'||L==='CN') e.lang=L; else delete e.lang; }
+  saveCol(); render();
+}
+const LANGB = {JP:'🇯🇵일판', CN:'🇨🇳중판'};
+const HIGHR = {SAR:1, UR:1, MUR:1, BWR:1, MA:1, SSR:1, HR:1, CSR:1};
+const STARTER_GEN = (()=>{
+  const gens = {
+    1:['이상해씨','이상해풀','이상해꽃','파이리','리자드','리자몽','꼬부기','어니부기','거북왕'],
+    2:['치코리타','베이리프','메가니움','브케인','마그케인','블레이범','리아코','엘리게이','장크로다일'],
+    3:['나무지기','나무돌이','나무킹','아차모','영치코','번치코','물짱이','늪짱이','대짱이'],
+    4:['모부기','수풀부기','토대부기','불꽃숭이','파이숭이','초염몽','팽도리','팽태자','엠페르트'],
+    5:['주리비얀','샤비','샤로다','뚜꾸리','차오꿀','염무왕','수댕이','쌍검자비','대검귀'],
+    6:['도치마론','도치보구','브리가론','푸호꼬','테르나','마폭시','개구마르','개굴반장','개굴닌자'],
+    7:['나몰빼미','빼미스로우','모크나이퍼','냐오불','냐오히트','어흥염','누리공','키요공','누리레느'],
+    8:['흥나숭','채키몽','고릴타','염버니','래비풋','에이스번','울머기','누겔레온','인텔리레온'],
+    9:['나오하','나로테','마스카나','뜨아거','악뜨거','라우드본','꾸왁스','아꾸왁','웨이니발']
+  };
+  const map = {};
+  for(const g in gens) for(const n of gens[g]) map[n] = g;
+  return map;
+})();
+function starterOf(name){
+  for(const n in STARTER_GEN){ if(name.includes(n)) return STARTER_GEN[n]; }
+  return null;
+}
+function addInvest(code){
+  const qty = parseInt(document.getElementById('iv-qty').value,10)||1;
+  const unit = parseInt((document.getElementById('iv-unit').value||'').replace(/[^0-9]/g,''),10);
+  const date = document.getElementById('iv-date').value || new Date().toISOString().slice(0,10);
+  const memo = document.getElementById('iv-memo').value.trim()||'박스 구매';
+  if(!unit){ alert('개당 가격을 입력하세요'); return; }
+  (MEM.invest[code]=MEM.invest[code]||[]).push({amt:qty*unit, qty, unit, date, memo});
+  saveCol(); render();
+}
+function invLabel(it){
+  const d = it.date ? it.date.slice(5).replace('-','/')+' · ' : '';
+  const q = it.qty && it.unit ? it.qty+'개 × '+won(it.unit)+' = ' : '';
+  return d + it.memo + ' — ' + q + won(it.amt);
+}
+function delInvest(code,i){ (MEM.invest[code]||[]).splice(i,1); saveCol(); render(); }
+function colStats(){
+  let val=0, singles=0, owned=0, kinds=0;
+  for(const s of SETS) for(const c of s.cards){ const e = MEM.cards[ckey(s.code,c)]; if(e&&e.q){ owned+=e.q; kinds++; val += (e.myPrice||priceOf(c)||0)*e.q; singles += costSum(e); } }
+  let invest = singles;
+  for(const code in MEM.invest) for(const it of MEM.invest[code]) invest += it.amt;
+  for(const e of (MEM.etc||[])){ invest += e.cost||0; val += (e.price||0)*(e.q||1); owned += e.q||1; kinds++; }
+  let sealedCost=0, sealedVal=0, sealedQty=0;
+  for(const code in (MEM.sealed||{})) for(const lot of MEM.sealed[code]){
+    const s = SETS.find(x=>x.code===code);
+    sealedCost += lot.qty*lot.unit; sealedQty += lot.qty;
+    sealedVal += lot.qty*(s?s.boxPrice:lot.unit);
+  }
+  invest += sealedCost;
+  return {val, invest, owned, kinds, sealedCost, sealedVal, sealedQty, total: val + sealedVal};
+}
+function exportCol(){
+  const blob = new Blob([JSON.stringify(MEM,null,1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'pokemon_collection_backup.json'; a.click();
+}
+function mergeInto(data){
+  for(const k in (data.cards||{})){
+    const src = data.cards[k]; const cur = MEM.cards[k];
+    if(!cur) MEM.cards[k] = {q:src.q||0, cost:src.cost||0, ...(src.grade?{grade:src.grade}:{}), ...(src.myPrice?{myPrice:src.myPrice}:{}), ...(src.cdate?{cdate:src.cdate}:{}), ...(src.lang?{lang:src.lang}:{}), ...(src.lots?{lots:src.lots.map(l=>({...l}))}:{})};
+    else {
+      cur.q = Math.max(cur.q||0, src.q||0);
+      if(src.cost && !cur.cost){ cur.cost = src.cost; if(src.cdate) cur.cdate = src.cdate; }
+      if(src.grade && !cur.grade) cur.grade = src.grade;
+      if(src.lots){ cur.lots = cur.lots||[]; for(const l of src.lots){ if(!cur.lots.some(x=>x.cost===l.cost && x.date===l.date && x.grade===l.grade)) cur.lots.push({...l}); } }
+    }
+  }
+  for(const e of (data.etc||[])){
+    if(!(MEM.etc||[]).some(x=>x.name===e.name && x.cost===e.cost)) MEM.etc.push({...e});
+  }
+  for(const code in (data.sealed||{})){
+    MEM.sealed[code] = MEM.sealed[code]||[];
+    for(const lot of data.sealed[code]){
+      if(!MEM.sealed[code].some(x=>x.unit===lot.unit && x.qty===lot.qty)) MEM.sealed[code].push({...lot});
+    }
+  }
+  for(const code in (data.invest||{})){
+    MEM.invest[code] = MEM.invest[code]||[];
+    for(const it of data.invest[code]){
+      if(!MEM.invest[code].some(x=>x.amt===it.amt && x.memo===it.memo)) MEM.invest[code].push(it);
+    }
+  }
+  saveCol();
+}
+function importCol(){
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+  inp.onchange = ()=>{ const f = inp.files[0]; if(!f) return; const r = new FileReader();
+    r.onload = ()=>{ try{
+      const data = JSON.parse(r.result);
+      const mode = confirm('확인 = 병합(기존 기록 유지 + 추가)\n취소 = 교체(전부 덮어쓰기)');
+      if(mode) mergeInto(data); else { MEM = data; saveCol(); }
+      alert('가져오기 완료!'); render(); }catch(e){ alert('파일을 읽지 못했습니다'); } };
+    r.readAsText(f); };
+  inp.click();
+}
+const PURCHASES = { invest: {}, sealed: {}, etc: [] };
+function applyPurchases(){
+  if(!confirm('네이버/크림 구매내역을 반영할까요?\n미개봉 박스: 초전×3(4.5만), 니힐×2(3.2만), 닌자×2(3.2만), 메가드림×1(3.5만)\n※ 이전 버전에서 자동 반영한 박스 투자 기록(네이버/크림 메모)은 미개봉 재고로 대체되어 삭제됩니다.')) return;
+  for(const code of ['BS2024017','BS2026002','BS2026003']){
+    if(MEM.invest[code]) MEM.invest[code] = MEM.invest[code].filter(it=>!/^(네이버|크림)/.test(it.memo||''));
+    if(MEM.invest[code] && !MEM.invest[code].length) delete MEM.invest[code];
+  }
+  mergeInto(PURCHASES);
+  alert('반영 완료! 미개봉 박스 4종(8박스) + 싱글 37종 + 기타 21건이 병합되었습니다.\n금액 미확정 카드(번들 등)는 각 카드의 ₩ 버튼으로 수정하세요.');
+  render();
+}
+function resetCol(){ if(confirm('컬렉션 기록을 모두 삭제할까요? (내보내기로 백업 권장)')){ MEM={cards:{},invest:{}}; saveCol(); render(); } }
+function priceOf(c){ return c[5]!=null ? c[5] : c[4]; }
+function isKeeper(c){
+  const p = priceOf(c)||0; const r = c[3];
+  if(['C','U','N','M'].includes(r)) return p>=2000;
+  if(['R','RR'].includes(r)) return p>=4000;
+  return false;
+}
+function cardCell(setCode, c, eager, withSet){
+  const [num, base, name, rar, price] = c;
+  const avg = c[5];
+  const q = getQ(setCode, c);
+  const e = MEM.cards[ckey(setCode,c)]||{};
+  const id = (setCode+'-'+num+'-'+rar).replace(/[^A-Za-z0-9-]/g,'');
+  const effP = e.myPrice || priceOf(c) || 0;
+  const keep = e.myPrice ? ((['C','U','N','M'].includes(rar)&&effP>=2000)||(['R','RR'].includes(rar)&&effP>=4000)||false) : isKeeper(c);
+  return '<div class="card'+(q>0?' owned':'')+(keep?' keeper':'')+'" id="cc-'+id+'">'
+    + (keep?'<div class="keepchip">⭐킵</div>':'')
+    + (q>0?'<div class="ownchip">✓ '+q+(gradeStr(e)?' · '+gradeStr(e):'')+'</div>':'')
+    + (function(){const g = starterOf(name); return g?'<div class="starterbub">🌱 '+g+'세대 스타터</div>':'';})()
+    + '<div class="imgwrap">'+imgTag(setCode,c,eager)+'</div>'
+    + (withSet?'<div class="setname">'+withSet+'</div>':'')
+    + '<div class="cnum">'+num+'/'+base+' <span class="badge" style="background:'+(RCOLOR[rar]||'#64748b')+'">'+RLABEL(rar)+'</span>'+(e.lang?' <span class="badge" style="background:#475569">'+LANGB[e.lang]+'</span>':'')+'</div>'
+    + '<div class="cname">'+name+'</div>'
+    + '<div class="cprice'+((e.myPrice||priceOf(c))>=30000?' hot':'')+'">'+won(e.myPrice||priceOf(c))+(e.myPrice?' <span class="avgb" style="background:#fef3c7;color:#92400e">내시세</span>':(avg?' <span class="avgb" title="컬렉토리+프라이스차팅 평균">평균</span>':''))+(costSum(e)?'<span style="font-size:10px;color:#64748b"> (구매 '+won(costSum(e))+')</span>':'')+'</div>'
+    + '<div class="ownbar noprintel">'
+    + '<button onclick="bump(this,\''+setCode+'\',\''+num+'\',\''+rar+'\',-1)">−</button>'
+    + '<span class="qty">'+q+'</span>'
+    + '<button onclick="bump(this,\''+setCode+'\',\''+num+'\',\''+rar+'\',1)">＋</button>'
+    + '<button class="cost" onclick="costOf(\''+setCode+'\',\''+num+'\',\''+rar+'\')">₩</button>'
+    + '<button class="cost" onclick="openShop(\'n\',\''+encodeURIComponent(name+' '+RLABEL(rar))+'\')" title="네이버쇼핑 시세 검색">N</button>'
+    + '<button class="cost" onclick="openShop(\'b\',\''+encodeURIComponent(name+' '+RLABEL(rar))+'\')" title="번개장터 시세 검색">번</button>'
+    + '</div></div>';
+}
+function openShop(site, q){
+  const kw = '포켓몬카드 ' + decodeURIComponent(q);
+  const url = site==='b'
+    ? 'https://m.bunjang.co.kr/search/products?q=' + encodeURIComponent(kw)
+    : 'https://msearch.shopping.naver.com/search/all?query=' + encodeURIComponent(kw);
+  window.open(url, '_blank');
+}
+function findCard(code,num,rar){ const s = SETS.find(x=>x.code===code); return [s, s.cards.find(c=>c[0]===num&&c[3]===rar)]; }
+function addLot(code,c){
+  const k = ckey(code,c); const e = MEM.cards[k]; if(!e) return;
+  const v = prompt(c[2]+' '+RLABEL(c[3])+' — 이 한 장의 구매가 (원)\n(박스에서 깐 카드면 비워두세요)','');
+  const cost = v===null?0:(parseInt(String(v).replace(/[^0-9]/g,''),10)||0);
+  const g = prompt('이 한 장의 상태 등급 (주관 평가, 예: S급, A급, B급, C급)\n안 매기면 비워두세요','');
+  if(cost || (g&&g.trim())){
+    e.lots = e.lots||[];
+    e.lots.push({cost, grade:(g||'').trim(), date:new Date().toISOString().slice(0,10)});
+    saveCol(); render();
+  }
+}
+function bump(btn,code,num,rar,d){
+  const [s,c] = findCard(code,num,rar); if(!c) return;
+  const prevQ = getQ(code,c);
+  const q = addQ(code,c,d);
+  if(d>0){
+    if(confirm(c[2]+' '+RLABEL(rar)+' ('+q+'번째 장) — 싱글 구매 기록(구매가·상태등급)을 추가할까요?\n박스에서 깐 카드면 취소!')){ addLot(code,c); return; }
+  }
+  const el = btn.closest('.card');
+  el.classList.toggle('owned', q>0);
+  el.querySelector('.qty').textContent = q;
+  let chip = el.querySelector('.ownchip');
+  if(q>0){ if(!chip){ chip = document.createElement('div'); chip.className='ownchip'; el.prepend(chip);} chip.textContent='✓ '+q; }
+  else if(chip) chip.remove();
+}
+function costOf(code,num,rar){ const [s,c] = findCard(code,num,rar); if(c) setCost(code,c); }
+function ratioInfo(s){
+  const buy = s.newPrice || s.boxPrice;
+  return {ratio: Math.round(s.ev/buy*100), base: s.newPrice?'신품가':'실거래가'};
+}
+
+/* ---------- views ---------- */
+function renderHome(){
+  ttl.textContent = '포켓몬 카드 박스 도감';
+  let m = '', mo = '';
+  SETS.forEach((s,i)=>{
+    const r = ratioInfo(s);
+    const ownK = s.cards.filter(c=>getQ(s.code,c)>0).length;
+    const item = '<a class="mitem" href="#box/'+s.code+'">'
+      + '<div class="mi-top"><b>'+(i+1)+'. '+s.name+'</b><small>'+s.date+'</small></div>'
+      + '<div class="mi-sub">수록 '+s.cards.length+'종 · 박스 '+won(s.boxPrice)+(s.ev?' · <span class="ev">기대값 '+r.ratio+'%</span>':'')
+      + (ownK?' · <span style="color:#16a34a;font-weight:700">보유 '+ownK+'/'+s.cards.length+'</span>':'')+'<br>'
+      + '<span class="top">🏆 '+s.top1.name+' '+RLABEL(s.top1.rarity)+' '+won(s.top1.price)+'</span></div></a>';
+    if (s.old) mo += item; else m += item;
+  });
+  app.innerHTML =
+   '<div class="hero"><h1>포켓몬 카드 박스별 도감</h1>'
+   +'<p>와일드포스(2024-03) ~ 어비스아이(2026-06) · 한국판 정규 박스 21종 · '+SETS.reduce((a,s)=>a+s.cards.length,0)+'장<br>'
+   +'RR 이상 레어 전체 + 2,000원↑ 일반 · 시세: collectory.cc 실거래 (2026-07-12) · <span class=\'avgb\' style=\'font-size:10px\'>평균</span> 표시는 PriceCharting(한글판) 시세와 2곳 평균</p>'
+   +'<div class="hbtns"><a href="#my" style="background:#4ade80;color:#052e16">🗂️ 내 정리함</a><a href="#top5">💰 돈 되는 박스 TOP5</a><button class="ghost" onclick="location.hash=\'#print\'">🖨️ 전체 인쇄(A4/PDF)</button><button class="ghost" onclick="document.getElementById(\'modal\').classList.remove(\'hidden\')">📱 바로가기 추가</button></div></div>'
+   +'<input id="q" placeholder="🔍 카드 이름 검색 (예: 리자몽, 이브이, 피카츄)" autocomplete="off">'
+   +'<div class="menu">'+m+'</div>'
+   +'<h3 style="margin:16px 0 8px;font-size:14px;color:#334155">📦 이전 박스 (AR 이상 레어만 수록)</h3>'
+   +'<div class="menu">'+mo+'</div>'
+   +'<div id="sres"></div>'
+   +'<footer>시세 출처: collectory.cc (번개장터 등 실거래 집계) · 신품가: 다나와 · 개봉 기대값은 봉입률 추정 기반 참고치</footer>';
+  const q = document.getElementById('q');
+  q.addEventListener('input', ()=>doSearch(q.value.trim()));
+}
+function doSearch(kw){
+  const box = document.getElementById('sres');
+  const menu = document.querySelector('.menu');
+  if(!kw){ box.innerHTML=''; menu.classList.remove('hidden'); return; }
+  menu.classList.add('hidden');
+  let hits = [];
+  for(const s of SETS) for(const c of s.cards) if(c[2].includes(kw)) hits.push([s,c]);
+  hits.sort((a,b)=>(priceOf(b[1])||0)-(priceOf(a[1])||0));
+  hits = hits.slice(0,60);
+  box.innerHTML = hits.length
+    ? '<p style="font-size:12px;color:#64748b;margin:4px 0 8px">검색 결과 '+hits.length+'건 (가격순)</p><div class="grid">'+hits.map(([s,c])=>cardCell(s.code,c,true,s.name)).join('')+'</div>'
+    : '<p style="padding:20px;text-align:center;color:#64748b">"'+kw+'" 검색 결과가 없습니다</p>';
+}
+function renderBox(code){
+  const s = SETS.find(x=>x.code===code);
+  if(!s){ location.hash=''; return; }
+  ttl.textContent = s.name;
+  const r = ratioInfo(s);
+  const rs = Object.entries(s.rarityStats).map(([k,v])=>k+' '+v.n+'종·평균 '+won(v.avg)).join(' / ');
+  const rarities = [...new Set(s.cards.map(c=>c[3]))];
+  const chips = ['전체',...rarities,'보유','미보유','킵'].map(x=>'<span class="rchip'+(x==='전체'?' on':'')+'" data-r="'+x+'">'+(x==='전체'?'전체':(x==='보유'?'✅ 보유':(x==='미보유'?'❌ 미보유':(x==='킵'?'⭐ 묵혀둘 카드':RLABEL(x)))))+'</span>').join('');
+  const sorts = [['price','💰 비싼순'],['rarity','⭐ 레어도순'],['num','#️⃣ 번호순']];
+  const sortChips = sorts.map(([k,l],i)=>'<span class="rchip sortc'+(i===0?' on':'')+'" data-s="'+k+'">'+l+'</span>').join('');
+  app.innerHTML =
+    '<div class="boxhead"><h2>'+s.name+'</h2>'
+    +'<div class="bh-sub">'+s.code+' · 발매 '+s.date+' · 전체 '+s.total+'종 중 <b>'+s.cards.length+'종</b> 수록'+(s.old?' (이전 박스: AR 이상만)':'')+'<br>'
+    +'박스 실거래 <b>'+won(s.boxPrice)+'</b>'+(s.newPrice?' · 신품 최저가 <b>'+won(s.newPrice)+'</b>':'')
+    +(s.ev?' · 개봉 기대값(추정) <b>'+won(s.ev)+'</b> <span style="color:#2563eb">('+r.base+' 대비 '+r.ratio+'%)</span>':'')+'<br>'
+    +'<span style="font-size:11px">'+rs+'</span></div>'
+    +'<div class="rchips" style="margin-top:10px"><span style="font-size:11px;color:#64748b;align-self:center">정렬:</span>'+sortChips+'</div>'
+    +'<div class="rchips"><span style="font-size:11px;color:#64748b;align-self:center">필터:</span>'+chips+'</div></div>'
+    +'<div class="investbox noprintel" id="investbox"></div>'
+    +'<div class="grid" id="bgrid"></div>';
+  let curSort = 'price', curR = '전체';
+  window.render_investbox = ()=>{
+    const inv = MEM.invest[s.code]||[];
+    const tot = inv.reduce((a,b)=>a+b.amt,0);
+    const ownK = s.cards.filter(c=>getQ(s.code,c)>0).length;
+    const ownVal = s.cards.reduce((a,c)=>{const e=MEM.cards[ckey(s.code,c)]; return a+((e&&e.myPrice)||priceOf(c)||0)*getQ(s.code,c);},0);
+    const singles = s.cards.reduce((a,c)=>a+costSum(MEM.cards[ckey(s.code,c)]||{}),0);
+    const spent = tot + singles;
+    const diff = ownVal - spent;
+    document.getElementById('investbox').innerHTML =
+      '<b>🗂️ 이 박스 내 기록</b> — 보유 '+ownK+'/'+s.cards.length+'종 · 보유 카드 시세 <b>'+won(ownVal)+'</b> · 투자 <b>'+won(spent)+'</b>'
+      +(spent?' · 손익 <b style="color:'+(diff>=0?'#16a34a':'#dc2626')+'">'+(diff>=0?'+':'')+won(diff).replace('₩','₩')+'</b>':'')
+      +'<div class="row"><input id="iv-date" type="date" style="flex:0 0 118px"><input id="iv-qty" inputmode="numeric" placeholder="수량" value="1" style="flex:0 0 52px"><input id="iv-unit" inputmode="numeric" placeholder="개당 가격 (원)"></div>'
+      +'<div class="row"><input id="iv-memo" placeholder="메모 (예: 네이버 구매, 개봉함)"><button onclick="addInvest(\''+s.code+'\')">기록</button></div>'
+      +(inv.length?'<div class="ilist">'+inv.map((it,i)=>'· '+invLabel(it)+'<span onclick="delInvest(\''+s.code+'\','+i+')">✕삭제</span>').join('<br>')+'</div>':'');
+  };
+  const RORDER = ['MUR','BWR','UR','MA','SAR','SR','AR','ACE','RR','M','R','U','N','C'];
+  function draw(){
+    let list;
+    if(curR==='전체') list = [...s.cards];
+    else if(curR==='보유') list = s.cards.filter(c=>getQ(s.code,c)>0);
+    else if(curR==='미보유') list = s.cards.filter(c=>getQ(s.code,c)===0);
+    else if(curR==='킵') list = s.cards.filter(isKeeper);
+    else list = s.cards.filter(c=>c[3]===curR);
+    if(curSort==='price') list.sort((a,b)=>(priceOf(b)||0)-(priceOf(a)||0));
+    else if(curSort==='rarity') list.sort((a,b)=>{const d = RORDER.indexOf(a[3])-RORDER.indexOf(b[3]); return d!==0?d:(b[4]||0)-(a[4]||0);});
+    else list.sort((a,b)=>parseInt(a[0])-parseInt(b[0]));
+    document.getElementById('bgrid').innerHTML = list.map(c=>cardCell(s.code,c,curSort!=='num')).join('');
+  }
+  document.querySelectorAll('.rchip').forEach(ch=>ch.addEventListener('click',()=>{
+    if(ch.dataset.s){ document.querySelectorAll('.sortc').forEach(x=>x.classList.remove('on')); ch.classList.add('on'); curSort = ch.dataset.s; }
+    else { document.querySelectorAll('.rchip:not(.sortc)').forEach(x=>x.classList.remove('on')); ch.classList.add('on'); curR = ch.dataset.r; }
+    draw();
+  }));
+  draw();
+  window.render_investbox();
+  const dt = document.getElementById('iv-date'); if(dt && !dt.value) dt.value = new Date().toISOString().slice(0,10);
+}
+function renderTop5(){
+  ttl.textContent = '박스 효율 랭킹';
+  const rank = SETS.filter(s=>s.ev).map(s=>({s,...ratioInfo(s)})).sort((a,b)=>b.ratio-a.ratio);
+  const rows = rank.map((r,i)=>'<tr class="'+(i<5?'t5':'')+'" onclick="location.hash=\'#box/'+r.s.code+'\'">'
+    +'<td>'+(i+1)+'</td><td style="text-align:left"><b>'+r.s.name+'</b></td><td>'+won(r.s.boxPrice)+'</td><td>'+(r.s.newPrice?won(r.s.newPrice):'—')+'</td>'
+    +'<td>'+won(r.s.ev)+'</td><td><b>'+r.ratio+'%</b><br><small style="color:#64748b">'+r.base+' 기준</small></td>'
+    +'<td style="text-align:left">'+r.s.top1.name+' '+RLABEL(r.s.top1.rarity)+'<br><b>'+won(r.s.top1.price)+'</b></td></tr>').join('');
+  const oldRows = OLD.filter(o=>!SETS.some(s=>s.name===o.name)).map((o,i)=>'<tr><td>'+(i+1)+'</td><td style="text-align:left"><b>'+o.name+'</b><br><small style="color:#64748b">'+o.date+(o.note?' · '+o.note:'')+'</small></td>'
+    +'<td>'+won(o.boxPrice)+'</td><td>'+won(o.ev)+'</td><td><b>'+o.ratio+'%</b></td><td style="text-align:left">'+o.top+'</td></tr>').join('');
+  app.innerHTML = '<div class="evwrap"><h2 style="margin-bottom:10px">💰 까서 돈 되는 박스 랭킹 <small style="font-size:12px;color:#64748b">(행을 누르면 해당 박스로 이동)</small></h2>'
+    +'<table class="evt"><tr><th>순위</th><th>박스</th><th>실거래가</th><th>신품 최저가</th><th>개봉 기대값</th><th>기대값/구매가</th><th>대표 당첨 카드</th></tr>'+rows+'</table>'
+    +'<h2 style="margin:18px 0 8px;font-size:15px">📦 이전 SV 박스 (스칼렛ex~샤이니트레저, 2023~2024.1) — 참고용</h2>'
+    +'<p style="font-size:11.5px;color:#64748b;margin-bottom:8px">카드 도감에는 미수록 · RR 등급 평균은 ₩1,500 근사치 적용 · 구박스는 시세 프리미엄이 붙어 개봉 효율이 대체로 낮습니다</p>'
+    +'<table class="evt"><tr><th>순위</th><th>박스</th><th>실거래가</th><th>개봉 기대값</th><th>기대값/구매가</th><th>대표 당첨 카드</th></tr>'+oldRows+'</table>'
+    +'<div class="assume"><b>계산 가정(봉입률 추정):</b> 일반 확장팩(30팩) RR 6.5 · AR 3 · SR 0.8 · SAR 0.3 · UR 0.1 · ACE 2 / 블랙볼트·화이트플레어(20팩) RR 4.5 · AR 10 · SR 0.8 · SAR 0.3 · BWR 0.05 / 하이클래스(10팩) RR 9 · SR 1.5 · SAR 0.7 · UR 0.1 (MEGA드림 MA 0.15, 샤이니트레저 S 10·SSR 1.5·SAR 0.4·UR 0.2) / 151(20팩)은 미러 기대값 +15,000 가산 / MUR 0.03. 등급별 기대 장수 × 등급 평균 시세 합산. 봉입률은 공식 수치가 아닌 커뮤니티 추정치이며 C/U/R 잔여가치는 0으로 계산. 기대값은 평균일 뿐 고가 카드가 안 나오면 손해이고, 판매 수수료·시세 변동도 감안하세요.</div></div>';
+}
+function etcHtml(){
+  let rows = (MEM.etc||[]).map((e,i)=>'<div class="lrow" data-lt="etc" data-i="'+i+'"><span>🎴 '+e.name+' ×'+(e.q||1)+(e.lang?' <span class="badge" style="background:#475569">'+LANGB[e.lang]+'</span>':'')+(e.note?' <small style="color:#94a3b8">'+e.note+'</small>':'')+'</span><b>시세 '+won(e.price)+' · 구매 '+won(e.cost)+'</b></div>').join('');
+  if(!rows) rows = '<div style="font-size:12px;color:#94a3b8;padding:8px">도감 밖 카드(프로모·클래식 등)를 여기에 추가할 수 있어요</div>';
+  return '<div class="ledger">'+rows+'</div><div class="mybtns"><button data-etcadd="1">➕ 기타 카드 추가</button></div>';
+}
+function etcAdd(){
+  const name = prompt('카드 이름 (예: 뮤 VMAX UR · VMAX클라이맥스)'); if(!name) return;
+  const cost = parseInt(String(prompt('구매가 (원)','0')||'').replace(/[^0-9]/g,''),10)||0;
+  const price = parseInt(String(prompt('현재 시세 (원, 모르면 비워두기)','')||'').replace(/[^0-9]/g,''),10)||0;
+  const lg = (prompt('언어판: 비우면 한글판 / JP=일본판 / CN=중국판','')||'').trim().toUpperCase();
+  MEM.etc.push({name, cost, price, q:1, date:new Date().toISOString().slice(0,10), ...(lg==='JP'||lg==='CN'?{lang:lg}:{})}); saveCol(); render();
+}
+function etcEdit(i){
+  const e = MEM.etc[i];
+  const act = prompt(e.name+'\n1=시세 수정  2=구매가 수정  3=삭제', '1');
+  if(act==='3'){ MEM.etc.splice(i,1); }
+  else if(act==='2'){ const v=prompt('구매가',e.cost); if(v!==null) e.cost=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; }
+  else if(act==='1'){ const v=prompt('현재 시세',e.price); if(v!==null) e.price=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; }
+  else return;
+  saveCol(); render();
+}
+document.addEventListener('click', e=>{
+  const nav = e.target.closest('[data-nav]'); if(nav){ location.hash = nav.dataset.nav; return; }
+  const go2 = e.target.closest('[data-go2]'); if(go2 && !e.target.closest('.thumb')){ location.hash = '#box/'+go2.dataset.go2; return; }
+  if(e.target.closest('[data-etcadd]')) { etcAdd(); return; }
+  const op = e.target.closest('[data-open]'); if(op){ const [c,i]=op.dataset.open.split('|'); sealedOpen(c,+i); return; }
+  const se = e.target.closest('[data-sedit]'); if(se){ const [c,i]=se.dataset.sedit.split('|'); sealedEdit(c,+i); return; }
+  if(e.target.closest('[data-saddnew]')){ sealedAdd(); return; }
+  const el = e.target.closest('.lrow[data-lt="etc"]'); if(el){ etcEdit(+el.dataset.i); }
+});
+function diaryHtml(){
+  const days = {};
+  const add = (date, label, amt)=>{ if(!amt) return; const d = date||'날짜미상'; (days[d]=days[d]||[]).push({label, amt}); };
+  for(const code in MEM.invest) for(const it of MEM.invest[code]) add(it.date, '📦 '+setName(code)+' '+(it.memo||'')+(it.qty>1?' ×'+it.qty:''), it.amt);
+  for(const code in (MEM.sealed||{})) for(const lot of MEM.sealed[code]) add(lot.date, '🔒 '+setName(code)+' 미개봉 ×'+lot.qty, lot.qty*lot.unit);
+  for(const k in MEM.cards){ const e = MEM.cards[k]; const [code,num,rar]=k.split('|');
+    const s = SETS.find(x=>x.code===code); const c = s&&s.cards.find(c=>c[0]===num&&c[3]===rar);
+    const nm = (c?c[2]:num)+' '+RLABEL(rar);
+    if(e.cost) add(e.cdate, '🃏 '+nm, e.cost);
+    for(const l of (e.lots||[])) add(l.date, '🃏 '+nm+(l.grade?' ['+l.grade+']':''), l.cost); }
+  for(const e of (MEM.etc||[])) if(e.cost) add(e.date, '🎴 '+e.name, e.cost);
+  const keys = Object.keys(days).sort().reverse();
+  if(!keys.length) return '<div style="font-size:12px;color:#94a3b8;padding:8px">아직 기록이 없습니다</div>';
+  let html = '';
+  let grand = 0;
+  for(const d of keys){
+    const items = days[d]; const tot = items.reduce((a,b)=>a+b.amt,0); grand += tot;
+    html += '<div class="dday"><div class="dday-h"><span>'+(d==='날짜미상'?d:d.replace(/-/g,'.'))+'</span><b>'+won(tot)+'</b></div>'
+      + items.map(it=>'<div class="dday-r"><span>'+it.label+'</span><span>'+won(it.amt)+'</span></div>').join('')+'</div>';
+  }
+  html += '<div class="dday-h" style="border-top:2px solid #334155;margin-top:4px;padding-top:8px"><span>누적 총 지출</span><b>'+won(grand)+'</b></div>';
+  return '<div class="ledger">'+html+'</div>';
+}
+function setName(code){ const s = SETS.find(x=>x.code===code); return s?s.name:code; }
+function ledgerHtml(){
+  let rows = ''; let tot = 0;
+  for(const code in MEM.invest){
+    MEM.invest[code].forEach((it,i)=>{
+      tot += it.amt;
+      rows += '<div class="lrow" data-lt="invest" data-code="'+code+'" data-i="'+i+'"><span>📦 '+setName(code)+' — '+invLabel(it)+'</span><b>'+won(it.amt)+'</b></div>';
+    });
+  }
+  for(const e of (MEM.etc||[])){ if(e.cost){ tot += e.cost; rows += '<div class="lrow ltot" style="cursor:default;background:transparent"><span>🎴 '+e.name+' (기타)</span><b>'+won(e.cost)+'</b></div>'; } }
+  for(const k in MEM.cards){
+    const e = MEM.cards[k]; const cs = costSum(e); if(!cs) continue;
+    tot += cs;
+    const [code,num,rar] = k.split('|');
+    const s = SETS.find(x=>x.code===code); const c = s && s.cards.find(c=>c[0]===num&&c[3]===rar);
+    const lotsInfo = (e.lots&&e.lots.length)?' <small style="color:#94a3b8">('+e.lots.map(l=>won(l.cost)+(l.grade?' '+l.grade:'')).join(' + ')+(e.cost?' + 기존 '+won(e.cost):'')+')</small>':'';
+    rows += '<div class="lrow" data-lt="card" data-k="'+k+'"><span>🃏 '+(c?c[2]:num)+' '+RLABEL(rar)+' ('+setName(code)+') ×'+e.q+lotsInfo+'</span><b>'+won(cs)+'</b></div>';
+  }
+  if(!rows) rows = '<div style="font-size:12px;color:#94a3b8;padding:8px">아직 지출 기록이 없습니다</div>';
+  return '<div class="ledger">'+rows+'<div class="lrow ltot"><span>총 지출</span><b>'+won(tot)+'</b></div></div>';
+}
+function ledgerClick(el){
+  const lt = el.dataset.lt;
+  if(lt==='invest'){
+    const code = el.dataset.code, i = +el.dataset.i;
+    const it = MEM.invest[code][i];
+    const act = prompt(setName(code)+' — '+invLabel(it)+'\n1=개당가격  2=수량  3=날짜  4=메모  5=삭제', '1');
+    if(act==null) return;
+    if(act==='5'){ MEM.invest[code].splice(i,1); }
+    else if(act==='2'){ const v=prompt('수량', it.qty||1); if(v==null) return; it.qty=parseInt(v,10)||1; it.amt=(it.unit||it.amt)*(it.qty); }
+    else if(act==='3'){ const v=prompt('날짜 (YYYY-MM-DD)', it.date||''); if(v==null) return; it.date=v; }
+    else if(act==='4'){ const v=prompt('메모', it.memo); if(v==null) return; it.memo=v; }
+    else { const v=prompt('개당 가격', it.unit||it.amt); if(v==null) return; it.unit=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; it.amt=it.unit*(it.qty||1); }
+    saveCol(); render();
+  } else {
+    const k = el.dataset.k; const e = MEM.cards[k];
+    if(e.lots && e.lots.length){
+      const [code,num,rar] = k.split('|');
+      const [s,c] = findCard(code,num,rar);
+      if(c){ setCost(code,c); return; }
+    }
+    const v = prompt('구매가 수정 (비우고 확인하면 0원 처리)', e.cost);
+    if(v===null) return;
+    e.cost = parseInt(String(v).replace(/[^0-9]/g,''),10)||0;
+    saveCol(); render();
+  }
+}
+document.addEventListener('click', e=>{ const el = e.target.closest('.lrow:not(.ltot)'); if(el && el.dataset.lt!=='etc') ledgerClick(el); });
+function sealedHtml(){
+  let rows = ''; let anyEV = false;
+  for(const code in (MEM.sealed||{})){
+    MEM.sealed[code].forEach((lot,i)=>{
+      if(lot.qty<=0) return;
+      const s = SETS.find(x=>x.code===code); if(!s) return;
+      const evR = Math.round(s.ev/s.boxPrice*100);
+      let rec, recC;
+      if (s.ev > s.boxPrice*1.15) { rec = '🔥 까기 추천'; recC = '#dc2626'; }
+      else if (s.boxPrice > s.ev*1.15) { rec = '📦 보유/판매 추천'; recC = '#2563eb'; }
+      else { rec = '⚖️ 중립'; recC = '#64748b'; }
+      anyEV = true;
+      rows += '<div class="setrow" style="cursor:default">'
+        +'<div class="t"><span><b>'+s.name+'</b> <small>미개봉 '+lot.qty+'박스 × '+won(lot.unit)+(lot.date?' · '+lot.date.slice(5).replace('-','/'):'')+'</small></span>'
+        +'<span style="color:'+recC+';font-weight:700;font-size:12px">'+rec+'</span></div>'
+        +'<div class="sub"><span>박스시세 '+won(s.boxPrice)+' → 평가 '+won(s.boxPrice*lot.qty)+' ('+(s.boxPrice>=lot.unit?'+':'')+won((s.boxPrice-lot.unit)*lot.qty).replace('₩','₩')+')</span><span>개봉 기대값 '+won(s.ev)+'/박스 ('+evR+'%)</span></div>'
+        +'<div class="mybtns" style="margin-top:8px"><button data-open="'+code+'|'+i+'" style="background:#fef2f2;border-color:#fecaca;font-weight:700">🔓 1박스 까기</button><button data-sedit="'+code+'|'+i+'">✏️ 수정/삭제</button></div>'
+        +'</div>';
+    });
+  }
+  if(!rows) rows = '<div style="font-size:12px;color:#94a3b8;padding:8px">미개봉 박스가 없습니다</div>';
+  return rows + '<div class="mybtns"><button data-saddnew="1">➕ 미개봉 박스 추가</button></div>';
+}
+function sealedOpen(code, i){
+  const s = SETS.find(x=>x.code===code); const lot = MEM.sealed[code][i];
+  if(!confirm(s.name+' 1박스를 깠나요?\n개봉 처리하면: 미개봉 재고 -1, 구매비 '+won(lot.unit)+'가 이 박스의 투자 기록으로 이동합니다.\n확인 후 박스 페이지에서 나온 카드들을 ＋ 로 체크하세요!')) return;
+  lot.qty -= 1;
+  if(lot.qty<=0) MEM.sealed[code].splice(i,1);
+  (MEM.invest[code]=MEM.invest[code]||[]).push({amt:lot.unit, qty:1, unit:lot.unit, date:new Date().toISOString().slice(0,10), memo:'박스 개봉'});
+  saveCol();
+  location.hash = '#box/'+code;
+}
+function sealedEdit(code, i){
+  const lot = MEM.sealed[code][i];
+  const act = prompt('1=수량  2=개당가  3=삭제', '1');
+  if(act==null) return;
+  if(act==='3') MEM.sealed[code].splice(i,1);
+  else if(act==='2'){ const v=prompt('개당 구매가', lot.unit); if(v==null) return; lot.unit=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; }
+  else { const v=prompt('수량', lot.qty); if(v==null) return; lot.qty=parseInt(v,10)||0; if(lot.qty<=0) MEM.sealed[code].splice(i,1); }
+  saveCol(); render();
+}
+function sealedAdd(){
+  const name = prompt('박스 이름 (예: 닌자스피너, 니힐제로, 초전브레이커)'); if(!name) return;
+  const s = SETS.find(x=>x.name.replace(/\s/g,'').includes(name.replace(/\s/g,''))) || SETS.find(x=>name.replace(/\s/g,'').includes(x.name.replace(/\s/g,'')));
+  if(!s){ alert('박스를 찾지 못했습니다: '+name); return; }
+  const qty = parseInt(prompt(s.name+' 몇 박스?', '1')||'0',10); if(!qty) return;
+  const unit = parseInt(String(prompt('개당 구매가 (원)')||'').replace(/[^0-9]/g,''),10); if(!unit) return;
+  const date = prompt('구매 날짜 (YYYY-MM-DD, 비우면 오늘)','') || new Date().toISOString().slice(0,10);
+  (MEM.sealed[s.code]=MEM.sealed[s.code]||[]).push({qty, unit, date});
+  saveCol(); render();
+}
+function seriesOf(s){
+  const y = String(s.date).slice(0,4);
+  if(s.swsh) return y + '년 · ' + (parseInt(y)<2021?'썬문':'소드실드');
+  const mega = s.code >= 'BS2025009' && !s.old;
+  return y + '년' + (mega ? ' · MEGA' : ' · SV');
+}
+const GROUP_ORDER = ['2026년 · MEGA','2026년 · SV','2025년 · MEGA','2025년 · SV','2024년 · SV','2023년 · SV','2022년 · 소드실드','2021년 · 소드실드','2019년 · 썬문'];
+function ownedOf(s){ return s.cards.filter(c=>getQ(s.code,c)>0); }
+function renderMy(){
+  ttl.textContent = '내 카드 정리함';
+  const st = colStats();
+  const diff = st.val - st.invest;
+  const pct = st.invest ? Math.round(diff/st.invest*100) : 0;
+  const diff2 = st.total - st.invest;
+  const pct2 = st.invest ? Math.round(diff2/st.invest*100) : 0;
+  const groups = {};
+  for(const s of SETS){ (groups[seriesOf(s)] = groups[seriesOf(s)]||[]).push(s); }
+  let body = '';
+  for(const gname of GROUP_ORDER.filter(g=>groups[g])){
+    const list = groups[gname]||[];
+    let gOwn=0, gVal=0, gInv=0, rows='';
+    for(const s of list){
+      const owned = ownedOf(s);
+      const ownK = owned.length;
+      const ownN = s.cards.reduce((a,c)=>a+getQ(s.code,c),0);
+      const val = s.cards.reduce((a,c)=>{const e=MEM.cards[ckey(s.code,c)]; return a+((e&&e.myPrice)||priceOf(c)||0)*getQ(s.code,c);},0);
+      const inv = (MEM.invest[s.code]||[]).reduce((a,b)=>a+b.amt,0) + s.cards.reduce((a,c)=>a+costSum(MEM.cards[ckey(s.code,c)]||{}),0);
+      gOwn+=ownK; gVal+=val; gInv+=inv;
+      if(ownK===0 && inv===0) {
+        rows += '<div class="setrow dim" data-go2="'+s.code+'"><div class="t"><span>'+s.name+' <small>'+s.date+'</small></span><span style="color:#94a3b8">미수집</span></div></div>';
+        continue;
+      }
+      const p = Math.round(ownK/s.cards.length*100);
+      const best = [...owned].sort((a,b)=>{const ea=MEM.cards[ckey(s.code,a)],eb=MEM.cards[ckey(s.code,b)]; return ((eb&&eb.myPrice)||priceOf(b)||0)-((ea&&ea.myPrice)||priceOf(a)||0);});
+      const thumbs = best.map(c=>{
+        const e = MEM.cards[ckey(s.code,c)]||{};
+        return '<div class="thumb">'+imgTag(s.code,c,false)+(e.grade?'<span class="gr">'+e.grade+'</span>':'')+'<span class="tp">'+won(e.myPrice||priceOf(c)).replace('₩','')+'</span></div>';
+      }).join('');
+      rows += '<div class="setrow" data-go2="'+s.code+'">'
+        +'<div class="t"><span><b>'+s.name+'</b> <small>'+s.date+'</small></span><span><b>'+ownK+'</b><small>/'+s.cards.length+'종</small></span></div>'
+        +'<div class="pbar"><div style="width:'+p+'%"></div></div>'
+        +'<div class="sub"><span>완성률 '+p+'%'+(ownN>ownK?' (총 '+ownN+'장)':'')+'</span><span>시세 <b>'+won(val)+'</b>'+(inv?' · 투자 '+won(inv):'')+'</span></div>'
+        +(thumbs?'<div class="thumbs">'+thumbs+'</div>':'')
+        +'</div>';
+    }
+    if(list.length) body += '<div class="sgrp"><div class="sgrp-h"><span>'+gname+'</span><span>보유 '+gOwn+'종 · 시세 '+won(gVal)+(gInv?' · 투자 '+won(gInv):'')+'</span></div>'+rows+'</div>';
+  }
+  app.innerHTML =
+    '<div class="mysum">'
+    +'<div class="stat"><div class="lbl">보유 카드</div><div class="v">'+st.owned+'장<small style="font-size:11px;color:#64748b"> ('+st.kinds+'종)</small></div></div>'
+    +'<div class="stat"><div class="lbl">총 투자금 (박스+싱글)</div><div class="v">'+won(st.invest)+'</div></div>'
+    +'<div class="stat"><div class="lbl">보유 카드 현재 시세</div><div class="v">'+won(st.val)+'</div></div>'
+    +'<div class="stat"><div class="lbl">미개봉 박스</div><div class="v">'+st.sealedQty+'박스<small style="font-size:11px;color:#64748b"> 평가 '+won(st.sealedVal)+'</small></div></div>'
+    +'<div class="stat '+(diff2>=0?'up':'down')+'"><div class="lbl">평가 손익 (카드+박스)</div><div class="v">'+(diff2>=0?'+':'−')+won(Math.abs(diff2))+(st.invest?' ('+(pct2>=0?'+':'')+pct2+'%)':'')+'</div></div>'
+    +'</div>'
+    +'<div class="mybtns" style="margin:0 0 12px"><button data-nav="#gallery" style="background:#eef2ff;border-color:#c7d2fe;font-weight:700">🖼️ 보유 카드 전체 갤러리</button><button onclick="applyPurchases()" style="background:#dcfce7;border-color:#86efac">🛒 구매내역 자동 반영</button></div>'
+    +'<h3 style="margin:4px 0 8px;font-size:14px">📦 미개봉 박스 (깠으면 까기 버튼!)</h3>'
+    + sealedHtml()
+    + body
+    +'<h3 style="margin:16px 0 8px;font-size:14px">📅 날짜별 가계부 (지출 자동 집계)</h3>'
+    + diaryHtml()
+    +'<h3 style="margin:16px 0 8px;font-size:14px">🎴 기타 카드 (도감 밖 · 누르면 수정)</h3>'
+    + etcHtml()
+    +'<h3 style="margin:16px 0 8px;font-size:14px">🧾 지출 내역 전체 (누르면 수정/삭제)</h3>'
+    + ledgerHtml()
+    +'<div class="mybtns"><button onclick="exportCol()">💾 내보내기 (백업)</button><button onclick="importCol()">📥 가져오기 (병합/교체)</button><button onclick="resetCol()" style="color:#dc2626">🗑️ 초기화</button></div>'
+    +'<p style="font-size:11px;color:#94a3b8;margin-top:10px">시세: collectory.cc 한국 실거래 기준 (2026-07-12) · 파란 배지는 PriceCharting 한글판과 2곳 평균 · 노란 배지는 직접 입력한 시세 · 기록은 이 브라우저에 저장되니 기기 이동 시 내보내기/가져오기를 이용하세요.</p>';
+}
+function renderGallery(){
+  ttl.textContent = '보유 카드 갤러리';
+  let all = [];
+  for(const s of SETS) for(const c of ownedOf(s)){
+    const e = MEM.cards[ckey(s.code,c)]||{};
+    all.push({s, c, v:(e.myPrice||priceOf(c)||0), e});
+  }
+  all.sort((a,b)=>b.v-a.v);
+  const totalV = all.reduce((a,x)=>a+x.v*(x.e.q||1),0);
+  app.innerHTML = all.length
+    ? '<p style="font-size:12.5px;color:#64748b;margin-bottom:10px">보유 '+all.length+'종 · 시세 합 <b>'+won(totalV)+'</b> · 비싼 순 정렬</p><div class="grid">'
+      + all.map(x=>cardCell(x.s.code, x.c, false, x.s.name)).join('')+'</div>'
+    : '<p style="padding:30px;text-align:center;color:#64748b">아직 보유 체크한 카드가 없어요.<br>박스 페이지에서 ＋ 버튼으로 등록해 보세요!</p>';
+}
+function renderPrint(){
+  ttl.textContent = '전체 인쇄 모드';
+  let out = '<div class="printtip noprintel">🖨️ 이미지가 모두 뜰 때까지 기다린 뒤(아래로 끝까지 한 번 스크롤 추천) <b>Ctrl+P → PDF로 저장 → A4 → 배경 그래픽 켜기</b>. 완료 후 뒤로가기를 누르면 메뉴로 돌아갑니다. <button style="margin-left:8px;padding:6px 14px;border:0;border-radius:8px;background:#1e293b;color:#fff;cursor:pointer" onclick="window.print()">지금 인쇄</button></div>';
+  for(const s of SETS){
+    const r = ratioInfo(s);
+    out += '<section class="pbox"><div class="pboxhead"><h2>'+s.name+'</h2><div>'+s.code+' · '+s.date+' · 박스 '+won(s.boxPrice)+' · 기대값 '+won(s.ev)+' ('+r.ratio+'%)</div></div>'
+      +'<div class="grid">'+s.cards.map(c=>cardCell(s.code,c,true)).join('')+'</div></section>';
+  }
+  app.innerHTML = out;
+}
+/* ---------- router ---------- */
+function render(){
+  const h = decodeURIComponent(location.hash||'');
+  window.scrollTo(0,0);
+  if(h.startsWith('#box/')) renderBox(h.slice(5));
+  else if(h==='#top5') renderTop5();
+  else if(h==='#print') renderPrint();
+  else if(h==='#my') renderMy();
+  else if(h==='#gallery') renderGallery();
+  else renderHome();
+  document.getElementById('btnBack').style.visibility = h ? 'visible' : 'hidden';
+}
+function goBack(){ if(history.length>1 && location.hash) history.back(); else location.hash=''; }
+window.addEventListener('hashchange', render);
+render();
+</script>
+</body></html>
