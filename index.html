@@ -297,6 +297,23 @@ function draw(){
     if(isV(k)){x=s.L[k]*w;y=h/2}else{x=w/2;y=s.L[k]*h}
     ctx.fillRect(x-hs,y-hs,hs*2,hs*2);ctx.strokeRect(x-hs,y-hs,hs*2,hs*2);
   }
+  // 감지 디버그: ?debug=1
+  if(s.dbg&&/[?&]debug=1/.test(location.search)){
+    var dg=s.dbg,sx=w/dg.W,sy=h/dg.H,j2;
+    ctx.lineWidth=1*DPR;
+    ctx.strokeStyle='rgba(80,180,255,.8)';
+    for(j2=0;j2<dg.Lc.length;j2++){var xx=(dg.off[0]+dg.Lc[j2][0])*sx;ctx.beginPath();ctx.moveTo(xx,0);ctx.lineTo(xx,h);ctx.stroke()}
+    for(j2=0;j2<dg.Rc.length;j2++){var xr=(dg.off[0]+dg.Rc[j2][0])*sx;ctx.beginPath();ctx.moveTo(xr,0);ctx.lineTo(xr,h);ctx.stroke()}
+    ctx.strokeStyle='rgba(120,255,120,.8)';
+    for(j2=0;j2<dg.Tc.length;j2++){var yt=(dg.off[1]+dg.Tc[j2][0])*sy;ctx.beginPath();ctx.moveTo(0,yt);ctx.lineTo(w,yt);ctx.stroke()}
+    for(j2=0;j2<dg.Bc.length;j2++){var yb=(dg.off[1]+dg.Bc[j2][0])*sy;ctx.beginPath();ctx.moveTo(0,yb);ctx.lineTo(w,yb);ctx.stroke()}
+    if(dg.box){
+      ctx.strokeStyle='#ff3cf0';ctx.lineWidth=2*DPR;ctx.setLineDash([]);
+      ctx.strokeRect(dg.box[0]*sx,dg.box[1]*sy,(dg.box[2]-dg.box[0])*sx,(dg.box[3]-dg.box[1])*sy);
+      ctx.fillStyle='#ff3cf0';ctx.font=(12*DPR)+'px sans-serif';
+      ctx.fillText('debug sup='+dg.sup.toFixed(2),dg.box[0]*sx+4,dg.box[1]*sy+14*DPR);
+    }
+  }
 }
 
 function pick(px,py){
@@ -1027,6 +1044,7 @@ function autoDetect(silent){
       }
     }
     var L=s.L;
+    s.dbg={W:W,H:H,Lc:Lc,Rc:Rc,Tc:Tc,Bc:Bc,off:[l,t],box:best?[l+best.pl,t+best.pt,l+best.pr,t+best.pb]:null,sup:best?best.sup:0};
     if(best){
       // 절대(검출공간) 좌표
       var fL=l+best.pl,fR=l+best.pr,fT=t+best.pt,fB=t+best.pb;
@@ -1035,7 +1053,7 @@ function autoDetect(silent){
       if(!s.autoWarped){
         try{
           var m0=Math.round(cardH2*0.15),m1=Math.round(cardW2*0.15);
-          var rad=Math.max(4,Math.round(Math.max(cardW2,cardH2)*0.05));
+          var rad=Math.max(5,Math.round(Math.max(cardW2,cardH2)*0.08));
           function refineV(xc,y0,y1){
             var pts=[],yy,xx,bx,bv;
             for(yy=y0;yy<y1;yy+=4){
