@@ -62,6 +62,11 @@ display:flex;align-items:center;gap:12px}
 </style>
 
 <h2>🎴 카드 센터링 계산기</h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:2px 0 12px">
+  <span style="font-size:12px;font-weight:800;color:#0c1116;background:linear-gradient(90deg,#39c5cf,#f0b429);border-radius:20px;padding:5px 12px">릴리에릴리라 제작</span>
+  <span style="font-size:12px;font-weight:700;color:#f0b429;border:1px solid #f0b429;border-radius:20px;padding:4px 12px">대구 포켓몬 카드 거래</span>
+  <a href="https://open.kakao.com/o/sT6YAPsc" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:#8fe0b0;background:#264a35;border-radius:20px;padding:5px 12px;text-decoration:none">💬 제작 문의 (카카오 오픈채팅)</a>
+</div>
 <p class="ccSub">앞면·뒷면 사진 2장을 한 번에 올려보세요. 앞면/뒷면 버튼을 누르면 해당 사진과 가이드가 자동으로 전환되고, 두 면이 모두 측정되면 종합 예상 등급이 표시됩니다. 순서가 바뀌었으면 ⇄ 버튼으로 교체하면 됩니다.</p>
 
 <div class="ccCard" id="ccUploadCard">
@@ -100,7 +105,7 @@ display:flex;align-items:center;gap:12px}
       <div id="ccLoupe"><canvas id="ccLoupeCv" width="260" height="260"></canvas></div>
     </div>
     <div class="ccToolRow">
-      <span class="ccHint" style="margin-top:0">실선 = 카드 바깥 모서리 · 점선 = 인쇄 테두리 안쪽 경계<br>드래그하면 돋보기가 뜹니다. 선을 탭한 뒤 −/＋ 버튼이나 방향키(Shift = 5칸)로 미세조정하세요.</span>
+      <span class="ccHint" style="margin-top:0">실선 = 카드 바깥 모서리 · 점선 = 인쇄 테두리 안쪽 경계<br>드래그하면 돋보기가 뜹니다. ⌨️ <b>Tab</b>으로 선 선택 → <b>방향키</b>로 1px 이동 (<b>Shift+방향키</b> = 5px), 또는 −/＋ 버튼.</span>
       <div class="ccNudge">
         <span id="ccSelName">선택 없음</span>
         <button type="button" id="ccMinus">−</button>
@@ -125,13 +130,13 @@ display:flex;align-items:center;gap:12px}
       <div class="t" id="ccSlabTxt">가이드를 맞추면 축별 센터링 중 <b>더 나쁜 쪽</b> 기준으로 등급을 예측합니다.</div>
     </div>
     <table id="ccTable">
-      <thead><tr><th>업체</th><th>10</th><th>9</th><th>8</th><th>7</th><th>예상</th></tr></thead>
+      <thead><tr><th>업체</th><th>10</th><th>9</th><th>8</th><th>7</th><th>예상</th><th>10 확률</th></tr></thead>
       <tbody></tbody>
     </table>
     <div id="ccCombined">
       <h3>🏆 앞·뒷면 종합 예상 등급</h3>
       <table id="ccComboTable">
-        <thead><tr><th>업체</th><th>앞면</th><th>뒷면</th><th>종합</th></tr></thead>
+        <thead><tr><th>업체</th><th>앞면</th><th>뒷면</th><th>종합</th><th>10 확률</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -186,7 +191,7 @@ function loadInto(sideKey,file,done){
     var im=new Image();
     im.onload=function(){
       S[sideKey].img=im;S[sideKey].W=im.naturalWidth;S[sideKey].H=im.naturalHeight;
-      S[sideKey].L=defL();S[sideKey].res=null;S[sideKey].detected=false;
+      S[sideKey].L=defL();S[sideKey].res=null;S[sideKey].detected=false;S[sideKey].cropped=false;
       if(done)done();
     };
     im.src=e.target.result;
@@ -409,7 +414,16 @@ function nudge(dir,big){
 $('ccMinus').addEventListener('click',function(e){e.preventDefault();nudge(-1)});
 $('ccPlus').addEventListener('click',function(e){e.preventDefault();nudge(1)});
 document.addEventListener('keydown',function(e){
-  if(!sel||!st().img||$('ccStage').style.display==='none')return;
+  if(!st().img||$('ccStage').style.display==='none'||warpMode)return;
+  if(e.key==='Tab'){
+    e.preventDefault();
+    var idx=sel?KEYS.indexOf(sel):-1;
+    idx=(idx+(e.shiftKey?-1:1)+KEYS.length)%KEYS.length;
+    sel=KEYS[idx];
+    $('ccSelName').textContent=NAMES[sel];
+    draw();return;
+  }
+  if(!sel)return;
   var big=e.shiftKey;
   if(isV(sel)){
     if(e.key==='ArrowLeft'){e.preventDefault();nudge(-1,big)}
@@ -450,6 +464,13 @@ function gradeFor(th,worst){
   if(worst<=th[3])return 7;
   return 6;
 }
+// 측정 오차(±1.5%p 가정) 기반 "센터링이 10 기준을 통과할 확률"
+function prob10(th,worst){
+  var z=(th[0]-worst)/1.5;
+  var p=1/(1+Math.exp(-1.702*z));
+  return Math.round(p*100);
+}
+function pCol(p){return p>=80?'#39c5cf':p>=50?'#3fb96f':p>=25?'#f0b429':'#e05252'}
 function gCol(g){return g>=10?'#39c5cf':g===9?'#3fb96f':g===8?'#f0b429':'#e05252'}
 function gTxt(g){return g<=6?'6 이하':g}
 
@@ -465,7 +486,9 @@ function renderTable(worst){
       var hit=(g===10-j)?' class="hit"':'';
       html+='<td'+hit+'>'+lab+'</td>';
     }
-    html+='<td class="gradeCell" style="color:'+gCol(g)+'">'+gTxt(g)+'</td></tr>';
+    var p=prob10(th,worst);
+    html+='<td class="gradeCell" style="color:'+gCol(g)+'">'+gTxt(g)+'</td>';
+    html+='<td style="color:'+pCol(p)+';font-weight:700">'+p+'%</td></tr>';
   }
   tb.innerHTML=html;
   $('ccWorst').textContent=(best<=6?'≤6':best);
@@ -481,10 +504,12 @@ function updateCombined(){
     gf=gradeFor(TH.front[co],S.front.res.worst);
     gb=gradeFor(TH.back[co],S.back.res.worst);
     gc=Math.min(gf,gb);
+    var pc=Math.round(prob10(TH.front[co],S.front.res.worst)*prob10(TH.back[co],S.back.res.worst)/100);
     html+='<tr><td>'+co+'</td>'
       +'<td style="color:'+gCol(gf)+';font-weight:700">'+gTxt(gf)+'</td>'
       +'<td style="color:'+gCol(gb)+';font-weight:700">'+gTxt(gb)+'</td>'
-      +'<td class="gradeCell" style="color:'+gCol(gc)+'">'+gTxt(gc)+'</td></tr>';
+      +'<td class="gradeCell" style="color:'+gCol(gc)+'">'+gTxt(gc)+'</td>'
+      +'<td style="color:'+pCol(pc)+';font-weight:700">'+pc+'%</td></tr>';
   }
   tb.innerHTML=html;
   $('ccCombined').style.display='block';
@@ -608,7 +633,7 @@ function applyWarp(){
     var im=new Image();
     im.onload=function(){
       s.img=im;s.W=im.naturalWidth;s.H=im.naturalHeight;
-      s.L=defL();s.detected=false;
+      s.L=defL();s.detected=false;s.cropped=true; // 보정 결과는 이미 카드에 맞춰짐
       stopWarp();
       fit();autoDetect(true);
     };
@@ -647,7 +672,7 @@ function cropDraw(c,sd,x,y,w,h){
 function buildReport(){
   var haveF=!!(S.front.img&&S.front.res), haveB=!!(S.back.img&&S.back.res);
   if(!haveF&&!haveB){alert('먼저 사진을 올리고 가이드를 맞춰주세요.');return}
-  var W=1080,H=1350;
+  var W=1080,H=1460;
   var oc=document.createElement('canvas');oc.width=W;oc.height=H;
   var c=oc.getContext('2d');
   // 배경
@@ -688,16 +713,17 @@ function buildReport(){
   var gy=y0+panelH+70;
   c.fillStyle='#93a1b3';c.font='600 24px sans-serif';
   c.fillText(haveF&&haveB?'앞·뒷면 종합 예상 등급':'측정 면 기준 예상 등급',W/2,gy);
-  var chips=[],i2,co,gg,gf2,gb2;
+  var chips=[],i2,co,gg,gf2,gb2,pp;
   for(i2=0;i2<ORDER.length;i2++){
     co=ORDER[i2];
     if(haveF&&haveB){
       gf2=gradeFor(TH.front[co],S.front.res.worst);
       gb2=gradeFor(TH.back[co],S.back.res.worst);
       gg=Math.min(gf2,gb2);
-    }else if(haveF){gg=gradeFor(TH.front[co],S.front.res.worst)}
-    else{gg=gradeFor(TH.back[co],S.back.res.worst)}
-    chips.push({co:co,g:gg});
+      pp=Math.round(prob10(TH.front[co],S.front.res.worst)*prob10(TH.back[co],S.back.res.worst)/100);
+    }else if(haveF){gg=gradeFor(TH.front[co],S.front.res.worst);pp=prob10(TH.front[co],S.front.res.worst)}
+    else{gg=gradeFor(TH.back[co],S.back.res.worst);pp=prob10(TH.back[co],S.back.res.worst)}
+    chips.push({co:co,g:gg,p:pp});
   }
   // 대표(가장 큰) 표시: PSA
   var psa=chips[0];
@@ -707,23 +733,27 @@ function buildReport(){
   var cw2=228,gap=22,total=cw2*4+gap*3,x0=(W-total)/2,cy=gy+150;
   for(i2=0;i2<4;i2++){
     var chx=x0+i2*(cw2+gap);
-    c.fillStyle='#141a22';rr(c,chx,cy,cw2,86,14);c.fill();
-    c.strokeStyle='#2c3644';c.lineWidth=2;rr(c,chx,cy,cw2,86,14);c.stroke();
+    c.fillStyle='#141a22';rr(c,chx,cy,cw2,116,14);c.fill();
+    c.strokeStyle='#2c3644';c.lineWidth=2;rr(c,chx,cy,cw2,116,14);c.stroke();
     c.fillStyle='#93a1b3';c.font='600 22px sans-serif';
-    c.fillText(chips[i2].co,chx+cw2/2,cy+34);
+    c.fillText(chips[i2].co,chx+cw2/2,cy+32);
     c.fillStyle=gCol(chips[i2].g);c.font='800 34px sans-serif';
-    c.fillText(''+gTxt(chips[i2].g),chx+cw2/2,cy+72);
+    c.fillText(''+gTxt(chips[i2].g),chx+cw2/2,cy+70);
+    c.fillStyle=pCol(chips[i2].p);c.font='700 21px sans-serif';
+    c.fillText('10 확률 '+chips[i2].p+'%',chx+cw2/2,cy+102);
   }
   // 푸터
-  var fy=cy+150;
+  var fy=cy+176;
   c.strokeStyle='#2c3644';c.lineWidth=2;
   c.beginPath();c.moveTo(80,fy);c.lineTo(W-80,fy);c.stroke();
   c.fillStyle='#f0b429';c.font='800 36px sans-serif';
   c.fillText('대구 포켓몬 카드 거래',W/2,fy+58);
   var dt=new Date();
-  c.fillStyle='#5f6c7c';c.font='500 22px sans-serif';
-  c.fillText('릴리에릴리라 제작 · '+dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate()
-    +' · 센터링 단일 항목 기준 예측',W/2,fy+100);
+  c.fillStyle='#93a1b3';c.font='600 24px sans-serif';
+  c.fillText('릴리에릴리라 제작 · 제작 문의 open.kakao.com/o/sT6YAPsc',W/2,fy+100);
+  c.fillStyle='#5f6c7c';c.font='500 20px sans-serif';
+  c.fillText(dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate()
+    +' · 센터링 단일 항목 기준 예측 (확률은 측정 오차 ±1.5%p 가정)',W/2,fy+136);
   c.textAlign='left';
   lastReportURL=oc.toDataURL('image/png');
   $('ccResultImg').src=lastReportURL;
@@ -797,6 +827,28 @@ function autoDetect(silent){
     var fT=scanEdge(1,Math.round(H*.45),1,rowScore);
     var fB=scanEdge(H-2,Math.round(H*.55),-1,rowScore);
     var L=s.L;
+    // ── 자동 크롭: 카드가 화면의 일부만 차지하면 배경을 잘라냄 (1회) ──
+    if(!s.cropped&&fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
+      var olN=fL/W,orN=fR/W,otN=fT/H,obN=fB/H;
+      var cwN=orN-olN,chN=obN-otN;
+      var padX=cwN*0.08,padY=chN*0.08;
+      var cx0=Math.max(0,olN-padX),cx1=Math.min(1,orN+padX);
+      var cy0=Math.max(0,otN-padY),cy1=Math.min(1,obN+padY);
+      // 잘라낼 게 실질적으로 있을 때만 (한 변이라도 5% 이상 여백)
+      if(cx0>0.05||1-cx1>0.05||cy0>0.05||1-cy1>0.05){
+        var CW=Math.round((cx1-cx0)*s.W),CH=Math.round((cy1-cy0)*s.H);
+        var cc2=document.createElement('canvas');cc2.width=CW;cc2.height=CH;
+        cc2.getContext('2d').drawImage(s.img,cx0*s.W,cy0*s.H,CW,CH,0,0,CW,CH);
+        var im2=new Image();
+        im2.onload=function(){
+          s.img=im2;s.W=CW;s.H=CH;s.cropped=true;s.detected=false;
+          fit();autoDetect(true); // 크롭된 이미지에서 재감지
+        };
+        im2.src=cc2.toDataURL('image/png');
+        return; // 재감지에서 이어감
+      }
+      s.cropped=true;
+    }
     if(fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
       L.ol=fL/W;L.or_=fR/W;L.ot=fT/H;L.ob=fB/H;
       // ③ 안쪽 테두리: RGB 그라디언트(3px 평활) 최대 지점, 카드 안쪽 2~22% 구간
