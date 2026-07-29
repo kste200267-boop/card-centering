@@ -61,6 +61,10 @@ display:flex;align-items:center;gap:12px}
 @media(max-width:560px){#ccWrap .ccReadout{grid-template-columns:1fr}#ccWrap h2{font-size:19px}#ccLoupe{width:110px;height:110px}}
 </style>
 
+<div style="display:flex;gap:10px;margin-bottom:16px;border-bottom:1px solid #2c3644;padding-bottom:12px">
+  <span style="font-size:15px;font-weight:800;color:#0c1116;background:#39c5cf;border-radius:10px;padding:9px 18px">🎯 센터링 계산기</span>
+  <a href="./pokedex.html" style="font-size:15px;font-weight:700;color:#93a1b3;background:#1b222c;border:1px solid #2c3644;border-radius:10px;padding:8px 18px;text-decoration:none">📖 내 포켓몬 도감</a>
+</div>
 <h2>🎴 카드 센터링 계산기</h2>
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0 18px">
   <span style="font-size:22px;font-weight:900;color:#0c1116;background:linear-gradient(90deg,#39c5cf,#f0b429);border-radius:30px;padding:10px 22px;letter-spacing:-.5px">✨ 릴리에릴리라 제작</span>
@@ -114,6 +118,7 @@ display:flex;align-items:center;gap:12px}
     </div>
     <div class="ccBtnRow" style="justify-content:flex-start;margin-top:8px">
       <button type="button" id="ccReplace">이 면 사진 바꾸기</button>
+      <button type="button" id="ccAnalyze">🔬 코너·엣지 분석</button>
       <button type="button" class="pri" id="ccReport">🏁 결과보기</button>
       <button type="button" class="warn" id="ccNew">처음부터</button>
     </div>
@@ -133,6 +138,12 @@ display:flex;align-items:center;gap:12px}
       <thead><tr><th>업체</th><th>10</th><th>9</th><th>8</th><th>7</th><th>예상</th><th>10 확률</th></tr></thead>
       <tbody></tbody>
     </table>
+    <div class="ccCard" id="ccAiPanel" style="display:none;margin:14px 0 0;background:#141a22">
+      <h3 style="font-size:15px;margin:0 0 2px">🔬 AI 코너·엣지 상태 분석 <span style="font-size:11px;color:#f0b429;border:1px solid #f0b429;border-radius:10px;padding:1px 8px;vertical-align:2px">BETA</span></h3>
+      <p style="font-size:12px;color:#93a1b3;margin:4px 0 10px;line-height:1.6">테두리 영역의 화이트닝(하얗게 까진 부분)을 픽셀 분석으로 추정합니다. 조명·홀로 반사에 따라 오차가 있으니 참고용으로 보세요.</p>
+      <div id="ccAiGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+      <p id="ccAiNote" style="font-size:12px;color:#93a1b3;margin:10px 0 0;line-height:1.6"></p>
+    </div>
     <div id="ccCombined">
       <h3>🏆 앞·뒷면 종합 예상 등급</h3>
       <table id="ccComboTable">
@@ -191,7 +202,7 @@ function loadInto(sideKey,file,done){
     var im=new Image();
     im.onload=function(){
       S[sideKey].img=im;S[sideKey].W=im.naturalWidth;S[sideKey].H=im.naturalHeight;
-      S[sideKey].L=defL();S[sideKey].res=null;S[sideKey].detected=false;S[sideKey].cropped=false;
+      S[sideKey].L=defL();S[sideKey].res=null;S[sideKey].detected=false;S[sideKey].cropped=false;S[sideKey].autoWarped=false;S[sideKey].lastCorners=null;S[sideKey].cond=null;
       if(done)done();
     };
     im.src=e.target.result;
@@ -213,8 +224,10 @@ function showSide(){
     $('ccNoImg').style.display='none';
     canvas.style.display='block';
     fit();
+    if(st().cond){renderCondition(st().cond)}else{$('ccAiPanel').style.display='none'}
     if(!st().detected){autoDetect(true)}else{draw();calc()}
   }else{
+    $('ccAiPanel').style.display='none';
     canvas.style.display='none';
     $('ccNoImg').style.display='block';
     $('ccLR').textContent='– / –';$('ccTB').textContent='– / –';
@@ -520,7 +533,8 @@ function startWarp(){
   var s=st();
   if(!s.img){alert('먼저 이 면의 사진을 올려주세요.');return}
   var L=s.L;
-  corners=[{x:L.ol,y:L.ot},{x:L.or_,y:L.ot},{x:L.or_,y:L.ob},{x:L.ol,y:L.ob}];
+  if(s.lastCorners){corners=s.lastCorners.map(function(p){return {x:p.x,y:p.y}})}
+  else{corners=[{x:L.ol,y:L.ot},{x:L.or_,y:L.ot},{x:L.or_,y:L.ob},{x:L.ol,y:L.ob}]}
   warpMode=true;wSel=-1;sel=null;
   $('ccWarpBar').style.display='block';
   $('ccSelName').textContent='모서리 조정';
@@ -601,14 +615,17 @@ function texTri(c,im,s0,s1,s2,d0,d1,d2){
   c.setTransform(1,0,0,1,0,0);
 }
 function applyWarp(){
+  doWarp(corners);
+}
+function doWarp(cornArr){
   var s=st();
-  if(!s.img||!corners){stopWarp();return}
+  if(!s.img||!cornArr){stopWarp();return}
   try{
     var srcQ=[
-      {x:corners[0].x*s.W,y:corners[0].y*s.H},
-      {x:corners[1].x*s.W,y:corners[1].y*s.H},
-      {x:corners[2].x*s.W,y:corners[2].y*s.H},
-      {x:corners[3].x*s.W,y:corners[3].y*s.H}
+      {x:cornArr[0].x*s.W,y:cornArr[0].y*s.H},
+      {x:cornArr[1].x*s.W,y:cornArr[1].y*s.H},
+      {x:cornArr[2].x*s.W,y:cornArr[2].y*s.H},
+      {x:cornArr[3].x*s.W,y:cornArr[3].y*s.H}
     ];
     var Hm=homography([{u:0,v:0},{u:1,v:0},{u:1,v:1},{u:0,v:1}],srcQ);
     if(!Hm){alert('모서리 위치가 올바르지 않습니다.');return}
@@ -633,7 +650,7 @@ function applyWarp(){
     var im=new Image();
     im.onload=function(){
       s.img=im;s.W=im.naturalWidth;s.H=im.naturalHeight;
-      s.L=defL();s.detected=false;s.cropped=true; // 보정 결과는 이미 카드에 맞춰짐
+      s.L=defL();s.detected=false;s.cropped=true;s.autoWarped=true; // 보정 결과는 이미 반듯함
       stopWarp();
       fit();autoDetect(true);
     };
@@ -643,6 +660,92 @@ function applyWarp(){
 $('ccWarp').addEventListener('click',function(e){e.preventDefault();if(warpMode){stopWarp()}else{startWarp()}});
 $('ccWarpApply').addEventListener('click',function(e){e.preventDefault();applyWarp()});
 $('ccWarpCancel').addEventListener('click',function(e){e.preventDefault();stopWarp()});
+
+// ── 🔬 코너·엣지 화이트닝 분석 ─────────────────
+function analyzeCondition(auto){
+  try{
+    var s=st();
+    if(!s.img||!s.res){if(!auto)alert('먼저 사진을 올리고 가이드를 맞춰주세요.');return}
+    var L=s.L;
+    var cw=(L.or_-L.ol)*s.W, ch=(L.ob-L.ot)*s.H;
+    if(cw<=0||ch<=0)return;
+    var AW=Math.min(800,Math.round(cw)), AH=Math.round(AW*ch/cw);
+    var oc=document.createElement('canvas');oc.width=AW;oc.height=AH;
+    var c=oc.getContext('2d');
+    c.drawImage(s.img,L.ol*s.W,L.ot*s.H,cw,ch,0,0,AW,AH);
+    var d=c.getImageData(0,0,AW,AH).data;
+    function hsv(x,y){
+      var p=(y*AW+x)*4,r=d[p]/255,g=d[p+1]/255,b=d[p+2]/255;
+      var mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+      return {v:mx,sat:mx===0?0:(mx-mn)/mx,l:(d[p]*.299+d[p+1]*.587+d[p+2]*.114)};
+    }
+    // 테두리 폭: 안쪽 선까지 거리 (분석 대역)
+    var bwX=Math.max(6,Math.round(((L.il-L.ol)+(L.or_-L.ir))/2/(L.or_-L.ol)*AW*0.9));
+    var bwY=Math.max(6,Math.round(((L.it-L.ot)+(L.ob-L.ib))/2/(L.ob-L.ot)*AH*0.9));
+    // 테두리 기준색: 4변 대역에서 표본 → 중앙값 밝기/채도
+    var Ls=[],Ss=[],x,y,h2;
+    for(x=0;x<AW;x+=4){for(y=0;y<bwY;y+=3){h2=hsv(x,y);Ls.push(h2.l);Ss.push(h2.sat)}
+                       for(y=AH-bwY;y<AH;y+=3){h2=hsv(x,y);Ls.push(h2.l);Ss.push(h2.sat)}}
+    for(y=bwY;y<AH-bwY;y+=4){for(x=0;x<bwX;x+=3){h2=hsv(x,y);Ls.push(h2.l);Ss.push(h2.sat)}
+                             for(x=AW-bwX;x<AW;x+=3){h2=hsv(x,y);Ls.push(h2.l);Ss.push(h2.sat)}}
+    Ls.sort(function(a,b){return a-b});Ss.sort(function(a,b){return a-b});
+    var Lmed=Ls[Math.floor(Ls.length/2)],Smed=Ss[Math.floor(Ss.length/2)];
+    var brightBorder=Lmed>195&&Smed<0.18; // 흰 테두리 카드: 분석 신뢰도 낮음
+    function isWhite(x2,y2){
+      var p2=hsv(x2,y2);
+      return (p2.l-Lmed>45)||(p2.v>0.85&&p2.sat<Math.max(0.10,Smed*0.35)&&Smed>0.2);
+    }
+    function ratio(x0,x1,y0,y1){
+      var cnt=0,tot=0,xx,yy;
+      for(yy=Math.max(0,y0);yy<Math.min(AH,y1);yy+=2){
+        for(xx=Math.max(0,x0);xx<Math.min(AW,x1);xx+=2){
+          tot++;if(isWhite(xx,yy))cnt++;
+        }
+      }
+      return tot>0?cnt/tot*100:0;
+    }
+    var cs=Math.max(bwX,bwY,Math.round(Math.min(AW,AH)*0.07)); // 코너 사각형 크기
+    var res={
+      corners:[
+        {name:'좌상 코너',v:ratio(0,cs,0,cs)},
+        {name:'우상 코너',v:ratio(AW-cs,AW,0,cs)},
+        {name:'우하 코너',v:ratio(AW-cs,AW,AH-cs,AH)},
+        {name:'좌하 코너',v:ratio(0,cs,AH-cs,AH)}
+      ],
+      edges:[
+        {name:'상단 엣지',v:ratio(cs,AW-cs,0,bwY)},
+        {name:'하단 엣지',v:ratio(cs,AW-cs,AH-bwY,AH)},
+        {name:'좌측 엣지',v:ratio(0,bwX,cs,AH-cs)},
+        {name:'우측 엣지',v:ratio(AW-bwX,AW,cs,AH-cs)}
+      ],
+      bright:brightBorder
+    };
+    s.cond=res;
+    renderCondition(res);
+  }catch(err){if(!auto)alert('분석에 실패했습니다: '+err.message)}
+}
+function condLevel(v){return v<2.5?{t:'양호',c:'#3fb96f'}:v<7?{t:'주의',c:'#f0b429'}:{t:'손상 의심',c:'#e05252'}}
+function renderCondition(res){
+  var g=$('ccAiGrid'),html='',i,it,lv;
+  var all=res.corners.concat(res.edges);
+  for(i=0;i<all.length;i++){
+    it=all[i];lv=condLevel(it.v);
+    html+='<div style="background:#1b222c;border:1px solid #2c3644;border-radius:10px;padding:10px 6px;text-align:center">'
+      +'<div style="font-size:11px;color:#93a1b3;margin-bottom:4px">'+it.name+'</div>'
+      +'<div style="font-size:15px;font-weight:800;color:'+lv.c+'">'+lv.t+'</div>'
+      +'<div style="font-size:11px;color:#5f6c7c;margin-top:2px">'+it.v.toFixed(1)+'%</div>'
+      +'</div>';
+  }
+  g.innerHTML=html;
+  var worstV=0;for(i=0;i<all.length;i++){if(all[i].v>worstV)worstV=all[i].v}
+  var note=res.bright
+    ?'⚠️ 테두리가 밝은 카드라 화이트닝 구분이 어렵습니다. 결과는 참고만 하세요.'
+    :(worstV<2.5?'✅ 전체적으로 화이트닝 흔적이 거의 감지되지 않았습니다.'
+      :'수치는 해당 영역에서 하얗게 튀는 픽셀의 비율입니다. 주의/손상 표시 부위를 돋보기나 실물로 직접 확인해보세요.');
+  $('ccAiNote').textContent=note;
+  $('ccAiPanel').style.display='block';
+}
+$('ccAnalyze').addEventListener('click',function(e){e.preventDefault();analyzeCondition(false)});
 
 // ── 🏁 결과 리포트 이미지 ─────────────────────
 var lastReportURL=null;
@@ -850,6 +953,75 @@ function autoDetect(silent){
       s.cropped=true;
     }
     if(fL>0&&fR>0&&fT>0&&fB>0&&(fR-fL)>W*.3&&(fB-fT)>H*.3){
+      // ── 자동 원근: 4변을 직선 피팅해 꼭짓점 검출, 기울어져 있으면 자동으로 펴기 (1회) ──
+      if(!s.autoWarped){
+        try{
+          function edgeScanX(y0,y1,fromX,dir){ // 각 행에서 경계 x 좌표 수집
+            var pts=[],yy,xx,run;
+            for(yy=y0;yy<y1;yy+=4){
+              run=0;
+              for(xx=fromX;dir>0?xx<W-1:xx>0;xx+=dir){
+                if(diff(xx,yy)>T){run++;if(run>=2){pts.push({a:yy,b:xx-dir});break}}else{run=0}
+              }
+            }
+            return pts;
+          }
+          function edgeScanY(x0,x1,fromY,dir){
+            var pts=[],xx,yy,run;
+            for(xx=x0;xx<x1;xx+=4){
+              run=0;
+              for(yy=fromY;dir>0?yy<H-1:yy>0;yy+=dir){
+                if(diff(xx,yy)>T){run++;if(run>=2){pts.push({a:xx,b:yy-dir});break}}else{run=0}
+              }
+            }
+            return pts;
+          }
+          function fitLine(pts){ // b = m*a + c 최소제곱 + 아웃라이어 1회 제거
+            function fit(ps){
+              var n=ps.length,sa=0,sb=0,sab=0,saa=0,i2;
+              for(i2=0;i2<n;i2++){sa+=ps[i2].a;sb+=ps[i2].b;sab+=ps[i2].a*ps[i2].b;saa+=ps[i2].a*ps[i2].a}
+              var den=n*saa-sa*sa;
+              if(Math.abs(den)<1e-9)return null;
+              var m=(n*sab-sa*sb)/den,c2=(sb-m*sa)/n;
+              return {m:m,c:c2};
+            }
+            if(pts.length<6)return null;
+            var f1=fit(pts);if(!f1)return null;
+            var res=pts.map(function(p){return Math.abs(p.b-(f1.m*p.a+f1.c))});
+            var sorted=res.slice().sort(function(a,b){return a-b});
+            var med=sorted[Math.floor(sorted.length/2)];
+            var kept=pts.filter(function(p,i2){return res[i2]<=Math.max(3,med*3)});
+            if(kept.length<6)return f1;
+            return fit(kept)||f1;
+          }
+          var m0=Math.round((fB-fT)*0.12), m1=Math.round((fR-fL)*0.12);
+          var lnL=fitLine(edgeScanX(fT+m0,fB-m0,Math.max(1,fL-Math.round(W*0.1)),1));   // x=m*y+c
+          var lnR=fitLine(edgeScanX(fT+m0,fB-m0,Math.min(W-2,fR+Math.round(W*0.1)),-1));
+          var lnT=fitLine(edgeScanY(fL+m1,fR-m1,Math.max(1,fT-Math.round(H*0.1)),1));   // y=m*x+c
+          var lnB=fitLine(edgeScanY(fL+m1,fR-m1,Math.min(H-2,fB+Math.round(H*0.1)),-1));
+          if(lnL&&lnR&&lnT&&lnB){
+            function xsect(v,h2){ // v: x=mv*y+cv, h2: y=mh*x+ch
+              var x=(v.m*h2.c+v.c)/(1-v.m*h2.m);
+              return {x:x,y:h2.m*x+h2.c};
+            }
+            var cTL=xsect(lnL,lnT),cTR=xsect(lnR,lnT),cBR=xsect(lnR,lnB),cBL=xsect(lnL,lnB);
+            var cardW2=fR-fL,cardH2=fB-fT;
+            var skew=Math.max(
+              Math.abs(cTL.x-cBL.x),Math.abs(cTR.x-cBR.x))/cardW2;
+            skew=Math.max(skew,Math.max(Math.abs(cTL.y-cTR.y),Math.abs(cBL.y-cBR.y))/cardH2);
+            s.lastCorners=[
+              {x:cTL.x/W,y:cTL.y/H},{x:cTR.x/W,y:cTR.y/H},
+              {x:cBR.x/W,y:cBR.y/H},{x:cBL.x/W,y:cBL.y/H}
+            ];
+            if(skew>0.012){
+              s.autoWarped=true;
+              doWarp(s.lastCorners); // 비동기: 보정 후 재감지로 이어짐
+              return;
+            }
+          }
+        }catch(e2){}
+        s.autoWarped=true;
+      }
       L.ol=fL/W;L.or_=fR/W;L.ot=fT/H;L.ob=fB/H;
       // ③ 안쪽 테두리: RGB 그라디언트(3px 평활) 최대 지점, 카드 안쪽 2~22% 구간
       function gAt(x,y,vert){
@@ -881,6 +1053,7 @@ function autoDetect(silent){
   }catch(err){if(!silent){alert('자동 감지에 실패했습니다. 선을 직접 맞춰주세요.')}}
   st().detected=true;
   draw();calc();
+  if(silent&&!st().cond){setTimeout(function(){analyzeCondition(true)},50)}
 }
 
 // ── 업로드 ──────────────────────────────
