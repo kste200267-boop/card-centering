@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대구 포켓몬 카드 거래</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B3A6B; --red:#E3350D; --gold:#F5C542;
+    --paper:#F7F5F0; --ink:#22262E; --gray:#8A8F98; --kakao:#FEE500;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    background:var(--paper);color:var(--ink);word-break:keep-all}
+  h1,h2,.jua{font-family:'Jua',sans-serif;font-weight:400}
+
+  header{background:var(--navy);color:#fff;padding:14px 16px 0;
+    position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(27,58,107,.25)}
+  .brand{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .ball{width:26px;height:26px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(180deg,var(--red) 0 46%,#fff 46% 54%,#fff 54% 56%,#F2F2F2 56% 100%);
+    border:2.5px solid #fff;position:relative}
+  .ball::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid var(--navy)}
+  .brand h1{font-size:20px;letter-spacing:.5px}
+  .refresh{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:#fff;
+    border-radius:8px;padding:7px 12px;font-family:'Jua';font-size:12.5px;cursor:pointer}
+  .searchrow{display:flex;gap:8px;margin-bottom:10px}
+  .searchrow input{flex:1;border:none;border-radius:10px;padding:10px 14px;font-size:14px;outline:none}
+  .tabs{display:flex;gap:4px}
+  .tab{flex:1;background:transparent;border:none;color:rgba(255,255,255,.65);
+    font-family:'Jua';font-size:14px;padding:10px 0 12px;cursor:pointer;border-bottom:3px solid transparent}
+  .tab.on{color:#fff;border-bottom-color:var(--gold)}
+
+  .chips{display:flex;gap:6px;padding:12px 16px 4px;flex-wrap:wrap}
+  .chip{border:1.5px solid #D9D5CC;background:#fff;border-radius:999px;
+    padding:6px 14px;font-size:13px;color:#555;cursor:pointer;font-family:'Jua'}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .meta{padding:6px 16px 0;font-size:12px;color:var(--gray);display:flex;justify-content:space-between}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+    padding:12px 16px 30px;max-width:760px;margin:0 auto}
+  @media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
+
+  .item{background:#fff;border-radius:14px;overflow:hidden;cursor:pointer;
+    box-shadow:0 1px 4px rgba(34,38,46,.08);border:2px solid transparent;
+    position:relative;transition:transform .15s}
+  .item:active{transform:scale(.97)}
+  .item.selling{border:2px solid transparent;
+    background:linear-gradient(#fff,#fff) padding-box,
+    linear-gradient(120deg,#F5C542,#E3350D,#5DA9E9,#F5C542) border-box;
+    background-size:100% 100%,300% 300%;animation:holo 6s linear infinite}
+  @keyframes holo{0%{background-position:0 0,0% 50%}100%{background-position:0 0,300% 50%}}
+  @media(prefers-reduced-motion:reduce){.item.selling{animation:none}}
+
+  .thumb{width:100%;aspect-ratio:1/1.05;display:flex;align-items:center;
+    justify-content:center;font-size:46px;background:#EDEAE3;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .item.done .thumb{filter:grayscale(1) brightness(.85)}
+  .item.done::after{content:'판매 완료';position:absolute;top:12px;left:50%;
+    transform:translateX(-50%) rotate(-6deg);background:rgba(34,38,46,.85);color:#fff;
+    font-family:'Jua';font-size:13px;padding:5px 14px;border-radius:6px}
+
+  .info{padding:10px 12px 12px}
+  .badge{display:inline-block;font-size:10.5px;font-family:'Jua';
+    padding:2.5px 8px;border-radius:5px;margin-bottom:6px}
+  .b-sell{background:#FDECE7;color:var(--red)}
+  .b-hold{background:#FFF6DE;color:#B98900}
+  .b-done{background:#EEEEEE;color:#999}
+  .cat{font-size:10.5px;color:var(--gray);margin-left:5px}
+  .title{font-size:13.5px;line-height:1.35;height:2.7em;overflow:hidden;margin-bottom:5px}
+  .price{font-family:'Jua';font-size:16px;color:var(--navy)}
+  .item.done .price{color:#AAA;text-decoration:line-through}
+  .time{font-size:11px;color:#B9B9B9;margin-top:3px}
+
+  .fab{position:fixed;right:18px;bottom:22px;z-index:60;background:var(--red);color:#fff;
+    border:none;border-radius:999px;padding:15px 22px;font-family:'Jua';font-size:16px;
+    cursor:pointer;box-shadow:0 6px 18px rgba(227,53,13,.4);display:flex;align-items:center;gap:7px}
+
+  .overlay{position:fixed;inset:0;background:rgba(20,25,35,.55);z-index:100;
+    display:none;align-items:flex-end;justify-content:center}
+  .overlay.show{display:flex}
+  .sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
+    border-radius:22px 22px 0 0;padding:22px 20px 30px;animation:up .25s ease}
+  @keyframes up{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+  .handle{width:42px;height:4px;border-radius:4px;background:#DDD;margin:0 auto 16px}
+
+  .detailImg{width:100%;aspect-ratio:1/1;border-radius:14px;background:#EDEAE3;
+    display:flex;align-items:center;justify-content:center;font-size:80px;
+    overflow:hidden;margin-bottom:10px}
+  .detailImg img{width:100%;height:100%;object-fit:contain;background:#111}
+  .thumbRow{display:flex;gap:8px;margin-bottom:12px}
+  .thumbRow img{width:58px;height:58px;border-radius:9px;object-fit:cover;
+    border:2px solid #E2DFD8;cursor:pointer}
+  .thumbRow img.pick{border-color:var(--navy)}
+  .noBox{display:inline-block;background:#F1EFE9;border-radius:6px;font-size:11.5px;
+    color:#777;padding:3px 9px;font-family:'Jua';margin-bottom:8px}
+  .dTitle{font-size:17px;font-weight:700;margin:6px 0 4px}
+  .dPrice{font-family:'Jua';font-size:22px;color:var(--navy)}
+  .dDesc{font-size:14px;color:#555;line-height:1.6;margin:12px 0;padding:12px;
+    background:#F8F6F1;border-radius:10px;white-space:pre-line}
+
+  .btn{width:100%;border:none;border-radius:12px;padding:15px;font-family:'Jua';
+    font-size:16px;cursor:pointer;margin-top:10px;text-align:center;display:block;
+    text-decoration:none;color:inherit}
+  .btn-kakao{background:var(--kakao);color:#3B1E1E}
+  .btn-ghost{background:#F1EFE9;color:#555;padding:12px;font-size:14px}
+  .btn-line{background:#fff;border:1.5px solid #E2DFD8;color:#666;padding:12px;font-size:14px}
+
+  footer{max-width:760px;margin:0 auto;padding:10px 16px 40px;text-align:center}
+  .disclaim{font-size:11.5px;color:#A8A49B;line-height:1.7;margin-bottom:14px}
+  .adminBtn{display:inline-block;background:#fff;border:1.5px solid #E2DFD8;border-radius:999px;
+    padding:9px 18px;font-family:'Jua';font-size:13px;color:#555;text-decoration:none}
+
+  .stateBox{grid-column:1/-1;text-align:center;padding:60px 16px;color:#AAA;
+    font-family:'Jua';font-size:15px;line-height:1.8}
+  .setup{margin:16px;background:#FFF6DE;border:1.5px solid #F2DFA4;border-radius:12px;
+    padding:16px;font-size:13px;color:#7A6210;line-height:1.7}
+  .setup code{background:#fff;border-radius:4px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="ball"></div>
+    <h1>대구 포켓몬 카드 거래</h1>
+    <button type="button" class="refresh" id="refreshBtn">↻ 새로고침</button>
+  </div>
+  <div class="searchrow">
+    <input type="text" id="search" placeholder="카드 이름, 박스명 검색">
+  </div>
+  <div class="tabs">
+    <button type="button" class="tab on" data-status="all">전체</button>
+    <button type="button" class="tab" data-status="selling">판매중</button>
+    <button type="button" class="tab" data-status="hold">예약중</button>
+    <button type="button" class="tab" data-status="done">판매완료</button>
+  </div>
+</header>
+
+<div id="setupNotice"></div>
+
+<div class="chips">
+  <button type="button" class="chip on" data-cat="all">전체</button>
+  <button type="button" class="chip" data-cat="카드">🎴 카드</button>
+  <button type="button" class="chip" data-cat="박스">📦 박스</button>
+  <button type="button" class="chip" data-cat="팩">🃏 팩</button>
+  <button type="button" class="chip" data-cat="기타">✨ 기타</button>
+</div>
+<div class="meta"><span id="count"></span><span id="updated"></span></div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  <div class="disclaim">
+    ⚠️ 본 게시판은 거래를 중개하지 않으며, 모든 거래의 책임은 거래 당사자에게 있습니다.<br>
+    안전한 직거래를 권장합니다. 허위 매물·사기 피해는 게시판 운영자가 책임지지 않습니다.
+  </div>
+  <a class="adminBtn" id="adminBtn" href="#" target="_blank" rel="noopener">💬 운영자에게 문의하기</a>
+</footer>
+
+<button type="button" class="fab" id="fabBtn">✏️ 판매글 쓰기</button>
+
+<div class="overlay" id="detailModal">
+  <div class="sheet" id="detailBody"></div>
+</div>
+
+<script>
+/* ═══════════════ 설정 (여기 3줄만 바꾸면 됩니다) ═══════════════ */
+var CONFIG = {
+  CSV_URL:    "PASTE_CSV_URL_HERE",     // ① 공개 시트 '웹에 게시' CSV 주소
+  FORM_WRITE: "PASTE_WRITE_FORM_HERE",  // ② 판매글 등록 구글폼 주소 (forms.gle/...)
+  FORM_MANAGE:"PASTE_MANAGE_FORM_HERE", // ③ 글 관리(상태변경·삭제) 구글폼 주소
+  ADMIN_KAKAO:"https://open.kakao.com/o/sT6YAPsc" // 운영자 오픈카톡
+};
+/* ═══════════════════════════════════════════════════════════════ */
+
+var STATUS_MAP = {'판매중':'selling','예약중':'hold','판매완료':'done'};
+var STATUS_LABEL = {selling:'판매중',hold:'예약중',done:'판매완료'};
+var CAT_EMOJI = {'카드':'🎴','박스':'📦','팩':'🃏','기타':'✨'};
+
+var items = [];
+var curStatus='all', curCat='all', curSearch='';
+
+document.getElementById('adminBtn').href = CONFIG.ADMIN_KAKAO;
+
+/* CSV 파서 (따옴표·줄바꿈 포함 필드 처리) */
+function parseCSV(text){
+  var rows=[],row=[],cur='',q=false,i,c;
+  for(i=0;i<text.length;i++){
+    c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=c;
+    }else{
+      if(c==='"')q=true;
+      else if(c===','){row.push(cur);cur='';}
+      else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';}
+      else if(c!=='\r')cur+=c;
+    }
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+
+/* 드라이브 사진 URL → 표시 가능한 썸네일 주소 */
+function driveImgs(cell){
+  var ids=[],m,re=/id=([-\w]{20,})/g;
+  while((m=re.exec(cell||''))!==null) ids.push(m[1]);
+  return ids.map(function(id){
+    return 'https://drive.google.com/thumbnail?id='+id+'&sz=w1000';
+  });
+}
+
+function fmtDate(s){
+  var m=(s||'').match(/(\d{4})[.\-\/]\s?(\d{1,2})[.\-\/]\s?(\d{1,2})/);
+  return m ? m[2]+'/'+m[3] : '';
+}
+
+function load(){
+  if(CONFIG.CSV_URL.indexOf('http')!==0){
+    document.getElementById('setupNotice').innerHTML =
+      '<div class="setup">🔧 <b>아직 설정 전이에요.</b> HTML 파일 안 <code>CONFIG</code>에 '
+      +'공개 시트 CSV 주소와 구글폼 주소 2개를 붙여넣으면 게시판이 작동합니다. '
+      +'자세한 방법은 setup-guide 문서를 확인하세요.</div>';
+    document.getElementById('grid').innerHTML='';
+    document.getElementById('count').textContent='';
+    return;
+  }
+  document.getElementById('grid').innerHTML =
+    '<div class="stateBox">매물을 불러오는 중… ⏳</div>';
+  var bust = CONFIG.CSV_URL + (CONFIG.CSV_URL.indexOf('?')>-1?'&':'?') + 't=' + Date.now();
+  fetch(bust)
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function(text){
+      var rows = parseCSV(text);
+      items = [];
+      /* 공개 시트 열 순서: 글번호, 등록일, 상품명, 분류, 가격, 설명, 사진, 오픈카톡, 상태 */
+      for(var i=1;i<rows.length;i++){
+        var r=rows[i];
+        if(!r || !r[0] || !r[2]) continue;
+        var st = STATUS_MAP[(r[8]||'').trim()];
+        if(!st) continue;
+        items.push({
+          no:r[0], date:fmtDate(r[1]), title:r[2], cat:(r[3]||'기타').trim(),
+          price:parseInt(String(r[4]).replace(/[^\d]/g,''),10)||0,
+          desc:r[5]||'설명 없음', imgs:driveImgs(r[6]), kakao:(r[7]||'').trim(), status:st
+        });
+      }
+      var now=new Date();
+      document.getElementById('updated').textContent =
+        now.getHours()+':'+('0'+now.getMinutes()).slice(-2)+' 기준';
+      render();
+    })
+    .catch(function(){
+      document.getElementById('grid').innerHTML =
+        '<div class="stateBox">불러오기에 실패했어요 😢<br>잠시 후 새로고침을 눌러주세요</div>';
+    });
+}
+
+function render(){
+  var list = items.filter(function(it){
+    if(curStatus!=='all' && it.status!==curStatus) return false;
+    if(curCat!=='all' && it.cat!==curCat) return false;
+    if(curSearch && it.title.indexOf(curSearch)===-1) return false;
+    return true;
+  });
+  list.sort(function(a,b){
+    if(a.status==='done' && b.status!=='done') return 1;
+    if(a.status!=='done' && b.status==='done') return -1;
+    return parseInt(b.no,10)-parseInt(a.no,10);
+  });
+  document.getElementById('count').textContent='매물 '+list.length+'건';
+  var html='';
+  for(var i=0;i<list.length;i++){
+    var it=list[i];
+    var cls = it.status==='selling'?'selling':(it.status==='done'?'done':'');
+    var badge = it.status==='selling'?'b-sell':(it.status==='hold'?'b-hold':'b-done');
+    var thumb = it.imgs.length
+      ? '<img src="'+it.imgs[0]+'" alt="'+esc(it.title)+'" loading="lazy" onerror="this.outerHTML=\''+(CAT_EMOJI[it.cat]||'🎴')+'\'">'
+      : (CAT_EMOJI[it.cat]||'🎴');
+    html += '<div class="item '+cls+'" data-no="'+it.no+'">'
+      +'<div class="thumb">'+thumb+'</div><div class="info">'
+      +'<span class="badge '+badge+'">'+STATUS_LABEL[it.status]+'</span>'
+      +'<span class="cat">'+(CAT_EMOJI[it.cat]||'')+' '+esc(it.cat)+' · #'+it.no+'</span>'
+      +'<div class="title">'+esc(it.title)+'</div>'
+      +'<div class="price">'+it.price.toLocaleString()+'원</div>'
+      +'<div class="time">'+it.date+'</div>'
+      +'</div></div>';
+  }
+  document.getElementById('grid').innerHTML = html ||
+    '<div class="stateBox">조건에 맞는 매물이 없어요 🔍<br><br>첫 판매글을 올려보세요!</div>';
+}
+
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* 필터 */
+document.querySelectorAll('.tab').forEach(function(b){
+  b.addEventListener('click',function(e){e.preventDefault();
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');curStatus=b.dataset.status;render();});
+});
+document.querySelectorAll('.chip').forEach(function(b){
+  b.addEventListener('click',function(e){e.preventDefault();
+    document.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');curCat=b.dataset.cat;render();});
+});
+document.getElementById('search').addEventListener('input',function(){
+  curSearch=this.value.trim();render();
+});
+document.getElementById('refreshBtn').addEventListener('click',function(e){
+  e.preventDefault();load();
+});
+document.getElementById('fabBtn').addEventListener('click',function(e){
+  e.preventDefault();window.open(CONFIG.FORM_WRITE,'_blank');
+});
+
+/* 상세 */
+document.getElementById('grid').addEventListener('click',function(e){
+  var card=e.target.closest('.item'); if(!card)return;
+  var it=items.filter(function(x){return x.no==card.dataset.no})[0]; if(!it)return;
+  var badge = it.status==='selling'?'b-sell':(it.status==='hold'?'b-hold':'b-done');
+  var main = it.imgs.length
+    ? '<img id="mainImg" src="'+it.imgs[0]+'" alt="사진">'
+    : (CAT_EMOJI[it.cat]||'🎴');
+  var thumbs='';
+  if(it.imgs.length>1){
+    thumbs='<div class="thumbRow">';
+    it.imgs.forEach(function(u,idx){
+      thumbs+='<img src="'+u+'" data-src="'+u+'" class="'+(idx===0?'pick':'')+'" alt="사진'+(idx+1)+'">';
+    });
+    thumbs+='</div>';
+  }
+  var body=document.getElementById('detailBody');
+  body.innerHTML='<div class="handle"></div>'
+    +'<div class="detailImg">'+main+'</div>'+thumbs
+    +'<span class="noBox">글번호 #'+it.no+'</span><br>'
+    +'<span class="badge '+badge+'">'+STATUS_LABEL[it.status]+'</span>'
+    +'<span class="cat">'+(CAT_EMOJI[it.cat]||'')+' '+esc(it.cat)+' · '+it.date+'</span>'
+    +'<div class="dTitle">'+esc(it.title)+'</div>'
+    +'<div class="dPrice">'+it.price.toLocaleString()+'원</div>'
+    +'<div class="dDesc">'+esc(it.desc)+'</div>'
+    +(it.kakao?'<a class="btn btn-kakao" href="'+esc(it.kakao)+'" target="_blank" rel="noopener">💬 오픈카톡으로 연락하기</a>':'')
+    +'<a class="btn btn-line" href="'+esc(CONFIG.FORM_MANAGE)+'" target="_blank" rel="noopener">⚙️ 내 글 관리 — 글번호 #'+it.no+' + 비밀번호 입력</a>'
+    +'<button type="button" class="btn btn-ghost" data-close>닫기</button>';
+  document.getElementById('detailModal').classList.add('show');
+  body.querySelector('[data-close]').addEventListener('click',function(ev){
+    ev.preventDefault();document.getElementById('detailModal').classList.remove('show');
+  });
+  body.querySelectorAll('.thumbRow img').forEach(function(t){
+    t.addEventListener('click',function(){
+      document.getElementById('mainImg').src=t.dataset.src;
+      body.querySelectorAll('.thumbRow img').forEach(function(x){x.classList.remove('pick')});
+      t.classList.add('pick');
+    });
+  });
+});
+document.getElementById('detailModal').addEventListener('click',function(e){
+  if(e.target===this)this.classList.remove('show');
+});
+
+load();
+</script>
+</body>
+</html>
