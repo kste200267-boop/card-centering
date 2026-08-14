@@ -171,7 +171,7 @@
 <script>
 /* ═══════════════ 설정 (여기 3줄만 바꾸면 됩니다) ═══════════════ */
 var CONFIG = {
-  CSV_URL:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRO3FdDn66JC-lmVhh73xoLtOCwTGwGw_c9RbcN_mCl9L_bAfZvHJPTvrJVzejQXkL6LMB-ggl8dufE/pub?gid=1170616786&single=true&output=csv",     // ① 공개 시트 '웹에 게시' CSV 주소
+  CSV_URL:    "PASTE_NEW_CSV_URL_HERE",     // ① 공개 시트 '웹에 게시' CSV 주소
   FORM_WRITE: "https://forms.gle/i2rc1QTfgAEuWYaD6",  // ② 판매글 등록 구글폼 주소 (forms.gle/...)
   FORM_MANAGE:"https://forms.gle/CKLzhfZPzpjiVsCc7", // ③ 글 관리(상태변경·삭제) 구글폼 주소
   ADMIN_KAKAO:"https://open.kakao.com/o/sT6YAPsc" // 운영자 오픈카톡
@@ -238,18 +238,34 @@ function load(){
     .then(function(text){
       var rows = parseCSV(text);
       items = [];
-      /* 공개 시트 열 순서: 글번호, 등록일, 상품명, 분류, 가격, 설명, 사진, 오픈카톡, 상태 */
+      var acts = [];
+      /* A~I열: 글 목록(검증값 포함) / K~N열: 관리 요청(시각,글번호,검증,처리) */
       for(var i=1;i<rows.length;i++){
         var r=rows[i];
-        if(!r || !r[0] || !r[2]) continue;
-        var st = STATUS_MAP[(r[8]||'').trim()];
-        if(!st) continue;
-        items.push({
-          no:r[0], date:fmtDate(r[1]), title:r[2], cat:(r[3]||'기타').trim(),
-          price:parseInt(String(r[4]).replace(/[^\d]/g,''),10)||0,
-          desc:r[5]||'설명 없음', imgs:driveImgs(r[6]), kakao:(r[7]||'').trim(), status:st
-        });
+        if(r && r[0] && r[2]){
+          items.push({
+            no:String(r[0]).trim(), date:fmtDate(r[1]), title:r[2], cat:(r[3]||'기타').trim(),
+            price:parseInt(String(r[4]).replace(/[^\d]/g,''),10)||0,
+            desc:r[5]||'설명 없음', imgs:driveImgs(r[6]), kakao:(r[7]||'').trim(),
+            hash:String(r[8]).trim(), status:'selling'
+          });
+        }
+        if(r && r.length>13 && r[10] && String(r[11]).trim()!==''){
+          acts.push({t:String(r[10]), no:String(r[11]).trim(),
+                     hash:String(r[12]).trim(), act:String(r[13]||'').trim()});
+        }
       }
+      acts.sort(function(a,b){ return a.t<b.t?-1:(a.t>b.t?1:0); });
+      for(var j=0;j<acts.length;j++){
+        var ac=acts[j];
+        for(var k=0;k<items.length;k++){
+          if(items[k].no===ac.no && items[k].hash===ac.hash){
+            if(ac.act==='삭제'){ items[k].status='deleted'; }
+            else if(STATUS_MAP[ac.act]){ items[k].status=STATUS_MAP[ac.act]; }
+          }
+        }
+      }
+      items = items.filter(function(x){ return x.status!=='deleted'; });
       var now=new Date();
       document.getElementById('updated').textContent =
         now.getHours()+':'+('0'+now.getMinutes()).slice(-2)+' 기준';
