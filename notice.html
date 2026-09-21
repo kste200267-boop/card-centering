@@ -50,41 +50,33 @@
   .must strong{display:block;font-size:17px;margin-bottom:4px}
   .must p{margin:0;font-size:15px}
 
-  /* 메뉴 격자 */
+  /* 메뉴 = 아코디언 한 목록 */
   .menu-head{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 10px}
   .menu-head h2{margin:0;font-size:15px;font-weight:600;color:var(--ink-2)}
   .menu-head button{
     border:1px solid var(--line);background:var(--paper);color:var(--ink-2);
     font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;cursor:pointer;
   }
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
-  .tile{
-    display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;
-    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
-    padding:14px 14px 12px;cursor:pointer;font:inherit;color:var(--ink);
-    -webkit-tap-highlight-color:transparent;transition:border-color .15s,background .15s;
-  }
-  .tile:active{background:#F1EEE5}
-  .tile.on{border-color:var(--red);background:var(--red-soft)}
-  .tile .ico{font-size:26px;line-height:1}
-  .tile .t{font-size:15px;font-weight:600;line-height:1.3}
-  .tile .d{font-size:12.5px;color:var(--ink-2);line-height:1.35}
-  .tile.wide{grid-column:1 / -1;flex-direction:row;align-items:center;gap:12px}
-  .tile.wide .t{font-size:16px}
-  .tile:focus-visible,.menu-head button:focus-visible,.sec-head:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-
-  /* 상세 섹션 */
   .sec{
     background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
-    margin-bottom:10px;overflow:hidden;
+    margin-bottom:10px;overflow:hidden;transition:border-color .15s;
   }
+  .sec.open{border-color:var(--red)}
   .sec-head{
-    width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;
-    padding:14px 16px;font:inherit;font-size:17px;font-weight:700;color:var(--ink);
-    text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;
+    width:100%;display:flex;align-items:center;gap:12px;background:none;border:0;
+    padding:12px 14px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
   }
-  .sec-head .ico{font-size:22px}
-  .sec-head .chev{margin-left:auto;color:var(--ink-2);font-size:14px;transition:transform .2s}
+  .sec-head:active{background:#F1EEE5}
+  .sec-head .badge{
+    flex:0 0 46px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--c,#ddd);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15);
+  }
+  .sec-head .badge svg{width:26px;height:26px;display:block}
+  .sec-head .txt{flex:1;min-width:0}
+  .sec-head .t{display:block;font-size:16.5px;font-weight:700;line-height:1.3}
+  .sec-head .d{display:block;font-size:13px;color:var(--ink-2);line-height:1.35;margin-top:2px}
+  .sec-head .chev{color:var(--ink-2);font-size:13px;transition:transform .2s;flex:0 0 auto}
   .sec.open .sec-head .chev{transform:rotate(180deg)}
   .sec.open .sec-head{border-bottom:1px solid var(--line)}
   .sec-body{display:none;padding:14px 16px 16px;font-size:15px}
@@ -102,6 +94,12 @@
   }
   .sec-body .link-btn.soft{background:var(--blue-soft);color:var(--blue)}
   .sec-body .back{margin-top:14px;font-size:13px;color:var(--ink-2);background:none;border:0;padding:0;cursor:pointer;font-family:inherit;text-decoration:underline}
+  .menu-head button:focus-visible,.sec-head:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+  /* 헤더 장식: 카드 부채꼴 */
+  .hero-art{display:flex;gap:6px;margin-top:14px}
+  .hero-art i{display:block;width:34px;height:48px;border-radius:5px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.15);transform:rotate(-8deg)}
+  .hero-art i:nth-child(2){transform:rotate(-3deg)}.hero-art i:nth-child(3){transform:rotate(3deg)}.hero-art i:nth-child(4){transform:rotate(8deg)}
 
   /* 표 */
   .grade{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px}
@@ -140,6 +138,7 @@
     <h1>대구 포켓몬 카드<br>카톡방 안내</h1>
     <p>아래 메뉴를 누르면 해당 안내가 펼쳐집니다.</p>
     <div class="updated" id="updated"></div>
+    <div class="hero-art" aria-hidden="true"><i style="background:#E8523F"></i><i style="background:#3F8CE8"></i><i style="background:#F2C21B"></i><i style="background:#5EAD4C"></i></div>
   </header>
 
   <div class="must" id="must"></div>
@@ -148,7 +147,6 @@
     <h2>메뉴</h2>
     <button type="button" id="toggleAll">전체 펼치기</button>
   </div>
-  <div class="grid" id="grid"></div>
 
   <div id="sections"></div>
 
@@ -165,12 +163,26 @@
    - MUST    : 맨 위 노란 필수 공지
    - MENUS   : 메뉴 목록. 항목을 복사해서 붙여넣으면 메뉴가 추가됩니다.
        id   : 영문, 겹치지 않게
-       icon : 이모지
+       type : 아이콘 종류 (위 ICONS 목록 중 하나: fire, water, electric, grass, psychic, fighting, steel, normal, dark, card)
        title: 메뉴 이름
        desc : 메뉴 타일에 보이는 한 줄 설명
-       wide : true 면 타일이 한 줄 전체 차지 (중요 메뉴용)
        body : 펼쳤을 때 보이는 내용 (HTML 그대로 작성)
    ============================================================ */
+
+/* 타입별 아이콘 (직접 그린 SVG). 메뉴의 type 값으로 고릅니다.
+   fire / water / electric / grass / psychic / fighting / steel / normal / dark */
+var ICONS = {
+  fire:     {c:"#F0783C", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 1-3-1-5 1-9z" fill="#fff"/></svg>'},
+  water:    {c:"#3F8CE8", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 2s7 7 7 12a7 7 0 0 1-14 0c0-5 7-12 7-12z" fill="#fff"/><path d="M9 14c0 2 1 3 2.5 3.5" stroke="#3F8CE8" stroke-width="1.6" stroke-linecap="round"/></svg>'},
+  electric: {c:"#F2C21B", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="#fff"/></svg>'},
+  grass:    {c:"#5EAD4C", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M20 4C10 4 5 9 5 16c0 2 1 3 1 3s0-6 8-10c-6 5-6 11-6 11s10 1 12-16z" fill="#fff"/></svg>'},
+  psychic:  {c:"#B563C8", svg:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="1.2" fill="#fff"/></svg>'},
+  fighting: {c:"#C1663A", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M7 11V7a1.5 1.5 0 0 1 3 0v3m0-4V5a1.5 1.5 0 0 1 3 0v5m0-4V5a1.5 1.5 0 0 1 3 0v6m0-3a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-12 0v-3l-2-2a1.4 1.4 0 0 1 2-2l2 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'},
+  steel:    {c:"#8FA2AE", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 2 20 6v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" fill="#fff"/><path d="m9 12 2 2 4-4" stroke="#8FA2AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'},
+  normal:   {c:"#A8A48C", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8L12 2z" fill="#fff"/></svg>'},
+  dark:     {c:"#4A4658", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M15 3a9 9 0 1 0 6 15.5A8 8 0 0 1 15 3z" fill="#fff"/></svg>'},
+  card:     {c:"#D0342C", svg:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" fill="#fff"/><rect x="7.5" y="5.5" width="9" height="7" rx="1" fill="#D0342C"/><path d="M7.5 15h9M7.5 17.5h6" stroke="#D0342C" stroke-width="1.4" stroke-linecap="round"/></svg>'}
+};
 
 var UPDATED = "2026년 9월 21일 기준";
 
@@ -183,10 +195,9 @@ var MENUS = [
 
   {
     id: "rules",
-    icon: "📌",
+    type: "electric",
     title: "입장 규칙",
     desc: "오픈프로필 · 발언 주의",
-    wide: true,
     body: '\
       <ul>\
         <li><b>오픈프로필 필수.</b> 입장 후 20분 내 변경, 안 하면 강퇴(재가입 가능).</li>\
@@ -198,10 +209,9 @@ var MENUS = [
 
   {
     id: "openprofile",
-    icon: "👤",
+    type: "psychic",
     title: "오픈프로필 만들기",
     desc: "가입 · 프로필 변경 · 방 만들기",
-    wide: true,
     body: '\
       <div class="note">카카오톡 버전에 따라 메뉴 위치가 조금 다를 수 있어요. 비슷한 이름의 메뉴를 찾으면 됩니다.</div>\
       <h3>1. 오픈프로필 만들기</h3>\
@@ -234,7 +244,7 @@ var MENUS = [
 
   {
     id: "private",
-    icon: "🔒",
+    type: "dark",
     title: "비공개 방 전환",
     desc: "한 달간 · 비밀번호 주 1회 변경",
     body: '\
@@ -253,7 +263,7 @@ var MENUS = [
 
   {
     id: "scam",
-    icon: "🚨",
+    type: "fire",
     title: "사기 피해 방지",
     desc: "거래 전 꼭 확인",
     body: '\
@@ -272,7 +282,7 @@ var MENUS = [
 
   {
     id: "grade",
-    icon: "🃏",
+    type: "card",
     title: "카드 상태 기준",
     desc: "S급 ~ F급",
     body: '\
@@ -290,7 +300,7 @@ var MENUS = [
 
   {
     id: "price",
-    icon: "💰",
+    type: "normal",
     title: "시세 확인",
     desc: "네이버는 시세가 아닙니다",
     body: '\
@@ -301,7 +311,7 @@ var MENUS = [
 
   {
     id: "shops",
-    icon: "🏪",
+    type: "grass",
     title: "대구 카드샵",
     desc: "주소 · 공식샵 영업시간",
     body: '\
@@ -322,7 +332,7 @@ var MENUS = [
 
   {
     id: "market",
-    icon: "🎴",
+    type: "water",
     title: "거래 게시판",
     desc: "우리 방 전용 · 인증코드 필요",
     body: '\
@@ -339,7 +349,7 @@ var MENUS = [
 
   {
     id: "tools",
-    icon: "🧰",
+    type: "steel",
     title: "우리 방 도구",
     desc: "센터링 · 도감 · 박스깡",
     body: '\
@@ -355,7 +365,6 @@ var MENUS = [
 
 /* ---------------- 렌더링 (건드리지 않아도 됨) ---------------- */
 (function(){
-  var grid = document.getElementById('grid');
   var secs = document.getElementById('sections');
   var must = document.getElementById('must');
   var toggleAll = document.getElementById('toggleAll');
@@ -367,48 +376,40 @@ var MENUS = [
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
   MENUS.forEach(function(m){
-    var tile = document.createElement('button');
-    tile.type = 'button';
-    tile.className = 'tile' + (m.wide ? ' wide' : '');
-    tile.setAttribute('data-id', m.id);
-    tile.innerHTML = '<span class="ico">' + m.icon + '</span><span><span class="t">' + esc(m.title) + '</span><br><span class="d">' + esc(m.desc||'') + '</span></span>';
-    tile.addEventListener('click', function(e){ e.preventDefault(); openSec(m.id, true); });
-    grid.appendChild(tile);
-
+    var ic = ICONS[m.type] || ICONS.normal;
     var sec = document.createElement('section');
     sec.className = 'sec';
     sec.id = 'sec-' + m.id;
     sec.innerHTML =
       '<button type="button" class="sec-head" aria-expanded="false">' +
-        '<span class="ico">' + m.icon + '</span><span>' + esc(m.title) + '</span><span class="chev">▼</span>' +
+        '<span class="badge" style="--c:' + ic.c + '">' + ic.svg + '</span>' +
+        '<span class="txt"><span class="t">' + esc(m.title) + '</span><span class="d">' + esc(m.desc||'') + '</span></span>' +
+        '<span class="chev">▼</span>' +
       '</button>' +
       '<div class="sec-body">' + m.body +
-        '<button type="button" class="back">▲ 메뉴로 돌아가기</button>' +
+        '<button type="button" class="back">▲ 접기</button>' +
       '</div>';
     sec.querySelector('.sec-head').addEventListener('click', function(e){
       e.preventDefault();
-      sec.classList.contains('open') ? closeSec(m.id) : openSec(m.id, false);
+      sec.classList.contains('open') ? closeSec(m.id) : openSec(m.id, true);
     });
     sec.querySelector('.back').addEventListener('click', function(e){
-      e.preventDefault();
-      closeSec(m.id);
-      grid.scrollIntoView({behavior:'smooth', block:'start'});
+      e.preventDefault(); closeSec(m.id);
+      sec.scrollIntoView({behavior:'smooth', block:'start'});
     });
     secs.appendChild(sec);
   });
 
   function setState(id, open){
     var sec = document.getElementById('sec-' + id);
-    var tile = grid.querySelector('[data-id="' + id + '"]');
     if(!sec) return;
     sec.classList.toggle('open', open);
     sec.querySelector('.sec-head').setAttribute('aria-expanded', open ? 'true' : 'false');
-    if(tile) tile.classList.toggle('on', open);
   }
-  function openSec(id, fromTile){
+  function openSec(id, scroll){
     if(!allOpen){ MENUS.forEach(function(m){ if(m.id!==id) setState(m.id,false); }); }
     setState(id, true);
-    if(fromTile){
+    if(scroll){
       var sec = document.getElementById('sec-' + id);
       setTimeout(function(){ sec.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
     }
