@@ -42,6 +42,13 @@
   .hero p{margin:0;color:var(--ink-2);font-size:15px}
   .hero .updated{margin-top:8px;font-size:13px;color:var(--ink-2)}
 
+  /* 대장 배지 */
+  .leader{display:flex;align-items:center;gap:12px;margin-top:16px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 16px 6px 6px;width:max-content;max-width:100%}
+  .leader img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#E9D7F2;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .leader img.none{display:none}
+  .leader .l{font-size:12.5px;color:var(--ink-2);line-height:1.2}
+  .leader .n{font-size:16px;font-weight:700;letter-spacing:-0.01em}
+
   /* 최상단 필수 공지 */
   .must{
     background:var(--yellow-soft);border:2px solid var(--yellow);border-radius:var(--radius);
@@ -138,6 +145,7 @@
     <h1>대구 포켓몬 카드<br>카톡방 안내</h1>
     <p>아래 메뉴를 누르면 해당 안내가 펼쳐집니다.</p>
     <div class="updated" id="updated"></div>
+    <div class="leader" id="leader"></div>
     <div class="hero-art" aria-hidden="true"><i style="background:#E8523F"></i><i style="background:#3F8CE8"></i><i style="background:#F2C21B"></i><i style="background:#5EAD4C"></i></div>
   </header>
 
@@ -183,6 +191,9 @@ var ICONS = {
   dark:     {c:"#4A4658", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M15 3a9 9 0 1 0 6 15.5A8 8 0 0 1 15 3z" fill="#fff"/></svg>'},
   card:     {c:"#D0342C", svg:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" fill="#fff"/><rect x="7.5" y="5.5" width="9" height="7" rx="1" fill="#D0342C"/><path d="M7.5 15h9M7.5 17.5h6" stroke="#D0342C" stroke-width="1.4" stroke-linecap="round"/></svg>'}
 };
+
+/* 대장(방장) 표시. image 는 저장소에 올린 파일명 (없으면 글자만 보임) */
+var LEADER = { label:"대장", name:"SoR", image:"leader.png" };
 
 var UPDATED = "2026년 9월 21일 기준";
 
@@ -370,10 +381,12 @@ var MENUS = [
   var toggleAll = document.getElementById('toggleAll');
   var allOpen = false;
 
-  document.getElementById('updated').textContent = UPDATED;
-  must.innerHTML = '<strong>' + MUST.title + '</strong><p>' + MUST.text + '</p>';
-
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  document.getElementById('updated').textContent = UPDATED;
+  var ld = document.getElementById('leader');
+  ld.innerHTML = '<img alt="" src="' + LEADER.image + '"><span><span class="l">' + esc(LEADER.label) + '</span><br><span class="n">' + esc(LEADER.name) + '</span></span>';
+  ld.querySelector('img').onerror = function(){ this.className = 'none'; };
+  must.innerHTML = '<strong>' + MUST.title + '</strong><p>' + MUST.text + '</p>';
 
   MENUS.forEach(function(m){
     var ic = ICONS[m.type] || ICONS.normal;
