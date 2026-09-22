@@ -108,6 +108,17 @@
   .grade tr:last-child td,.grade tr:last-child th{border-bottom:0}
   .g-S{color:#B8860B}.g-A{color:#2E7D32}.g-B{color:#2F5DA8}.g-C{color:#8E6A1F}.g-D{color:#B04A2A}.g-F{color:var(--red)}
 
+  /* 카드샵 한눈에 표 */
+  .shoptab-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px -4px 12px}
+  .shoptab{border-collapse:collapse;font-size:13px;min-width:100%;white-space:nowrap}
+  .shoptab th,.shoptab td{border-bottom:1px solid var(--line);padding:8px 8px;text-align:center}
+  .shoptab th{font-weight:700;background:var(--red-soft);font-size:12.5px}
+  .shoptab td:first-child,.shoptab th:first-child{text-align:left;font-weight:600;position:sticky;left:0;background:var(--paper)}
+  .shoptab th:first-child{background:var(--red-soft)}
+  .shoptab .y{color:#2E7D32;font-weight:700}.shoptab .q{color:#B9B3A8}
+  .legend{font-size:12.5px;color:var(--ink-2);margin:0 0 6px}
+  .shop .map{display:inline-block;margin-top:4px;font-size:13px;color:var(--blue)}
+
   /* 카드샵 */
   .shop{padding:10px 0;border-bottom:1px solid var(--line)}
   .shop:last-child{border-bottom:0}
@@ -183,6 +194,18 @@ var ICONS = {
   dark:     {c:"#4A4658", svg:'<svg viewBox="0 0 24 24" fill="none"><path d="M15 3a9 9 0 1 0 6 15.5A8 8 0 0 1 15 3z" fill="#fff"/></svg>'},
   card:     {c:"#D0342C", svg:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" fill="#fff"/><rect x="7.5" y="5.5" width="9" height="7" rx="1" fill="#D0342C"/><path d="M7.5 15h9M7.5 17.5h6" stroke="#D0342C" stroke-width="1.4" stroke-linecap="round"/></svg>'}
 };
+
+/* 카드샵 취급 품목 표. 값: true = ✔, false = 빈칸, "?" = 확인 필요
+   single=싱글카드, oripa=오리파, classic=고전(구카드), play=플레이 공간/대회, box=정가 박스·팩 */
+var SHOPS = [
+  { name:"카드랑",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"피쿠샵",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"포켓섬",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"토레카",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"도파민센터",      single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"팡팡문구",        single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"트레이너 스쿨(공식)", single:true, oripa:false, classic:"?", play:true, box:true }
+];
 
 var UPDATED = "2026년 9월 21일 기준";
 
@@ -315,12 +338,19 @@ var MENUS = [
     id: "shops",
     type: "grass",
     title: "대구 카드샵",
-    desc: "주소 · 공식샵 영업시간",
+    desc: "주소 · 취급 품목 한눈에",
     body: '\
-      <div class="shop"><b>1. 카드랑</b><span>대구 중구 사일동 81</span><span>동성로 자라 오른쪽 골목 (일명 떡볶이 골목)</span></div>\
-      <div class="shop"><b>2. 피쿠샵</b><span>대구 중구 동성로3길 20 2층</span><span>IN디팡 상가 2층</span></div>\
-      <div class="shop"><b>3. 팡팡문구 &amp; Korea TCG store</b><span>대구 달서구 죽전빌리브스카이 상가 1층 124호</span></div>\
-      <div class="shop"><b>4. 포켓섬 &amp; poket.som</b><span>대구 중구 동성로2길 12-38 1층</span></div>\
+      <h3>한눈에 보기</h3>\
+      <p class="legend">✔ 취급/특화 · ? 확인 필요 (방 멤버 제보로 채워 주세요)</p>\
+      <div class="shoptab-wrap" id="shoptab"></div>\
+      <h3>동성로 (중구)</h3>\
+      <div class="shop"><b>카드랑</b><span>대구 중구 사일동 81</span><span>동성로 자라 오른쪽 골목 (일명 떡볶이 골목)</span></div>\
+      <div class="shop"><b>피쿠샵</b><span>대구 중구 동성로3길 20 2층 (IN디팡 상가 2층)</span></div>\
+      <div class="shop"><b>포켓섬 &amp; poket.som</b><span>대구 중구 동성로2길 12-38 1층</span></div>\
+      <div class="shop"><b>토레카</b><span>대구 중구 동성로6길 49 2층</span><a class="map" href="https://naver.me/FVFpczgR" target="_blank" rel="noopener">네이버지도 열기 →</a></div>\
+      <div class="shop"><b>도파민센터 대구점</b><span>대구 중구 동성로2길 27 2층</span><a class="map" href="https://naver.me/FwGgXjDU" target="_blank" rel="noopener">네이버지도 열기 →</a></div>\
+      <h3>달서구</h3>\
+      <div class="shop"><b>팡팡문구 &amp; Korea TCG store</b><span>대구 달서구 죽전빌리브스카이 상가 1층 124호</span></div>\
       <h3>공식샵 · 트레이너 스쿨 (성당동)</h3>\
       <div class="shop">\
         <b>대구 달서구 야외음악당로 50 2층</b>\
@@ -424,6 +454,14 @@ var MENUS = [
     MENUS.forEach(function(m){ setState(m.id, allOpen); });
     toggleAll.textContent = allOpen ? '전체 접기' : '전체 펼치기';
   });
+
+  var st = document.getElementById('shoptab');
+  if(st){
+    function cell(v){ return v===true ? '<td class="y">✔</td>' : v==='?' ? '<td class="q">?</td>' : '<td></td>'; }
+    var html = '<table class="shoptab"><tr><th>매장</th><th>싱글</th><th>오리파</th><th>고전</th><th>플레이</th><th>정가박스</th></tr>';
+    SHOPS.forEach(function(r){ html += '<tr><td>' + esc(r.name) + '</td>' + cell(r.single) + cell(r.oripa) + cell(r.classic) + cell(r.play) + cell(r.box) + '</tr>'; });
+    st.innerHTML = html + '</table>';
+  }
 
   /* 링크에 #메뉴id 가 붙어 있으면 그 메뉴를 바로 펼침 (예: notice.html#openprofile) */
   var h = location.hash.replace('#','');
