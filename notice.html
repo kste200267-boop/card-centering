@@ -119,6 +119,13 @@
   .legend{font-size:12.5px;color:var(--ink-2);margin:0 0 6px}
   .shop .map{display:inline-block;margin-top:4px;font-size:13px;color:var(--blue)}
 
+  .reviews{font-size:14px}
+  .rv-shop{margin:0 0 12px}
+  .rv-shop b{display:block;font-size:14.5px;margin-bottom:4px}
+  .rv{background:var(--bg);border-radius:10px;padding:8px 11px;margin-bottom:6px}
+  .rv .m{display:block;font-size:12px;color:var(--ink-2);margin-top:2px}
+  .rv .tags{font-size:11.5px;color:var(--blue)}
+
   /* 카드샵 */
   .shop{padding:10px 0;border-bottom:1px solid var(--line)}
   .shop:last-child{border-bottom:0}
@@ -195,7 +202,14 @@ var ICONS = {
   card:     {c:"#D0342C", svg:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" fill="#fff"/><rect x="7.5" y="5.5" width="9" height="7" rx="1" fill="#D0342C"/><path d="M7.5 15h9M7.5 17.5h6" stroke="#D0342C" stroke-width="1.4" stroke-linecap="round"/></svg>'}
 };
 
-/* 카드샵 취급 품목 표. 값: true = ✔, false = 빈칸, "?" = 확인 필요
+/* 카드샵 리뷰 (구글 폼 → 시트 웹게시 CSV) */
+var REVIEW = {
+  csv:  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRLFx41b0eGNfBDUSEqBQmG1qS1XpPl250Lzx4XWDh3svJfM0fcAkC0ElJ2L9fz2fD8bRdAGAKFbaUY/pub?gid=1946713247&single=true&output=csv",
+  form: "https://forms.gle/NfJ3mH8hanJziGui8",
+  code: "7942"   /* 폼 인증코드. 이 값과 다른 응답은 표시 안 함 */
+};
+
+/* 카드샵 표 기본값. 리뷰가 들어오면 제보 수로 자동 덮어씀. 값: true = ✔, false = 빈칸, "?" = 확인 필요
    single=싱글카드, oripa=오리파, classic=고전(구카드), play=플레이 공간/대회, box=정가 박스·팩 */
 var SHOPS = [
   { name:"카드랑",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
@@ -341,8 +355,11 @@ var MENUS = [
     desc: "주소 · 취급 품목 한눈에",
     body: '\
       <h3>한눈에 보기</h3>\
-      <p class="legend">✔ 취급/특화 · ? 확인 필요 (방 멤버 제보로 채워 주세요)</p>\
+      <p class="legend" id="shoplegend">✔ 뒤 숫자는 제보한 사람 수 · ? 아직 제보 없음</p>\
       <div class="shoptab-wrap" id="shoptab"></div>\
+      <a class="link-btn" id="reviewBtn" href="#" target="_blank" rel="noopener">✏️ 카드샵 리뷰 남기기 (인증코드 7942)</a>\
+      <h3>방 멤버 리뷰</h3>\
+      <div id="reviews" class="reviews">불러오는 중…</div>\
       <h3>동성로 (중구)</h3>\
       <div class="shop"><b>카드랑</b><span>대구 중구 사일동 81</span><span>동성로 자라 오른쪽 골목 (일명 떡볶이 골목)</span></div>\
       <div class="shop"><b>피쿠샵</b><span>대구 중구 동성로3길 20 2층 (IN디팡 상가 2층)</span></div>\
@@ -455,13 +472,82 @@ var MENUS = [
     toggleAll.textContent = allOpen ? '전체 접기' : '전체 펼치기';
   });
 
-  var st = document.getElementById('shoptab');
-  if(st){
-    function cell(v){ return v===true ? '<td class="y">✔</td>' : v==='?' ? '<td class="q">?</td>' : '<td></td>'; }
-    var html = '<table class="shoptab"><tr><th>매장</th><th>싱글</th><th>오리파</th><th>고전</th><th>플레이</th><th>정가박스</th></tr>';
-    SHOPS.forEach(function(r){ html += '<tr><td>' + esc(r.name) + '</td>' + cell(r.single) + cell(r.oripa) + cell(r.classic) + cell(r.play) + cell(r.box) + '</tr>'; });
+  var COLS = [
+    {key:'single', label:'싱글',   kw:'싱글'},
+    {key:'oripa',  label:'오리파', kw:'오리파'},
+    {key:'classic',label:'고전',   kw:'고전'},
+    {key:'play',   label:'플레이', kw:'플레이'},
+    {key:'box',    label:'정가박스',kw:'정가'}
+  ];
+  function renderTable(counts){
+    var st = document.getElementById('shoptab'); if(!st) return;
+    var html = '<table class="shoptab"><tr><th>매장</th>';
+    COLS.forEach(function(c){ html += '<th>' + c.label + '</th>'; });
+    html += '</tr>';
+    SHOPS.forEach(function(r){
+      html += '<tr><td>' + esc(r.name) + '</td>';
+      COLS.forEach(function(c){
+        var n = counts && counts[r.name] ? (counts[r.name][c.key]||0) : 0;
+        if(n>0) html += '<td class="y">✔ ' + n + '</td>';
+        else if(r[c.key]===true) html += '<td class="y">✔</td>';
+        else if(r[c.key]==='?') html += '<td class="q">?</td>';
+        else html += '<td></td>';
+      });
+      html += '</tr>';
+    });
     st.innerHTML = html + '</table>';
   }
+  function parseCSV(text){
+    var rows=[],row=[],cur='',q=false;
+    for(var i=0;i<text.length;i++){
+      var ch=text[i];
+      if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+      else if(ch==='"') q=true;
+      else if(ch===','){ row.push(cur); cur=''; }
+      else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n') i++; row.push(cur); rows.push(row); row=[]; cur=''; }
+      else cur+=ch;
+    }
+    if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+  function shopKey(name){
+    for(var i=0;i<SHOPS.length;i++){ var n=SHOPS[i].name.replace(/\(.*\)/,'').trim(); if(name.indexOf(n)>-1 || n.indexOf(name.trim())>-1) return SHOPS[i].name; }
+    return name.trim();
+  }
+  function loadReviews(){
+    var box = document.getElementById('reviews');
+    var btn = document.getElementById('reviewBtn');
+    if(btn) btn.href = REVIEW.form;
+    renderTable(null);
+    if(!box) return;
+    fetch(REVIEW.csv + '&t=' + Date.now()).then(function(r){ return r.text(); }).then(function(t){
+      var rows = parseCSV(t); rows.shift();
+      var counts = {}, byShop = {}, seen = {};
+      rows.forEach(function(r){
+        if(r.length<6 || String(r[5]).trim()!==REVIEW.code) return;
+        var shop = shopKey(r[1]||''); if(!shop) return;
+        var items = r[2]||'', nick = (r[4]||'').trim(), text = (r[3]||'').trim();
+        counts[shop] = counts[shop] || {}; byShop[shop] = byShop[shop] || [];
+        var k = shop + '|' + nick;
+        if(!seen[k]){ seen[k]=1; COLS.forEach(function(c){ if(items.indexOf(c.kw)>-1) counts[shop][c.key]=(counts[shop][c.key]||0)+1; }); }
+        byShop[shop].unshift({nick:nick||'익명', text:text, items:items, when:(r[0]||'').split(' ')[0]});
+      });
+      renderTable(counts);
+      var names = Object.keys(byShop);
+      if(!names.length){ box.innerHTML = '<p class="legend">아직 리뷰가 없어요. 첫 리뷰를 남겨 주세요!</p>'; return; }
+      var html='';
+      names.forEach(function(n){
+        html += '<div class="rv-shop"><b>' + esc(n) + ' <span class="legend">(' + byShop[n].length + ')</span></b>';
+        byShop[n].slice(0,3).forEach(function(v){
+          html += '<div class="rv">' + (v.text ? esc(v.text) : '<span class="legend">(취급 품목만 제보)</span>') +
+                  '<span class="m">' + esc(v.nick) + ' · ' + esc(v.when) + (v.items ? ' · <span class="tags">' + esc(v.items) + '</span>' : '') + '</span></div>';
+        });
+        html += '</div>';
+      });
+      box.innerHTML = html;
+    }).catch(function(){ box.innerHTML = '<p class="legend">리뷰를 불러오지 못했어요. 잠시 후 다시 열어 주세요.</p>'; });
+  }
+  loadReviews();
 
   /* 링크에 #메뉴id 가 붙어 있으면 그 메뉴를 바로 펼침 (예: notice.html#openprofile) */
   var h = location.hash.replace('#','');
