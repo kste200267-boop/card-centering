@@ -126,6 +126,23 @@
   .rv .m{display:block;font-size:12px;color:var(--ink-2);margin-top:2px}
   .rv .tags{font-size:11.5px;color:var(--blue)}
 
+  /* 매장 목록 (누르면 펼침) */
+  .shoplist{margin:0 0 10px}
+  .shopc{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;background:var(--paper)}
+  .shopc-h{width:100%;display:flex;align-items:center;gap:8px;background:none;border:0;padding:11px 12px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .shopc-h .nm{font-weight:700;font-size:15px;flex:1;min-width:0}
+  .shopc-h .nm small{display:block;font-weight:400;font-size:12px;color:var(--ink-2)}
+  .shopc-h .st{font-size:13px;color:#B8860B;font-weight:700;white-space:nowrap}
+  .shopc-h .st.none{color:var(--ink-2);font-weight:400}
+  .shopc-h .chev{color:var(--ink-2);font-size:12px;transition:transform .2s}
+  .shopc.open .shopc-h .chev{transform:rotate(180deg)}
+  .shopc-b{display:none;padding:0 12px 12px;border-top:1px solid var(--line)}
+  .shopc.open .shopc-b{display:block}
+  .shopc-b .addr{font-size:14px;color:var(--ink-2);margin:10px 0 6px}
+  .shopc-b .hours{font-size:13.5px;margin:0 0 6px}
+  .shopc-b .link-btn{margin:8px 0}
+  .heart{color:var(--red)}
+
   /* 카드샵 */
   .shop{padding:10px 0;border-bottom:1px solid var(--line)}
   .shop:last-child{border-bottom:0}
@@ -209,16 +226,19 @@ var REVIEW = {
   code: "7942"   /* 폼 인증코드. 이 값과 다른 응답은 표시 안 함 */
 };
 
-/* 카드샵 표 기본값. 리뷰가 들어오면 제보 수로 자동 덮어씀. 값: true = ✔, false = 빈칸, "?" = 확인 필요
-   single=싱글카드, oripa=오리파, classic=고전(구카드), play=플레이 공간/대회, box=정가 박스·팩 */
+/* 카드샵 목록. 매장 추가는 여기 한 줄 복사.
+   name: 표·리뷰에 쓰는 이름 (폼의 매장 이름과 일부만 겹쳐도 매칭됨)
+   map : 네이버지도 링크. 비워 두면 주소로 네이버지도 검색 링크를 자동 생성
+   official: true 면 이름 앞에 ♥ 표시
+   기본값(single 등): true = ✔, "?" = 제보 대기. 리뷰가 들어오면 제보 수로 자동 덮어씀 */
 var SHOPS = [
-  { name:"카드랑",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
-  { name:"피쿠샵",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
-  { name:"포켓섬",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
-  { name:"토레카",          single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
-  { name:"도파민센터",      single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
-  { name:"팡팡문구",        single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
-  { name:"트레이너 스쿨(공식)", single:true, oripa:false, classic:"?", play:true, box:true }
+  { name:"카드랑",      area:"동성로", addr:"대구 중구 사일동 81", note:"동성로 자라 오른쪽 골목 (떡볶이 골목)", map:"", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"피쿠샵",      area:"동성로", addr:"대구 중구 동성로3길 20 2층", note:"IN디팡 상가 2층", map:"", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"포켓섬",      area:"동성로", addr:"대구 중구 동성로2길 12-38 1층", note:"poket.som", map:"", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"토레카",      area:"동성로", addr:"대구 중구 동성로6길 49 2층", note:"", map:"https://naver.me/FVFpczgR", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"도파민센터",  area:"동성로", addr:"대구 중구 동성로2길 27 2층", note:"도파민센터 대구점", map:"https://naver.me/FwGgXjDU", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"팡팡문구",    area:"달서구", addr:"대구 달서구 죽전빌리브스카이 상가 1층 124호", note:"Korea TCG store", map:"", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
+  { name:"트레이너 스쿨", area:"성당동 · 공식샵", addr:"대구 달서구 야외음악당로 50 2층 (성당동 488-1)", note:"", hours:"월·화 휴무 / 평일 15:00~21:00 / 주말·공휴일 13:00~20:00", map:"", official:true, single:true, oripa:false, classic:"?", play:true, box:true }
 ];
 
 var UPDATED = "2026년 9월 21일 기준";
@@ -352,30 +372,14 @@ var MENUS = [
     id: "shops",
     type: "grass",
     title: "대구 카드샵",
-    desc: "주소 · 취급 품목 한눈에",
+    desc: "별점 · 취급 품목 · 지도",
     body: '\
-      <h3>한눈에 보기</h3>\
-      <p class="legend" id="shoplegend">✔ 뒤 숫자는 제보한 사람 수 · ? 아직 제보 없음</p>\
+      <p class="legend">✔ 뒤 숫자는 제보한 사람 수 · ★는 별점 평균 · 매장을 누르면 지도와 리뷰가 열려요</p>\
       <div class="shoptab-wrap" id="shoptab"></div>\
       <a class="link-btn" id="reviewBtn" href="#" target="_blank" rel="noopener">✏️ 카드샵 리뷰 남기기 (인증코드 7942)</a>\
-      <h3>방 멤버 리뷰</h3>\
-      <div id="reviews" class="reviews">불러오는 중…</div>\
-      <h3>동성로 (중구)</h3>\
-      <div class="shop"><b>카드랑</b><span>대구 중구 사일동 81</span><span>동성로 자라 오른쪽 골목 (일명 떡볶이 골목)</span></div>\
-      <div class="shop"><b>피쿠샵</b><span>대구 중구 동성로3길 20 2층 (IN디팡 상가 2층)</span></div>\
-      <div class="shop"><b>포켓섬 &amp; poket.som</b><span>대구 중구 동성로2길 12-38 1층</span></div>\
-      <div class="shop"><b>토레카</b><span>대구 중구 동성로6길 49 2층</span><a class="map" href="https://naver.me/FVFpczgR" target="_blank" rel="noopener">네이버지도 열기 →</a></div>\
-      <div class="shop"><b>도파민센터 대구점</b><span>대구 중구 동성로2길 27 2층</span><a class="map" href="https://naver.me/FwGgXjDU" target="_blank" rel="noopener">네이버지도 열기 →</a></div>\
-      <h3>달서구</h3>\
-      <div class="shop"><b>팡팡문구 &amp; Korea TCG store</b><span>대구 달서구 죽전빌리브스카이 상가 1층 124호</span></div>\
-      <h3>공식샵 · 트레이너 스쿨 (성당동)</h3>\
-      <div class="shop">\
-        <b>대구 달서구 야외음악당로 50 2층</b>\
-        <span>(대구 달서구 성당동 488-1)</span>\
-        <span>매주 <b>월·화 휴무</b></span>\
-        <span>평일 15:00 ~ 21:00</span>\
-        <span>주말·공휴일 13:00 ~ 20:00</span>\
-      </div>\
+      <div class="warn">리뷰는 직접 다녀온 경험만 적어 주세요. 근거 없는 <b>일방적인 비방은 경고 사유</b>가 됩니다.</div>\
+      <h3>매장 목록</h3>\
+      <div id="shoplist" class="shoplist"></div>\
       <a class="link-btn" href="https://tcg-reservation-three.vercel.app" target="_blank" rel="noopener">트레이너 스쿨 예약하기</a>'
   },
 
@@ -479,13 +483,18 @@ var MENUS = [
     {key:'play',   label:'플레이', kw:'플레이'},
     {key:'box',    label:'정가박스',kw:'정가'}
   ];
-  function renderTable(counts){
+  function shopLabel(r){ return (r.official ? '<span class="heart">♥</span> ' : '') + esc(r.name); }
+  function starText(a){ return a.n ? '★ ' + a.avg.toFixed(1) + ' <small>(' + a.n + ')</small>' : '★ -'; }
+  function mapUrl(r){ return r.map || ('https://map.naver.com/p/search/' + encodeURIComponent(r.addr)); }
+
+  function renderTable(counts, ratings){
     var st = document.getElementById('shoptab'); if(!st) return;
-    var html = '<table class="shoptab"><tr><th>매장</th>';
+    var html = '<table class="shoptab"><tr><th>매장</th><th>별점</th>';
     COLS.forEach(function(c){ html += '<th>' + c.label + '</th>'; });
     html += '</tr>';
     SHOPS.forEach(function(r){
-      html += '<tr><td>' + esc(r.name) + '</td>';
+      var a = ratings && ratings[r.name];
+      html += '<tr><td>' + shopLabel(r) + '</td><td class="' + (a && a.n ? 'y' : 'q') + '">' + (a && a.n ? a.avg.toFixed(1) : '-') + '</td>';
       COLS.forEach(function(c){
         var n = counts && counts[r.name] ? (counts[r.name][c.key]||0) : 0;
         if(n>0) html += '<td class="y">✔ ' + n + '</td>';
@@ -497,6 +506,32 @@ var MENUS = [
     });
     st.innerHTML = html + '</table>';
   }
+
+  function renderShops(byShop, ratings){
+    var list = document.getElementById('shoplist'); if(!list) return;
+    list.innerHTML = '';
+    SHOPS.forEach(function(r){
+      var a = ratings && ratings[r.name];
+      var rv = (byShop && byShop[r.name]) || [];
+      var card = document.createElement('div'); card.className = 'shopc';
+      var body = '<p class="addr">' + esc(r.addr) + (r.note ? '<br>' + esc(r.note) : '') + '</p>' +
+                 (r.hours ? '<p class="hours">' + esc(r.hours) + '</p>' : '') +
+                 '<a class="link-btn soft" href="' + mapUrl(r) + '" target="_blank" rel="noopener">네이버지도에서 보기</a>';
+      if(rv.length){
+        rv.slice(0,5).forEach(function(v){
+          body += '<div class="rv">' + (v.text ? esc(v.text) : '<span class="legend">(취급 품목만 제보)</span>') +
+                  '<span class="m">' + (v.star ? '★' + v.star + ' · ' : '') + esc(v.nick) + ' · ' + esc(v.when) + (v.items ? ' · <span class="tags">' + esc(v.items) + '</span>' : '') + '</span></div>';
+        });
+      } else body += '<p class="legend">아직 리뷰가 없어요.</p>';
+      card.innerHTML =
+        '<button type="button" class="shopc-h"><span class="nm">' + shopLabel(r) + '<small>' + esc(r.area) + '</small></span>' +
+        '<span class="st' + (a && a.n ? '' : ' none') + '">' + starText(a||{n:0}) + '</span><span class="chev">▼</span></button>' +
+        '<div class="shopc-b">' + body + '</div>';
+      card.querySelector('.shopc-h').addEventListener('click', function(e){ e.preventDefault(); card.classList.toggle('open'); });
+      list.appendChild(card);
+    });
+  }
+
   function parseCSV(text){
     var rows=[],row=[],cur='',q=false;
     for(var i=0;i<text.length;i++){
@@ -511,41 +546,36 @@ var MENUS = [
     return rows;
   }
   function shopKey(name){
-    for(var i=0;i<SHOPS.length;i++){ var n=SHOPS[i].name.replace(/\(.*\)/,'').trim(); if(name.indexOf(n)>-1 || n.indexOf(name.trim())>-1) return SHOPS[i].name; }
-    return name.trim();
+    name = (name||'').trim();
+    for(var i=0;i<SHOPS.length;i++){ var n=SHOPS[i].name; if(name.indexOf(n)>-1 || (name && n.indexOf(name)>-1)) return n; }
+    return null;
+  }
+  function colIndex(head, kw, fallback){
+    for(var i=0;i<head.length;i++){ if(String(head[i]).indexOf(kw)>-1) return i; }
+    return fallback;
   }
   function loadReviews(){
-    var box = document.getElementById('reviews');
     var btn = document.getElementById('reviewBtn');
     if(btn) btn.href = REVIEW.form;
-    renderTable(null);
-    if(!box) return;
+    renderTable(null, null); renderShops(null, null);
     fetch(REVIEW.csv + '&t=' + Date.now()).then(function(r){ return r.text(); }).then(function(t){
-      var rows = parseCSV(t); rows.shift();
-      var counts = {}, byShop = {}, seen = {};
+      var rows = parseCSV(t); var head = rows.shift() || [];
+      var iShop = colIndex(head,'매장',1), iItems = colIndex(head,'품목',2), iText = colIndex(head,'리뷰',3),
+          iNick = colIndex(head,'닉네임',4), iCode = colIndex(head,'인증',5), iStar = colIndex(head,'별점',-1);
+      var counts = {}, byShop = {}, ratings = {}, seen = {};
       rows.forEach(function(r){
-        if(r.length<6 || String(r[5]).trim()!==REVIEW.code) return;
-        var shop = shopKey(r[1]||''); if(!shop) return;
-        var items = r[2]||'', nick = (r[4]||'').trim(), text = (r[3]||'').trim();
-        counts[shop] = counts[shop] || {}; byShop[shop] = byShop[shop] || [];
+        if(String(r[iCode]||'').trim()!==REVIEW.code) return;
+        var shop = shopKey(r[iShop]); if(!shop) return;
+        var items = r[iItems]||'', nick = (r[iNick]||'').trim()||'익명', text = (r[iText]||'').trim();
+        var star = iStar>-1 ? parseFloat(String(r[iStar]).replace(/[^0-9.]/g,'')) : NaN;
+        counts[shop] = counts[shop] || {}; byShop[shop] = byShop[shop] || []; ratings[shop] = ratings[shop] || {n:0,sum:0,avg:0};
         var k = shop + '|' + nick;
         if(!seen[k]){ seen[k]=1; COLS.forEach(function(c){ if(items.indexOf(c.kw)>-1) counts[shop][c.key]=(counts[shop][c.key]||0)+1; }); }
-        byShop[shop].unshift({nick:nick||'익명', text:text, items:items, when:(r[0]||'').split(' ')[0]});
+        if(!isNaN(star) && star>=1 && star<=5){ ratings[shop].n++; ratings[shop].sum+=star; ratings[shop].avg = ratings[shop].sum/ratings[shop].n; }
+        byShop[shop].unshift({nick:nick, text:text, items:items, star:(isNaN(star)?'':star), when:(r[0]||'').split(' ')[0]});
       });
-      renderTable(counts);
-      var names = Object.keys(byShop);
-      if(!names.length){ box.innerHTML = '<p class="legend">아직 리뷰가 없어요. 첫 리뷰를 남겨 주세요!</p>'; return; }
-      var html='';
-      names.forEach(function(n){
-        html += '<div class="rv-shop"><b>' + esc(n) + ' <span class="legend">(' + byShop[n].length + ')</span></b>';
-        byShop[n].slice(0,3).forEach(function(v){
-          html += '<div class="rv">' + (v.text ? esc(v.text) : '<span class="legend">(취급 품목만 제보)</span>') +
-                  '<span class="m">' + esc(v.nick) + ' · ' + esc(v.when) + (v.items ? ' · <span class="tags">' + esc(v.items) + '</span>' : '') + '</span></div>';
-        });
-        html += '</div>';
-      });
-      box.innerHTML = html;
-    }).catch(function(){ box.innerHTML = '<p class="legend">리뷰를 불러오지 못했어요. 잠시 후 다시 열어 주세요.</p>'; });
+      renderTable(counts, ratings); renderShops(byShop, ratings);
+    }).catch(function(){ /* CSV 못 읽으면 기본값 그대로 표시 */ });
   }
   loadReviews();
 
