@@ -143,6 +143,9 @@
   .shopc-b .link-btn{margin:8px 0}
   .heart{color:var(--red)}
 
+  .pray{text-align:center;background:var(--yellow-soft);border:1px dashed var(--yellow);border-radius:10px;padding:10px 12px;margin:-2px 0 10px;font-size:14px}
+  .pray b{display:block;font-size:16px;margin-top:2px}
+
   /* 카드샵 */
   .shop{padding:10px 0;border-bottom:1px solid var(--line)}
   .shop:last-child{border-bottom:0}
@@ -240,6 +243,9 @@ var SHOPS = [
   { name:"팡팡문구",    area:"달서구", addr:"대구 달서구 죽전빌리브스카이 상가 1층 124호", note:"Korea TCG store", map:"", single:"?", oripa:"?", classic:"?", play:"?", box:"?" },
   { name:"트레이너 스쿨", area:"성당동 · 공식샵", addr:"대구 달서구 야외음악당로 50 2층 (성당동 488-1)", note:"", hours:"월·화 휴무 / 평일 15:00~21:00 / 주말·공휴일 13:00~20:00", map:"", official:true, single:true, oripa:false, classic:"?", play:true, box:true }
 ];
+
+/* 트레이너 스쿨 예약 정지 안내. 정상화되면 active 를 false 로 */
+var RESERVE_PAUSE = { active:true, since:"2026-09-20" };
 
 var UPDATED = "2026년 9월 21일 기준";
 
@@ -380,7 +386,8 @@ var MENUS = [
       <div class="warn">리뷰는 직접 다녀온 경험만 적어 주세요. 근거 없는 <b>일방적인 비방은 경고 사유</b>가 됩니다.</div>\
       <h3>매장 목록</h3>\
       <div id="shoplist" class="shoplist"></div>\
-      <a class="link-btn" href="https://tcg-reservation-three.vercel.app" target="_blank" rel="noopener">트레이너 스쿨 예약하기</a>'
+      <a class="link-btn" href="https://tcg-reservation-three.vercel.app" target="_blank" rel="noopener">트레이너 스쿨 예약하기</a>\
+      <div class="pray" id="pray"></div>'
   },
 
   {
@@ -578,6 +585,20 @@ var MENUS = [
     }).catch(function(){ /* CSV 못 읽으면 기본값 그대로 표시 */ });
   }
   loadReviews();
+
+  var pr = document.getElementById('pray');
+  if(pr){
+    if(RESERVE_PAUSE.active){
+      var kst = new Date(Date.now() + 9*3600*1000);
+      var today = Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate());
+      var p0 = RESERVE_PAUSE.since.split('-');
+      var start = Date.UTC(+p0[0], +p0[1]-1, +p0[2]);
+      var day = Math.floor((today - start)/86400000) + 1;
+      if(day < 1) day = 1;
+      pr.innerHTML = '예약은 현재 <b>정지 중</b>' + '🙏 예약 정상화 기원 <b>' + day + '일차</b> 🙏'.replace('<b>','<b style="display:inline">');
+      pr.innerHTML = '예약은 현재 정지 중입니다<b>🙏 예약 정상화 기원 ' + day + '일차 🙏</b>';
+    } else pr.style.display = 'none';
+  }
 
   /* 링크에 #메뉴id 가 붙어 있으면 그 메뉴를 바로 펼침 (예: notice.html#openprofile) */
   var h = location.hash.replace('#','');
