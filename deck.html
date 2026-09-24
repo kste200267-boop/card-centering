@@ -21,7 +21,7 @@
   .wrap{padding:10px 10px 120px}
   .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
   @media(min-width:520px){.grid{grid-template-columns:repeat(6,1fr)}}
-  .card{position:relative;background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+  .card{position:relative;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
   .card img{width:100%;display:block;aspect-ratio:63/88;object-fit:cover;background:#eee}
   .card .nm{font-size:10.5px;padding:3px 4px;line-height:1.2;height:30px;overflow:hidden;color:var(--ink2)}
   .card .cnt{position:absolute;top:4px;right:4px;background:var(--pink);color:#fff;font-size:12px;font-weight:700;border-radius:999px;min-width:20px;height:20px;line-height:20px;text-align:center;padding:0 5px}
@@ -169,11 +169,12 @@ function render(){
     var d = document.createElement('div'); d.className='card';
     var n = deck.cards[c.id] ? deck.cards[c.id].n : 0;
     d.innerHTML = imgTagOf({id:c.id,img:cardImgBase(c),name:c.name})+'<div class="nm">'+esc(c.name)+'<br>#'+esc(c.localId)+'</div><span class="cnt'+(n?'':' z')+'">'+n+'</span>';
-    var t=null, longed=false;
-    d.addEventListener('pointerdown', function(){ longed=false; t=setTimeout(function(){ longed=true; openDetail(c); },480); });
-    d.addEventListener('pointermove', function(){ if(t){ clearTimeout(t); t=null; } });
-    d.addEventListener('pointerup', function(e){ e.preventDefault(); if(t){ clearTimeout(t); t=null; if(!longed) add(c); } });
+    var t=null, longed=false, sx=0, sy=0;
+    d.addEventListener('pointerdown', function(e){ longed=false; sx=e.clientX; sy=e.clientY; if(t) clearTimeout(t); t=setTimeout(function(){ t=null; longed=true; openDetail(c); },480); });
+    d.addEventListener('pointermove', function(e){ if(t && (Math.abs(e.clientX-sx)>12 || Math.abs(e.clientY-sy)>12)){ clearTimeout(t); t=null; } });
+    d.addEventListener('pointerup', function(){ if(t){ clearTimeout(t); t=null; } });
     d.addEventListener('pointercancel', function(){ if(t){ clearTimeout(t); t=null; } });
+    d.addEventListener('click', function(e){ e.preventDefault(); if(longed){ longed=false; return; } add(c); });
     d.addEventListener('contextmenu', function(e){ e.preventDefault(); });
     g.appendChild(d);
   });
