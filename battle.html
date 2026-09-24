@@ -290,14 +290,14 @@ function offerReconnect(){sheet('<h3>연결 끊김</h3><p style="color:var(--ink
 function reconnect(){closeSheet();if(!peer||!joinedCode)return;reconnecting=true;conn=peer.connect('dgpk-'+joinedCode,{reliable:true});bindConn();}
 function send(m){if(conn&&conn.open)conn.send(m);}
 function onData(m){
-  if(m.t==='hello'){oppPub=m.pub;if(!$('game').classList.contains('hide')){}else{send({t:'hello',pub:pub(me)});enterGame();}return;}
+  if(m.t==='hello'){oppPub=m.pub;if(!$('game').classList.contains('hide')){send({t:'state',pub:pub(me)});render();}else{send({t:'hello',pub:pub(me)});enterGame();}return;}
   if(m.t==='state'){oppPub=m.pub;render();return;}
   if(m.t==='log'){log(m.text,true);return;}
   if(m.t==='big'){big(m.text);return;}
   if(m.t==='attack'){applyAttack(m.target,m.dmg,m.name);return;}
   if(m.t==='msg'){big(m.text);log('💬 '+m.text,true);buzz();return;}
   if(m.t==='result'){gameOver(m.win?false:true,true);return;}
-  if(m.t==='turn'){turn=(m.turn==='me')?'opp':'me';turnNo=m.no;if(turn==='me')startTurn();render();return;}
+  if(m.t==='turn'){turn='me';turnNo=m.no;startTurn();buzz();render();return;}
   if(m.t==='first'){turn=m.first==='host'?(isHost?'me':'opp'):(isHost?'opp':'me');me.first=(turn==='me');turnNo=1;log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();render();return;}
 }
 function sync(){if(solo){oppPub=pub(opp);}else send({t:'state',pub:pub(me)});render();}
