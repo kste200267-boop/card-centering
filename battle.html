@@ -393,7 +393,8 @@ function onData(m){
   if(m.t==='turn'){turn='me';turnNo=m.no;startTurn();buzz();render();return;}
   if(m.t==='first'){if(m.timer!=null)rules.timer=m.timer;turn=m.first==='host'?(isHost?'me':'opp'):(isHost?'opp':'me');me.first=(turn==='me');turnNo=1;log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();else startTimer(false);render();return;}
 }
-function sync(){if(solo){oppPub=pub(opp);}else send({t:'state',pub:pub(me)});render();}
+var koTimer=null;
+function sync(){if(solo){oppPub=pub(opp);}else send({t:'state',pub:pub(me)});render();if(ai&&!ended){clearTimeout(koTimer);koTimer=setTimeout(aiCheckKO,120);}}
 function log(text,fromOpp){var who=fromOpp?'[상대] ':(solo?'':'[나] ');logs.push(who+text);if(logs.length>200)logs.shift();$('logLine').textContent=who+text;if(!fromOpp&&!solo)send({t:'log',text:text});}
 
 /* ---------- 게임 시작 ---------- */
@@ -482,7 +483,7 @@ function gameOver(iWin,fromOpp){if(ended)return;ended=true;stopTimer();$('timer'
   var oppNick=(oppPub&&oppPub.nick)||opp&&opp.nick||'상대';
   big(iWin?'🏆 승리!':'패배…');log(iWin?'승리!':'패배');
   if(!fromOpp&&!solo)send({t:'result',win:iWin});
-  if(!solo)saveRecord(iWin,oppNick);
+  if(!solo)saveRecord(iWin,oppNick);else if(ai){try{var arr=JSON.parse(localStorage.getItem('dgpk_ai_records')||'[]');arr.push({t:Date.now(),lv:aiLv,win:iWin});localStorage.setItem('dgpk_ai_records',JSON.stringify(arr.slice(-100)));}catch(e){}}
   setTimeout(function(){sheet('<h3>'+(iWin?'🏆 승리!':'패배…')+'</h3><p style="color:var(--ink2)">'+esc(me.nick)+' vs '+esc(oppNick)+' · '+turnNo+'턴</p>'+(solo?'':'<p style="font-size:12.5px;color:var(--ink2)">전적이 저장됐어요'+(RANK.form?' (랭킹 반영은 몇 분 뒤)':' (랭킹 폼 미설정 — 이 기기에만)')+'</p>')+'<div class="acts"><a class="full" href="rank.html" style="text-align:center;background:var(--panel2);color:var(--ink);padding:10px;border-radius:9px;text-decoration:none;font-weight:600">🏆 랭킹 보기</a><button type="button" class="full" onclick="location.reload()">로비로</button><button type="button" class="ghost full" onclick="closeSheet()">필드 계속 보기</button></div>');},1500);}
 function saveRecord(iWin,oppNick){
   var rec={t:Date.now(),me:me.nick,opp:oppNick,win:iWin,room:$('roomCode').textContent!=='----'?$('roomCode').textContent:joinedCode};
@@ -492,7 +493,7 @@ function saveRecord(iWin,oppNick){
   var fd=new FormData();fd.append(RANK.entries.winner,iWin?me.nick:oppNick);fd.append(RANK.entries.loser,iWin?oppNick:me.nick);fd.append(RANK.entries.reporter,me.nick+'#'+pin);fd.append(RANK.entries.room,rec.room||'');fd.append(RANK.entries.code,ROOM_CODE);
   try{fetch(RANK.form,{method:'POST',mode:'no-cors',body:fd});}catch(e){}
 }
-function showMyRec(){try{var arr=JSON.parse(localStorage.getItem('dgpk_records')||'[]');if(!arr.length)return;var w=arr.filter(function(r){return r.win;}).length;$('myRec').innerHTML='<b style="color:var(--ink)">'+w+'승 '+(arr.length-w)+'패</b> · 최근: '+arr.slice(-3).reverse().map(function(r){return (r.win?'승':'패')+' vs '+esc(r.opp);}).join(', ');}catch(e){}}
+function showMyRec(){try{var ar=JSON.parse(localStorage.getItem('dgpk_ai_records')||'[]');if(ar.length){var aw=ar.filter(function(r){return r.win;}).length;var best=Math.max.apply(null,ar.filter(function(r){return r.win;}).map(function(r){return r.lv;}).concat([0]));$('myRec').innerHTML='컴퓨터전 '+aw+'승 '+(ar.length-aw)+'패'+(best?' · 최고 클리어 Lv.'+best:'');}var arr=JSON.parse(localStorage.getItem('dgpk_records')||'[]');if(!arr.length)return;var w=arr.filter(function(r){return r.win;}).length;$('myRec').innerHTML=($('myRec').innerHTML?$('myRec').innerHTML+'<br>':'')+'사람전 <b style="color:var(--ink)">'+w+'승 '+(arr.length-w)+'패</b> · 최근: '+arr.slice(-3).reverse().map(function(r){return (r.win?'승':'패')+' vs '+esc(r.opp);}).join(', ');}catch(e){}}
 
 /* ---------- 드로/덱 ---------- */
 function drawN(n){if(me.deck.length<n){toast('덱이 부족해요! (드로 못 하면 패배)');log('덱 없음 — 드로 불가');if(confirm('덱에서 드로할 수 없으면 패배입니다. 패배 처리할까요?'))gameOver(false,false);return;}me.hand=me.hand.concat(me.deck.splice(0,n));if(turn==='me')me.drew=true;log(n+'장 드로');sync();}
