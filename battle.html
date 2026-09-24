@@ -168,6 +168,7 @@
     <h2>혼자 연습</h2>
     <div class="row" style="margin:0 0 8px"><label style="flex:0 0 auto;font-size:14px">컴퓨터 난이도</label><input type="range" id="aiLv" min="1" max="10" value="3" style="flex:1"><b id="aiLvTxt" style="flex:0 0 60px;text-align:right">Lv.3</b></div>
     <p id="aiDesc" style="font-size:12.5px;color:var(--ink2);margin:0 0 8px"></p>
+    <div class="row" style="margin:0 0 8px"><label style="flex:0 0 auto;font-size:14px">컴퓨터 덱</label><select id="aiDeckSel"><option value="auto">레벨별 자동 (Lv.1 불꽃 ~ Lv.10 대회 덱)</option><option value="mirror">내 덱과 미러전</option></select></div>
     <button type="button" id="btnAI" style="width:100%">🤖 컴퓨터와 대전</button>
     <p style="margin:10px 0 6px;font-size:12.5px;color:var(--ink2)">또는 양쪽을 다 내가 조작하며 룰 익히기 ([시점 전환] 사용)</p>
     <button type="button" class="soft" id="btnSolo" style="width:100%">양쪽 직접 조작</button>
@@ -299,13 +300,14 @@ function pub(p){ /* 상대에게 보낼 공개 정보 */
 var me=null, opp=null, oppPub=null, solo=false, ai=false, aiLv=3, conn=null, peer=null, isHost=false;
 var turn=null /* 'me'|'opp' */, turnNo=0, logs=[];
 var rules={enforce:true,timer:90};
+var AI_DECKS={"1": {"name": "불꽃 기본 덱", "cards": [[4, "Charmander", "", ""], [4, "Growlithe", "", ""], [4, "Vulpix", "", ""], [4, "Fuecoco", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [30, "Fire Energy", "", ""]]}, "2": {"name": "물 기본 덱", "cards": [[4, "Squirtle", "", ""], [4, "Psyduck", "", ""], [4, "Quaxly", "", ""], [4, "Staryu", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [30, "Water Energy", "", ""]]}, "3": {"name": "풀 진화 덱", "cards": [[4, "Bulbasaur", "", ""], [3, "Ivysaur", "", ""], [4, "Sprigatito", "", ""], [3, "Floragato", "", ""], [4, "Oddish", "", ""], [3, "Gloom", "", ""], [4, "Caterpie", "", ""], [3, "Metapod", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [2, "Iono", "", ""], [16, "Grass Energy", "", ""]]}, "4": {"name": "번개 진화 덱", "cards": [[4, "Pikachu", "", ""], [3, "Raichu", "", ""], [4, "Magnemite", "", ""], [3, "Magneton", "", ""], [4, "Pawmi", "", ""], [3, "Pawmo", "", ""], [4, "Voltorb", "", ""], [3, "Electrode", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [2, "Iono", "", ""], [16, "Lightning Energy", "", ""]]}, "5": {"name": "초 진화 덱", "cards": [[4, "Abra", "", ""], [3, "Kadabra", "", ""], [2, "Alakazam", "", ""], [4, "Ralts", "", ""], [3, "Kirlia", "", ""], [2, "Gardevoir", "", ""], [4, "Drowzee", "", ""], [3, "Hypno", "", ""], [4, "Gastly", "", ""], [3, "Haunter", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [2, "Boss's Orders", "", ""], [2, "Rare Candy", "", ""], [2, "Iono", "", ""], [8, "Psychic Energy", "", ""]]}, "6": {"name": "격투 진화 덱", "cards": [[4, "Machop", "", ""], [3, "Machoke", "", ""], [2, "Machamp", "", ""], [4, "Riolu", "", ""], [3, "Lucario", "", ""], [4, "Mankey", "", ""], [3, "Primeape", "", ""], [4, "Geodude", "", ""], [3, "Graveler", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [2, "Boss's Orders", "", ""], [2, "Rare Candy", "", ""], [2, "Iono", "", ""], [10, "Fighting Energy", "", ""]]}, "7": {"name": "악 진화 덱", "cards": [[4, "Zorua", "", ""], [3, "Zoroark", "", ""], [4, "Murkrow", "", ""], [3, "Honchkrow", "", ""], [4, "Sneasel", "", ""], [3, "Weavile", "", ""], [4, "Poochyena", "", ""], [3, "Mightyena", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [2, "Boss's Orders", "", ""], [2, "Rare Candy", "", ""], [2, "Iono", "", ""], [12, "Darkness Energy", "", ""]]}, "8": {"name": "강철 진화 덱", "cards": [[4, "Beldum", "", ""], [3, "Metang", "", ""], [2, "Metagross", "", ""], [4, "Aron", "", ""], [3, "Lairon", "", ""], [2, "Aggron", "", ""], [4, "Klink", "", ""], [3, "Klang", "", ""], [2, "Klinklang", "", ""], [4, "Bronzor", "", ""], [3, "Bronzong", "", ""], [4, "Professor's Research", "", ""], [4, "Ultra Ball", "", ""], [4, "Nest Ball", "", ""], [2, "Switch", "", ""], [2, "Boss's Orders", "", ""], [2, "Rare Candy", "", ""], [2, "Iono", "", ""], [6, "Metal Energy", "", ""]]}, "9": {"name": "드래펄트 ex (대회 덱)", "cards": [[4, "Dreepy", "TWM", 128], [4, "Drakloak", "TWM", 129], [3, "Dragapult ex", "TWM", 130], [2, "Budew", "ASC", 16], [2, "Munkidori", "TWM", 95], [1, "Dunsparce", "JTG", 120], [1, "Dudunsparce", "TEF", 129], [1, "Meowth ex", "POR", 62], [1, "Fezandipiti ex", "ASC", 142], [4, "Lillie's Determination", "MEG", 119], [3, "Boss's Orders", "MEG", 114], [2, "Crispin", "SCR", 133], [1, "Rosa's Encouragement", "POR", 84], [1, "Judge", "POR", 76], [4, "Poké Pad", "POR", 81], [4, "Buddy-Buddy Poffin", "TEF", 144], [4, "Crushing Hammer", "POR", 71], [3, "Night Stretcher", "ASC", 196], [3, "Ultra Ball", "MEG", 131], [1, "Unfair Stamp", "TWM", 165], [1, "Special Red Card", "CRI", 82], [2, "Risky Ruins", "MEG", 127], [3, "Fire Energy", "MEE", 10], [3, "Psychic Energy", "MEE", 13], [2, "Darkness Energy", "MEE", 15]]}, "10": {"name": "베이직 박스 (대회 덱)", "cards": [[4, "Mega Kangaskhan ex", "MEG", 104], [3, "Meowth ex", "POR", 62], [2, "Latias ex", "SSP", 76], [2, "Teal Mask Ogerpon ex", "TWM", 25], [2, "Lillie's Clefairy ex", "JTG", 56], [1, "Chien-Pao", "SSP", 56], [1, "Raging Bolt ex", "TEF", 123], [1, "Iron Leaves ex", "TEF", 25], [1, "Fezandipiti ex", "ASC", 142], [1, "Enamorus", "TWM", 93], [1, "Iron Crown ex", "TEF", 81], [1, "Wellspring Mask Ogerpon ex", "TWM", 64], [4, "Crispin", "SCR", 133], [2, "Cyrano", "SSP", 170], [2, "Boss's Orders", "MEG", 114], [1, "Ciphermaniac's Codebreaking", "TEF", 145], [4, "Energy Switch", "MEG", 115], [4, "Ultra Ball", "MEG", 131], [2, "Night Stretcher", "ASC", 196], [1, "Special Red Card", "CRI", 82], [1, "Glass Trumpet", "SCR", 135], [1, "Hero's Cape", "TEF", 152], [4, "Area Zero Underdepths", "SCR", 131], [6, "Grass Energy", "MEE", 9], [3, "Psychic Energy", "MEE", 13], [2, "Fighting Energy", "MEE", 14], [2, "Lightning Energy", "MEE", 12], [1, "Water Energy", "MEE", 11]]}};
 var AI_DESC={1:'무작위로 냅니다. 완전 초보용.',2:'벤치는 채우지만 공격은 대충.',3:'진화·에너지 기본은 하지만 약점 계산 없음.',4:'가장 센 기술을 고릅니다. 굿즈 사용 시작.',5:'서포트·굿즈를 활용하고 기절 우선.',6:'약점·저항력 계산, 보스로 벤치 저격.',7:'후퇴·에너지 배분까지. 대회 초심자 수준.',8:'다음 어태커 미리 준비, 손패 관리.',9:'최적 데미지·프라이즈 계산. 빡셈.',10:'9단계 + 첫 손패 8장, 매 턴 2장 드로 (핸디캡).'};
-$('aiLv').oninput=function(){aiLv=+this.value;$('aiLvTxt').textContent='Lv.'+aiLv;$('aiDesc').textContent=AI_DESC[aiLv];};aiLv=+($('aiLv').value=localStorage.getItem('dgpk_ailv')||'3');$('aiLv').oninput();var timerLeft=0,timerIv=null;
+$('aiLv').oninput=function(){aiLv=+this.value;$('aiLvTxt').textContent='Lv.'+aiLv;$('aiDesc').textContent=AI_DESC[aiLv]+' · 덱: '+AI_DECKS[aiLv].name;};aiLv=+($('aiLv').value=localStorage.getItem('dgpk_ailv')||'3');$('aiLv').oninput();var timerLeft=0,timerIv=null;
 $('timerSel').value=localStorage.getItem('dgpk_timer')||'90';
 
 /* ---------- 로비 ---------- */
 function getDecks(){try{return JSON.parse(localStorage.getItem(LS_DECKS)||'[]');}catch(e){return[];}}
-function fillDecks(){var s=$('deckSel');s.innerHTML='<option value="">덱을 고르세요</option>';getDecks().forEach(function(d,i){var n=0;for(var k in d.cards)n+=d.cards[k].n;var o=document.createElement('option');o.value=i;o.textContent=d.name+' ('+n+'장)';s.appendChild(o);});}
+function fillDecks(){var s=$('deckSel');s.innerHTML='<option value="">덱을 고르세요</option>';var a=$('aiDeckSel');getDecks().forEach(function(d,i){var n=0;for(var k in d.cards)n+=d.cards[k].n;var o=document.createElement('option');o.value=i;o.textContent=d.name+' ('+n+'장)';s.appendChild(o);var o2=document.createElement('option');o2.value='saved:'+i;o2.textContent='내 덱: '+d.name;a.appendChild(o2);});}
 function chosenDeck(){
   var code=$('codeIn').value.trim();
   if(code){try{var o=JSON.parse(decodeURIComponent(escape(atob(code))));if(o.cards)return {name:o.name||'코드 덱',cards:o.cards};}catch(e){toast('덱 코드가 올바르지 않아요');return null;}}
@@ -325,8 +327,26 @@ $('nick').value=localStorage.getItem('dgpk_nick')||'';$('roomCodeIn').value=loca
 fillDecks();
 $('btnPaste').onclick=function(e){e.preventDefault();$('codeIn').classList.toggle('hide');};
 
-$('btnAI').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);localStorage.setItem('dgpk_ailv',String(aiLv));solo=true;ai=true;isHost=true;
-  me=newPlayer(s.nick,s.deck);opp=newPlayer('컴퓨터 Lv.'+aiLv,s.deck);enterGame();};
+$('btnAI').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);localStorage.setItem('dgpk_ailv',String(aiLv));
+  var sel=$('aiDeckSel').value;var btn=$('btnAI');btn.disabled=true;
+  var p;if(sel==='mirror')p=Promise.resolve(s.deck);else if(sel.indexOf('saved:')===0)p=Promise.resolve(getDecks()[+sel.slice(6)]);else p=buildAIDeck(aiLv,function(t){btn.textContent=t;});
+  p.then(function(deckObj){solo=true;ai=true;isHost=true;me=newPlayer(s.nick,s.deck);opp=newPlayer('컴퓨터 Lv.'+aiLv,deckObj);enterGame();})
+   .catch(function(){btn.disabled=false;btn.textContent='🤖 컴퓨터와 대전';toast('컴퓨터 덱을 만들지 못했어요 (카드 DB 접속). 미러전으로 시도해 보세요');});};
+
+/* 컴퓨터 덱 구성: 카드 이름으로 TCGdex 영어 DB에서 찾기 (한 번 만들면 이 기기에 저장) */
+var SETN={SVI:'Scarlet & Violet',PAL:'Paldea Evolved',OBF:'Obsidian Flames',MEW:'151',PAR:'Paradox Rift',PAF:'Paldean Fates',TEF:'Temporal Forces',TWM:'Twilight Masquerade',SFA:'Shrouded Fable',SCR:'Stellar Crown',SSP:'Surging Sparks',PRE:'Prismatic Evolutions',JTG:'Journey Together',DRI:'Destined Rivals',BLK:'Black Bolt',WHT:'White Flare',MEG:'Mega Evolution',PFL:'Phantasmal Flames',POR:'Perfect Order',CRI:'Chaos Rising',ASC:'Ascended Heroes',PBL:'Pitch Black',MEE:'Mega Evolution Energies'};
+var setMap=null;
+function loadSetMap(){if(setMap)return Promise.resolve(setMap);return fetch(API+'en/sets').then(function(r){return r.json();}).then(function(l){setMap={};l.forEach(function(x){setMap[String(x.name).toLowerCase()]=x.id;});return setMap;});}
+function findEn(name,code,num){var key=name.toLowerCase();return fetch(API+'en/cards?name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(list){if(!Array.isArray(list)||!list.length)return null;
+  var exact=list.filter(function(c){return String(c.name).toLowerCase()===key;});var pool=exact.length?exact:list.filter(function(c){return String(c.name).toLowerCase().indexOf(key)>-1;});if(!pool.length)pool=list;
+  var sid=code&&SETN[code]?setMap[SETN[code].toLowerCase()]:null;
+  return pool.find(function(c){return sid&&c.id.indexOf(sid+'-')===0&&String(parseInt(c.localId,10))===String(parseInt(num,10));})||pool.find(function(c){return sid&&c.id.indexOf(sid+'-')===0;})||pool.filter(function(c){return /^(sv|me)/.test(c.id);}).pop()||pool[pool.length-1];}).catch(function(){return null;});}
+function buildAIDeck(lv,prog){var def=AI_DECKS[lv];var key='dgpk_aideck_'+lv;try{var cached=JSON.parse(localStorage.getItem(key)||'null');if(cached&&cached.cards)return Promise.resolve(cached);}catch(e){}
+  var deck={name:def.name,lang:'en',cards:{}},done=0,total=def.cards.length,fill=0;
+  return loadSetMap().then(function(){var chain=Promise.resolve();def.cards.forEach(function(c){chain=chain.then(function(){return findEn(c[1],c[2],c[3]).then(function(hit){done++;if(prog)prog('덱 만드는 중… '+done+'/'+total);
+    if(!hit){fill+=c[0];return;}var e=deck.cards[hit.id]||(deck.cards[hit.id]={id:hit.id,name:hit.name,img:hit.image||'',n:0});e.n+=c[0];});});});return chain;})
+  .then(function(){if(fill>0){/* 못 찾은 카드는 기본 에너지로 채움 */var en=Object.keys(deck.cards).map(function(k){return deck.cards[k];}).filter(function(x){return /Energy/i.test(x.name);})[0];if(en)en.n+=fill;}
+    var n=0;for(var k in deck.cards)n+=deck.cards[k].n;if(n<40)throw new Error('short');try{localStorage.setItem(key,JSON.stringify(deck));}catch(e){}return deck;});}
 $('btnSolo').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);solo=true;isHost=true;
   me=newPlayer(s.nick,s.deck);opp=newPlayer('연습 상대',s.deck);enterGame();};
 
@@ -721,6 +741,9 @@ function aiTurn(){if(ended||!ai)return;
   /* 1 드로 */
   step(function(){opp.energyUsed=false;opp.supporterUsed=false;if(!opp.deck.length){aiLog('덱 없음 — 드로 불가, 패배');gameOver(true,false);return 'stop';}
     var n=aiLv>=10?2:1;opp.hand=opp.hand.concat(opp.deck.splice(0,n));aiLog(n+'장 드로');},400);
+  /* 1.5 특성: "Once during your turn, you may draw N cards" 류만 */
+  step(function(){if(aiLv<4)return;[opp.active].concat(opp.bench).forEach(function(sl){if(!sl)return;var d=D(topCard(sl));if(!d||!d.abilities)return;d.abilities.forEach(function(a){var t=String(a.effect||'');var m=t.match(/Once during your turn, you may draw (\d+) cards?/i)||t.match(/자신의 차례에 1번 사용할 수 있다\.? ?덱에서 카드를 (\d+)장 뽑는다/);
+      if(m&&!sl.abilityUsed){sl.abilityUsed=turnNo;opp.hand=opp.hand.concat(opp.deck.splice(0,+m[1]));aiLog(topCard(sl).name+' 특성 「'+a.name+'」 → '+m[1]+'장 드로');if(/shuffle this Pokémon and all attached cards into your deck/i.test(t)){var cards=allCards(sl);if(sl===opp.active)opp.active=null;else opp.bench.splice(opp.bench.indexOf(sl),1);opp.deck=shuffle(opp.deck.concat(cards));}}});});},600);
   /* 2 서포트 (간단 효과) */
   step(function(){if(aiLv<5||rnd()<0.15)return;var sup=opp.hand.filter(function(c){var d=D(c);return d&&d.trainerType==='Supporter';});if(!sup.length)return;
     var pri=sup.map(function(c){var n=enName(c).toLowerCase();var sc=0;
@@ -771,15 +794,50 @@ function aiTurn(){if(ended||!ai)return;
   step(function(){if(!opp.active||!me.active)return;if(turnNo===1&&opp.first){aiLog('선공 첫 턴 — 공격 불가');return;}if(opp.active.status.asleep||opp.active.status.paralyzed){aiLog('상태이상으로 공격 불가');return;}
     var ba=bestAttack(opp.active,me.active);if(!ba.atk){aiLog('에너지 부족 — 공격 못 함');return;}
     if(opp.active.status.confused&&rnd()<0.5){opp.active.dmg+=30;aiLog('혼란 코인 뒷면 — 자신에게 30');return;}
-    var dmg=calcDmg(opp.active,ba.atk,me.active);var hits=[{target:-1,dmg:dmg}];var eff=(ba.atk.effect||'');var st=null;
-    if(aiLv>=5&&/Burned|화상/.test(eff))st='burn';else if(aiLv>=5&&/Poisoned|독/.test(eff))st='poison';else if(aiLv>=5&&/Asleep|잠듦/.test(eff)&&rnd()<0.5)st='asleep';else if(aiLv>=5&&/Paralyzed|마비/.test(eff)&&rnd()<0.5)st='paralyzed';
-    applyAttack(hits,topCard(opp.active).name+'의 '+ba.atk.name,st);opp.attacked=true;setTimeout(aiCheckKO,600);},900);
+    var res=resolveEffect(opp.active,ba.atk,me.active);if(res.nothing){aiLog(topCard(opp.active).name+'의 '+ba.atk.name+' — 코인 뒷면, 효과 없음');opp.attacked=true;return;}
+    var hits=[];if(res.dmg>0)hits.push({target:-1,dmg:res.dmg});if(res.bench)me.bench.forEach(function(sl,i){hits.push({target:i,dmg:res.bench});});
+    if(res.self)opp.active.dmg+=res.self;if(res.heal)opp.active.dmg=Math.max(0,opp.active.dmg-res.heal);
+    if(res.discardE)for(var k=0;k<res.discardE&&opp.active.energy.length;k++)opp.discard.push(opp.active.energy.pop());
+    if(res.draw)opp.hand=opp.hand.concat(opp.deck.splice(0,res.draw));
+    if(res.note)aiLog(res.note);
+    if(hits.length||res.status)applyAttack(hits.length?hits:[{target:-1,dmg:0}],topCard(opp.active).name+'의 '+ba.atk.name,res.status);else aiLog(topCard(opp.active).name+'의 '+ba.atk.name+' (데미지 없음)');
+    opp.attacked=true;setTimeout(aiCheckKO,600);},900);
   /* 10 턴 종료 */
   step(function(){if(ended)return 'stop';[opp.active].concat(opp.bench).forEach(function(sl){if(!sl)return;if(sl.status.poison)sl.dmg+=10;if(sl.status.burn)sl.dmg+=20;if(sl.status.paralyzed)sl.status.paralyzed=false;});
     turnNo++;turn='me';startTurn();aiLog('턴 종료');setTimeout(aiCheckKO,300);},700);
   var i=0;function run(){if(i>=steps.length||ended){aiSync();return;}var st=steps[i++];var r;try{r=st[0]();}catch(e){console.error(e);}aiSync();if(r==='stop')return;setTimeout(run,st[1]);}
   run();}
 function evolvesTo(card,name){var d=D(card);var n=String(name).toLowerCase();var base=(d&&d.name?d.name:card.name).toLowerCase();if(n.indexOf(base)>-1)return true;var en=enName(card).toLowerCase();return n.indexOf(en)>-1;}
+
+/* 기술 효과 해석 (영어/한국어 텍스트 패턴) — 코인·추가 데미지·상태이상·벤치·회복·에너지 버리기 */
+function coin(){var h=rnd()<0.5;big('🪙 '+(h?'앞면':'뒷면'));log('🤖 코인: '+(h?'앞면':'뒷면'),true);return h;}
+function resolveEffect(atkSlot,atk,defSlot){var base=calcDmg(atkSlot,atk,defSlot);var e=String(atk.effect||'');var r={dmg:base,status:null,bench:0,self:0,heal:0,discardE:0,draw:0,nothing:false,note:''};
+  var dmgTxt=String(atk.damage||'');var m,notes=[];
+  function statusOf(txt){if(/Burned|화상/.test(txt))return 'burn';if(/Poisoned|독/.test(txt))return 'poison';if(/Asleep|잠듦/.test(txt))return 'asleep';if(/Paralyzed|마비/.test(txt))return 'paralyzed';if(/Confused|혼란/.test(txt))return 'confused';return null;}
+  /* N coins × M damage */
+  if((m=e.match(/Flip (\d+) coins?\.? This attack does (\d+) damage (?:for|times) each heads/i))||(m=e.match(/동전을 (\d+)번 던져서 앞면이 나온 수 ?[×x] ?(\d+)/))){var n=+m[1],per=+m[2],h=0;for(var i=0;i<n;i++)if(coin())h++;r.dmg=h*per*(base&&parseDmg(dmgTxt)?base/Math.max(1,parseDmg(dmgTxt)):1);notes.push('앞면 '+h+'개 → '+r.dmg);}
+  /* coin: more damage */
+  else if((m=e.match(/Flip a coin\. If heads, this attack does (\d+) more damage/i))||(m=e.match(/동전을 1번 던져서 앞면이면 (\d+)데미지 추가/))){if(coin()){r.dmg+=+m[1];notes.push('앞면 +'+m[1]);}}
+  /* coin: tails nothing */
+  else if(/Flip a coin\. If tails, this attack does nothing/i.test(e)||/뒷면이면 이 기술은 실패/.test(e)){if(!coin()){r.nothing=true;return r;}}
+  /* coin: status */
+  if((m=e.match(/Flip a coin\. If heads, (?:your opponent's Active Pokémon|the Defending Pokémon) is now (Burned|Poisoned|Asleep|Paralyzed|Confused)/i))||(m=e.match(/동전을 1번 던져서 앞면이면 상대의 배틀 포켓몬을 (화상|독|잠듦|마비|혼란)/))){if(coin())r.status=statusOf(m[1]);}
+  else if((m=e.match(/(?:opponent's Active Pokémon|Defending Pokémon) is now (Burned|Poisoned|Asleep|Paralyzed|Confused)/i))||(m=e.match(/상대의 배틀 포켓몬을 (화상|독|잠듦|마비|혼란)으?로/))){r.status=statusOf(m[1]);}
+  /* +N for each energy attached / damage counters / cards in hand */
+  if((m=e.match(/does (\d+) more damage for each (?:\[?\w+\]? )?Energy attached to (?:this|the Defending)/i))||(m=e.match(/에너지 개수 ?[×x] ?(\d+)데미지 추가/))){var cnt=/Defending|상대/.test(e)?defSlot.energy.length:atkSlot.energy.length;r.dmg+=cnt*+m[1];notes.push('에너지 '+cnt+' × '+m[1]);}
+  if((m=e.match(/does (\d+) more damage for each damage counter on (?:this|your opponent's Active)/i))){var dc=/opponent/.test(e)?Math.floor(defSlot.dmg/10):Math.floor(atkSlot.dmg/10);r.dmg+=dc*+m[1];}
+  if((m=e.match(/does (\d+) damage for each card in your hand/i))||(m=e.match(/자신의 손패 장수 ?[×x] ?(\d+)/))){r.dmg=opp.hand.length*+m[1];notes.push('손패 '+opp.hand.length+'장 × '+m[1]);}
+  if((m=e.match(/does (\d+) more damage for each (?:of your Benched|Benched Pokémon)/i))){r.dmg+=opp.bench.length*+m[1];}
+  /* bench damage */
+  if((m=e.match(/also does (\d+) damage to each of your opponent's Benched Pokémon/i))||(m=e.match(/상대의 벤치 포켓몬 전원에게도 (\d+)데미지/))){r.bench=+m[1];}
+  /* self damage / heal / discard energy */
+  if((m=e.match(/This Pokémon (?:also )?does (\d+) damage to itself/i))||(m=e.match(/이 포켓몬에게도 (\d+)데미지/))){r.self=+m[1];}
+  if((m=e.match(/Heal (\d+) damage from this Pokémon/i))||(m=e.match(/이 포켓몬의 HP를 (\d+) 회복/))){r.heal=+m[1];}
+  if(/Discard all Energy from this Pokémon/i.test(e)||/이 포켓몬에 붙어 있는 에너지를 모두 트래시/.test(e))r.discardE=99;else if((m=e.match(/Discard (an|\d+) (?:\[?\w+\]? )?Energy from this Pokémon/i))||(m=e.match(/이 포켓몬에서 (?:\[?\w+\]? )?에너지를 (\d+)개 트래시/))){r.discardE=m[1]==='an'?1:+m[1];}
+  if((m=e.match(/Draw (\d+|a) cards?/i))||(m=e.match(/(\d+)장 뽑는다/))){r.draw=m[1]==='a'?1:+m[1];}
+  /* damage text like "60+" or "30x" without matching pattern: keep base */
+  if(notes.length)r.note=notes.join(' · ');
+  r.dmg=Math.max(0,Math.round(r.dmg/10)*10);return r;}
 
 /* ---------- 초보 도우미 (뮤) ---------- */
 var recSet={};
