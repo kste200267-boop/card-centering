@@ -75,6 +75,7 @@
     <button type="button" class="soft" id="btnOpen">덱 보기</button>
     <button type="button" id="btnSave">저장</button>
     <button type="button" class="ghost" id="btnCode">덱 코드</button>
+    <button type="button" class="ghost" id="btnCheck">규칙 검사</button>
     <a href="battle.html" style="flex:1;text-align:center;background:var(--ink);color:#fff;padding:9px;border-radius:10px;text-decoration:none;font-weight:600">대전 →</a>
   </div>
 </div>
@@ -212,6 +213,38 @@ function fromCode(s){
   catch(e){ toast('코드가 올바르지 않아요'); return false; }
 }
 
+/* ---------- 규칙 검사 (TCGdex 상세로 확인) ---------- */
+var DCACHE_KEY='dgpk_dcache';
+function dcacheGet(id){try{var c=JSON.parse(localStorage.getItem(DCACHE_KEY)||'{}');return c[id];}catch(e){return null;}}
+function dcachePut(id,d){try{var c=JSON.parse(localStorage.getItem(DCACHE_KEY)||'{}');c[id]={name:d.name,category:d.category,stage:d.stage,rarity:d.rarity,regulationMark:d.regulationMark,energyType:d.energyType,trainerType:d.trainerType};var ks=Object.keys(c);if(ks.length>400)delete c[ks[0]];localStorage.setItem(DCACHE_KEY,JSON.stringify(c));}catch(e){}}
+function checkDeck(){
+  var ids=Object.keys(deck.cards);if(!ids.length){toast('덱이 비어 있어요');return;}
+  $('detailIn').innerHTML='<h3>규칙 검사</h3><p class="msg" id="chkMsg">카드 정보 확인 중… (0/'+ids.length+')</p><div class="nav"><a href="#" onclick="show(\'shDetail\',false);return false">닫기</a></div>';show('shDetail');$('shDetail').onclick=function(e){if(e.target===$('shDetail'))show('shDetail',false);};
+  var done=0,info={};
+  function next(i){if(i>=ids.length){report(info);return;}var id=ids[i];var c=dcacheGet(id);
+    var pr=c?Promise.resolve(c):fetch(API+lang+'/cards/'+id).then(function(r){return r.json();}).then(function(d){dcachePut(id,d);return d;}).catch(function(){return null;});
+    pr.then(function(d){info[id]=d;done++;var m=$('chkMsg');if(m)m.textContent='카드 정보 확인 중… ('+done+'/'+ids.length+')';next(i+1);});}
+  next(0);
+}
+function report(info){
+  var n=total(),basics=0,ace=0,unknown=0,marks={},byName={},problems=[];
+  Object.keys(deck.cards).forEach(function(id){var e=deck.cards[id],d=info[id];if(!d){unknown+=e.n;return;}
+    if(d.category==='Pokemon'&&d.stage==='Basic')basics+=e.n;
+    if(/ACE/i.test(d.rarity||''))ace+=e.n;
+    if(d.regulationMark)marks[d.regulationMark]=(marks[d.regulationMark]||0)+e.n;
+    var isBasicEnergy=d.category==='Energy'&&(d.energyType==='Normal'||/기본|Basic/.test(d.name));
+    if(!isBasicEnergy)byName[d.name]=(byName[d.name]||0)+e.n;});
+  if(n!==60)problems.push('총 '+n+'장 (60장이어야 함)');
+  if(basics<1)problems.push('기본(Basic) 포켓몬이 없음 — 최소 1장');
+  if(ace>1)problems.push('ACE SPEC '+ace+'장 (1장만 가능)');
+  Object.keys(byName).forEach(function(k){if(byName[k]>4)problems.push(k+' '+byName[k]+'장 (같은 이름 4장까지)');});
+  var mk=Object.keys(marks).sort().map(function(k){return k+':'+marks[k]+'장';}).join(' · ');
+  var h='<h3>규칙 검사 결과</h3>'+(problems.length?'<ul style="color:var(--warn);padding-left:18px">'+problems.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>':'<p style="color:var(--ok);font-weight:700">✔ 기본 규칙 통과</p>')+
+    '<p class="msg">기본 포켓몬 '+basics+'장 · ACE SPEC '+ace+'장'+(unknown?' · 정보 없음 '+unknown+'장':'')+'</p>'+(mk?'<p class="msg">레귤레이션 마크: '+mk+'<br>스탠다드 대회는 최신 마크만 허용되니 오래된 마크가 있으면 확인하세요.</p>':'')+
+    '<div class="nav"><a href="#" onclick="show(\'shDetail\',false);return false">닫기</a></div>';
+  $('detailIn').innerHTML=h;
+}
+
 /* ---------- 상세 ---------- */
 function openDetail(c){
   var box=$('detailIn'); box.innerHTML='<img src="'+img(c,'high')+'" alt=""><p class="msg">상세 불러오는 중…</p>'; show('shDetail');
@@ -243,6 +276,7 @@ $('btnSave').onclick=function(e){ e.preventDefault(); if($('shDeck').classList.c
 $('btnDecks').onclick=function(e){ e.preventDefault(); renderDecks(); show('shDecks'); };
 $('closeDecks').onclick=function(e){ e.preventDefault(); show('shDecks',false); };
 $('newDeck').onclick=function(e){ e.preventDefault(); deck={name:'새 덱 '+(getDecks().length+1),lang:lang,cards:{}}; update(); show('shDecks',false); };
+$('btnCheck').onclick=function(e){e.preventDefault();checkDeck();};
 $('btnCode').onclick=function(e){ e.preventDefault(); $('codeOut').value=toCode(); show('shCode'); };
 $('closeCode').onclick=function(e){ e.preventDefault(); show('shCode',false); };
 $('btnCopy').onclick=function(e){ e.preventDefault(); $('codeOut').select(); try{ document.execCommand('copy'); toast('복사됨'); }catch(x){} };
