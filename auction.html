@@ -130,7 +130,7 @@ function won(n){return Number(n||0).toLocaleString('ko-KR')+'원';}
 var galIdx={};
 function gallery(photos,key){photos=photos||[];if(!photos.length)return '';var i=galIdx[key]||0;if(i>=photos.length)i=0;
   return '<div class="gal" data-g="'+key+'"><img src="'+photos[i]+'" alt="">'+(photos.length>1?'<button type="button" class="arr l" data-d="-1">‹</button><button type="button" class="arr r" data-d="1">›</button><div class="dots">'+(i+1)+' / '+photos.length+'</div>':'')+'</div>';}
-document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.gal .arr');if(!b)return;var g=b.closest('.gal');var key=g.dataset.g;var photos=key==='h'?(cur&&cur.photos)||[]:(bstate&&bstate.item.photos)||[];galIdx[key]=((galIdx[key]||0)+ +b.dataset.d+photos.length)%photos.length;g.outerHTML=gallery(photos,key);});
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.gal .arr');if(!b)return;var g=b.closest('.gal');var key=g.dataset.g;var photos=key==='h'?(cur&&cur.photos)||[]:bphotos;galIdx[key]=((galIdx[key]||0)+ +b.dataset.d+photos.length)%photos.length;g.outerHTML=gallery(photos,key);});
 var tt;function toast(m){var t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(function(){t.style.opacity=0;},1800);}
 function buzz(){try{if(navigator.vibrate)navigator.vibrate(50);}catch(e){}}
 function saveRec(r){try{var a=JSON.parse(localStorage.getItem('dgpk_auction')||'[]');a.push(r);localStorage.setItem('dgpk_auction',JSON.stringify(a.slice(-100)));}catch(e){}}
@@ -142,18 +142,21 @@ var myKakao='';
 /* ================= 판매자 (호스트) ================= */
 var peer=null,conns=[],myNick='',code='',queue=[],cur=null,tick=null;
 function state(){if(!cur)return {t:'idle',seller:myNick,people:conns.length};function nickOf(n){if(!cur||cur.showNick||!n)return n;if(!cur.anon)cur.anon={};if(!cur.anon[n])cur.anon[n]='입찰자'+(Object.keys(cur.anon).length+1);return cur.anon[n];}
-  return {t:'state',seller:myNick,people:conns.length,item:{name:cur.name,grade:cur.grade,note:cur.note,photos:cur.photos,start:cur.start,step:cur.step,buyNow:cur.buyNow,minFirst:cur.minFirst,cool:cur.cool,big:cur.big},price:cur.price,leader:nickOf(cur.leader),leaderReal:cur.leader,bids:cur.bids.slice(-15).map(function(b){return {nick:nickOf(b.nick),amount:b.amount};}),endsAt:cur.endsAt,ended:cur.ended,winner:cur.winner?{nick:cur.winner.nick,price:cur.winner.price}:null,extLeft:cur.maxExt-cur.extUsed};}
+  return {t:'state',seller:myNick,people:conns.length,item:{name:cur.name,grade:cur.grade,note:cur.note,start:cur.start,step:cur.step,buyNow:cur.buyNow,minFirst:cur.minFirst,cool:cur.cool,big:cur.big,nPhotos:(cur.photos||[]).length},price:cur.price,leader:nickOf(cur.leader),leaderReal:cur.leader,bids:cur.bids.slice(-15).map(function(b){return {nick:nickOf(b.nick),amount:b.amount};}),left:Math.max(0,cur.endsAt-Date.now()),ended:cur.ended,winner:cur.winner?{nick:nickOf(cur.winner.nick),price:cur.winner.price,real:cur.winner.nick}:null,extLeft:cur.maxExt-cur.extUsed};}
 function broadcast(msg){var s=JSON.stringify(msg);conns.forEach(function(c){try{if(c.open)c.send(s);}catch(e){}});}
-function pushState(){var st=state();conns.forEach(function(c){try{if(c.open){var o=Object.assign({},st);o.mine=(cur&&cur.leader&&c.nick===cur.leader);delete o.leaderReal;c.send(JSON.stringify(o));}}catch(e){}});renderHostLive();}
+function personalize(st,c){var o=Object.assign({},st);o.mine=!!(cur&&cur.leader&&c.nick===cur.leader);if(o.winner){o.winner={nick:o.winner.nick,price:o.winner.price,me:o.winner.real===c.nick};}delete o.leaderReal;return o;}
+function pushState(){var st=state();conns.forEach(function(c){try{if(c.open)c.send(JSON.stringify(personalize(st,c)));}catch(e){}});renderHostLive();}
+function sendPhotos(c){if(!cur)return;try{c.send(JSON.stringify({t:'photos',photos:cur.photos||[]}));}catch(e){}}
 $('btnHost').onclick=function(){var n=checkMe();if(!n)return;myNick=n;code=String(Math.floor(1000+Math.random()*9000));$('hostCode').textContent=code;
   peer=new Peer('dgpkauc-'+code);$('btnHost').disabled=true;$('btnHost').textContent='연결 준비 중…';
   peer.on('open',function(){$('lobby').classList.add('hide');$('host').classList.remove('hide');window.scrollTo(0,0);});
-  peer.on('connection',function(c){c.on('open',function(){conns.push(c);var o=state();delete o.leaderReal;c.send(JSON.stringify(o));$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});
+  peer.on('connection',function(c){c.on('open',function(){conns.push(c);c.send(JSON.stringify(personalize(state(),c)));sendPhotos(c);$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});
     c.on('data',function(d){try{onBid(c,JSON.parse(d));}catch(e){}});
     c.on('close',function(){conns=conns.filter(function(x){return x!==c;});$('hostPeople').textContent='접속 '+conns.length+'명';plist();broadcast({t:'people',n:conns.length});});});
   peer.on('error',function(err){toast('연결 오류: '+err.type);$('btnHost').disabled=false;$('btnHost').textContent='경매장 만들기';});};
+function nickOfPub(n){if(!cur||cur.showNick||!n)return n;return (cur.anon&&cur.anon[n])||n;}
 function plist(){$('hostPlist').textContent=conns.map(function(c){return c.nick||'?';}).filter(Boolean).join(' · ');}
-function onBid(c,m){if(m.t==='hello'){c.nick=m.nick;c.kakao=m.kakao||'';plist();return;}if(m.t!=='bid'||!cur||cur.ended)return;
+function onBid(c,m){if(m.t==='hello'){c.nick=String(m.nick||'').slice(0,12)||'익명';c.kakao=m.kakao||'';plist();return;}if(m.t!=='bid'||!cur||cur.ended||!c.nick)return;m.nick=c.nick;
   var amt=Math.floor(+m.amount||0);var min=cur.leader?cur.price+cur.step:cur.minFirst;
   if(cur.leader===m.nick){try{c.send(JSON.stringify({t:'reject',min:min,why:'이미 최고 입찰자'}));}catch(e){}return;}
   var last=cur.lastBid&&cur.lastBid[m.nick]||0;if(cur.cool>0&&Date.now()-last<cur.cool*1000){try{c.send(JSON.stringify({t:'reject',min:min,why:Math.ceil((cur.cool*1000-(Date.now()-last))/1000)+'초 후 재입찰'}));}catch(e){}return;}
@@ -183,10 +186,11 @@ function renderQueue(){$('queueCnt').textContent=queue.length?queue.length+'개'
   document.querySelectorAll('#queue [data-s]').forEach(function(b){b.onclick=function(){if(cur&&!cur.ended){toast('진행 중인 경매가 있어요');return;}var it=queue.splice(+b.dataset.s,1)[0];renderQueue();startItem(it);};});
   document.querySelectorAll('#queue [data-d]').forEach(function(b){b.onclick=function(){queue.splice(+b.dataset.d,1);renderQueue();};});}
 function startItem(it){cur=Object.assign({},it,{price:it.start,leader:null,bids:[],endsAt:Date.now()+it.time*1000,ended:false,winner:null,extUsed:0,lastBid:{},anon:{}});
-  $('hostLive').classList.remove('hide');$('hostForm').classList.add('hide');pushState();clearInterval(tick);tick=setInterval(hostTick,250);broadcast({t:'start'});window.scrollTo(0,0);}
-function hostTick(){if(!cur||cur.ended)return;var left=cur.endsAt-Date.now();var el=$('hTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}
+  $('hostLive').classList.remove('hide');$('hostForm').classList.add('hide');conns.forEach(sendPhotos);pushState();clearInterval(tick);tick=setInterval(hostTick,250);broadcast({t:'start'});window.scrollTo(0,0);}
+var lastSync=0;
+function hostTick(){if(!cur||cur.ended){$('bigcount').classList.remove('on');return;}var left=cur.endsAt-Date.now();if(Date.now()-lastSync>4000){lastSync=Date.now();broadcast({t:'tick',left:Math.max(0,left)});}var el=$('hTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}
   if(left<=0){cur.ended=true;var wc=conns.find(function(c){return c.nick===cur.leader;});cur.winner=cur.leader?{nick:cur.leader,price:cur.price,kakao:(wc&&wc.kakao)||''}:null;clearInterval(tick);pushState();
-    conns.forEach(function(c){try{if(c.open)c.send(JSON.stringify({t:'end',winner:cur.winner?{nick:cur.winner.nick,price:cur.winner.price}:null,item:cur.name,sellerKakao:(cur.winner&&c.nick===cur.winner.nick)?myKakao:''}));}catch(e){}});
+    conns.forEach(function(c){try{if(c.open)c.send(JSON.stringify({t:'end',winner:cur.winner?{nick:(cur.showNick||c.nick===cur.winner.nick)?cur.winner.nick:nickOfPub(cur.winner.nick),price:cur.winner.price,me:c.nick===cur.winner.nick}:null,item:cur.name,sellerKakao:(cur.winner&&c.nick===cur.winner.nick)?myKakao:''}));}catch(e){}});
     if(cur.winner){saveRec({role:'seller',item:cur.name,price:cur.price,other:cur.winner.nick,kakao:cur.winner.kakao,t:Date.now()});buzz();}}
   else{bigCount(left,cur.big);}}
 var lastBig=-1;function bigCount(left,big){var s=Math.ceil(left/1000);var el=$('bigcount');if(!big||s>big||s<=0){el.classList.remove('on');lastBig=-1;return;}if(s!==lastBig){lastBig=s;el.querySelector('b').textContent=s;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');buzz();}}
@@ -213,21 +217,23 @@ function bindB(){bconn.on('open',function(){bconn.send(JSON.stringify({t:'hello'
   bconn.on('close',function(){toast('판매자와 연결이 끊겼어요');$('bidLive').innerHTML='<div class="card"><b>연결 끊김</b><p class="sub">판매자 폰이 화면을 끄거나 나갔을 수 있어요.</p><div class="row"><button type="button" id="bRe">다시 연결</button></div></div>';$('bRe').onclick=function(){bconn=bpeer.connect('dgpkauc-'+bcode,{reliable:true});bindB();};});}
 function onHost(m){
   if(m.t==='people'){$('bidPeople').textContent='입찰자 '+m.n+'명';return;}
+  if(m.t==='photos'){bphotos=m.photos||[];galIdx.b=0;if(bstate)renderBid();return;}
+  if(m.t==='tick'){if(bstate&&!bstate.ended){bstate.endsAt=Date.now()+m.left;}return;}
   if(m.t==='idle'){bstate=null;$('sellerNick').textContent=m.seller||'';$('bidPeople').textContent='입찰자 '+(m.people||0)+'명';$('bidLive').innerHTML='<div class="card sub" style="text-align:center">판매자가 물품을 올리면 여기에 표시됩니다…</div>';clearInterval(btick);return;}
-  if(m.t==='state'){bstate=m;$('sellerNick').textContent=m.seller||'';$('bidPeople').textContent='입찰자 '+(m.people||0)+'명';renderBid();clearInterval(btick);if(!m.ended)btick=setInterval(bidTick,250);return;}
+  if(m.t==='state'){m.endsAt=Date.now()+(m.left||0);m.item.photos=bphotos;bstate=m;$('sellerNick').textContent=m.seller||'';$('bidPeople').textContent='입찰자 '+(m.people||0)+'명';renderBid();clearInterval(btick);if(!m.ended)btick=setInterval(bidTick,250);return;}
   if(m.t==='start'){buzz();toast('경매 시작!');return;}
   if(m.t==='reject'){toast('입찰 실패 — 최소 '+won(m.min)+(m.why?' ('+m.why+')':''));return;}
-  if(m.t==='end'){buzz();if(m.cancel){toast('판매자가 경매를 취소했어요');return;}if(m.winner&&m.winner.nick===myNick){sellerKakao=m.sellerKakao||'';saveRec({role:'buyer',item:m.item,price:m.winner.price,other:(bstate&&bstate.seller)||'판매자',kakao:sellerKakao,t:Date.now()});if(bstate){bstate.ended=true;bstate.winner=m.winner;renderBid();}}return;}
+  if(m.t==='end'){buzz();if(m.cancel){toast('판매자가 경매를 취소했어요');return;}if(m.winner&&m.winner.me){sellerKakao=m.sellerKakao||'';saveRec({role:'buyer',item:m.item,price:m.winner.price,other:(bstate&&bstate.seller)||'판매자',kakao:sellerKakao,t:Date.now()});if(bstate){bstate.ended=true;bstate.winner=m.winner;renderBid();}}$('bigcount').classList.remove('on');return;}
   if(m.t==='big'){toast(m.text);buzz();return;}
   if(m.t==='closed'){alert('판매자가 경매장을 닫았어요');location.reload();}}
 function bidTick(){if(!bstate||bstate.ended)return;var left=bstate.endsAt-Date.now();var el=$('bTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}bigCount(left,bstate.item.big);}
 function bid(amount){if(!bstate||bstate.ended)return;bconn.send(JSON.stringify({t:'bid',nick:myNick,amount:amount}));}
-var sellerKakao='';
-function renderBid(){var s=bstate,it=s.item;var mine=!!s.mine;var min=s.leader?s.price+it.step:(it.minFirst||s.start);
+var sellerKakao='',bphotos=[];
+function renderBid(){bstate.item.photos=bphotos;var s=bstate,it=s.item;var mine=!!s.mine;var min=s.leader?s.price+it.step:(it.minFirst||s.start);
   var h='<div class="card item">'+gallery(it.photos,'b')+'<div class="nm">'+esc(it.name)+'</div><div class="meta">'+esc(it.grade)+(it.note?' · '+esc(it.note):'')+' · 시작가 '+won(it.start)+' · 단위 '+won(it.step)+(it.buyNow?' · 즉시구매 '+won(it.buyNow):'')+(it.cool?' · 재입찰 '+it.cool+'초 간격':'')+'</div>';
-  if(s.ended){h+=s.winner?(s.winner.nick===myNick?'<div class="won"><div>🎉 내가 낙찰!</div><b>'+won(s.winner.price)+'</b>'+(sellerKakao?'<a href="'+esc(sellerKakao)+'" target="_blank" rel="noopener" style="display:block;margin-top:8px;background:#FEE500;color:#111;padding:10px;border-radius:10px;text-decoration:none;font-weight:700">💬 판매자 오픈카톡으로 연락</a>':'<div class="sub" style="margin:4px 0 0">판매자 '+esc(s.seller)+'님과 방에서 연락하세요.</div>')+'<div class="sub" style="margin:4px 0 0">기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><div>낙찰</div><b>'+esc(s.winner.nick)+' · '+won(s.winner.price)+'</b></div>'):'<div class="won" style="background:#eee"><b>유찰</b></div>';}
+  if(s.ended){h+=s.winner?(s.winner.me?'<div class="won"><div>🎉 내가 낙찰!</div><b>'+won(s.winner.price)+'</b>'+(sellerKakao?'<a href="'+esc(sellerKakao)+'" target="_blank" rel="noopener" style="display:block;margin-top:8px;background:#FEE500;color:#111;padding:10px;border-radius:10px;text-decoration:none;font-weight:700">💬 판매자 오픈카톡으로 연락</a>':'<div class="sub" style="margin:4px 0 0">판매자 '+esc(s.seller)+'님과 방에서 연락하세요.</div>')+'<div class="sub" style="margin:4px 0 0">기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><div>낙찰</div><b>'+esc(s.winner.nick)+' · '+won(s.winner.price)+'</b></div>'):'<div class="won" style="background:#eee"><b>유찰</b></div>';}
   else{h+='<div class="timer" id="bTimer">⏱</div><div class="price"><b>'+won(s.price)+'</b><small>'+(s.leader?'현재 최고':'시작가')+'</small></div><div class="leader">'+(s.leader?(mine?'<b>내가 최고 입찰자</b> 🙌':'최고 입찰자 <b>'+esc(s.leader)+'</b>'):'아직 입찰 없음 — '+won(min)+'부터')+'</div>'+
-    '<div class="bidbtns"><button type="button" data-b="'+min+'" '+(mine?'disabled':'')+'>'+won(min)+'</button><button type="button" class="soft" data-b="'+(min+it.step)+'">'+won(min+it.step)+'</button><button type="button" class="soft" data-b="'+(min+it.step*2)+'">'+won(min+it.step*2)+'</button></div>'+(it.buyNow?'<div class="row"><button type="button" class="buynow" data-b="'+it.buyNow+'" style="flex:1">⚡ 즉시구매 '+won(it.buyNow)+'</button></div>':'')+
+    '<div class="bidbtns"><button type="button" data-b="'+min+'" '+(mine?'disabled':'')+'>'+won(min)+'</button><button type="button" class="soft" data-b="'+(min+it.step)+'" '+(mine?'disabled':'')+'>'+won(min+it.step)+'</button><button type="button" class="soft" data-b="'+(min+it.step*2)+'" '+(mine?'disabled':'')+'>'+won(min+it.step*2)+'</button></div>'+(it.buyNow?'<div class="row"><button type="button" class="buynow" data-b="'+it.buyNow+'" style="flex:1">⚡ 즉시구매 '+won(it.buyNow)+'</button></div>':'')+
     '<div class="row"><input type="number" id="bidIn" placeholder="직접 입력 (원)" inputmode="numeric" step="100" min="'+min+'"><button type="button" id="bidGo" style="flex:0 0 auto">입찰</button></div>';}
   h+='<div class="hist">'+(s.bids||[]).slice().reverse().map(function(b,i){return '<div class="'+(i===0?'top':'')+'">'+esc(b.nick)+' — '+won(b.amount)+'</div>';}).join('')+'</div></div>';
   $('bidLive').innerHTML=h;bidTick();
