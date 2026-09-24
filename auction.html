@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>실시간 카드 경매 · 대구 포켓몬 카드 방</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<style>
+  :root{--bg:#F8F4FB;--paper:#fff;--ink:#1D1B16;--ink2:#5B5850;--line:#E6DEEE;--pink:#D64A9B;--pinkS:#FBE8F3;--blue:#5A7BD6;--blueS:#EAEFFC;--ok:#2E7D32;--warn:#C0392B;--yel:#FFF7D6;--gold:#D4A017;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  *,*::before,*::after{box-sizing:inherit}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5;word-break:keep-all;-webkit-text-size-adjust:100%}
+  .wrap{max-width:560px;margin:0 auto;padding:14px 14px 40px}
+  h1{margin:0 0 4px;font-size:22px}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 12px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .card h2{margin:0 0 8px;font-size:15px}
+  input,select,button,textarea{font:inherit}
+  input[type=text],input[type=number],select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .row{display:flex;gap:8px;margin-top:8px;align-items:center}.row>*{flex:1;min-width:0}
+  button{border:0;border-radius:10px;padding:11px 14px;background:var(--pink);color:#fff;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  button.soft{background:var(--blueS);color:var(--blue)}button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2)}button.ok{background:var(--ok)}
+  button:disabled{opacity:.5}
+  .code{font-size:36px;letter-spacing:8px;text-align:center;font-weight:900;color:var(--pink);margin:6px 0}
+  .hide{display:none!important}
+  .item img{width:100%;max-height:360px;object-fit:contain;border-radius:12px;background:#eee;display:block}
+  .item .nm{font-size:18px;font-weight:800;margin:10px 0 2px}.item .meta{font-size:13px;color:var(--ink2)}
+  .price{display:flex;align-items:flex-end;gap:10px;margin:12px 0 6px}
+  .price b{font-size:34px;line-height:1;color:var(--ink)}.price small{color:var(--ink2);font-size:13px}
+  .leader{font-size:14px;color:var(--ink2)}.leader b{color:var(--pink)}
+  .timer{font-size:28px;font-weight:900;text-align:center;padding:6px;border-radius:12px;background:var(--yel)}
+  .timer.low{background:var(--warn);color:#fff;animation:pulse .6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .bidbtns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+  .bidbtns button{padding:14px 6px;font-size:15px}
+  .hist{max-height:160px;overflow:auto;font-size:13px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .hist div{padding:3px 0;border-bottom:1px dashed var(--line)}
+  .hist .top{color:var(--pink);font-weight:700}
+  .people{font-size:12.5px;color:var(--ink2);margin-top:6px}
+  .won{background:linear-gradient(135deg,#FFF3C4,#FFD98A);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px}
+  .won b{display:block;font-size:22px}
+  .queue .q{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .queue .q img{width:44px;height:44px;object-fit:cover;border-radius:6px}
+  .queue .q b{flex:1}
+  .rec{font-size:13.5px;padding:7px 0;border-bottom:1px solid var(--line)}.rec small{color:var(--ink2);display:block}
+  .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);background:#000;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;max-width:92%;text-align:center}
+  .nav{display:flex;gap:6px;margin-top:10px}.nav a{flex:1;text-align:center;background:var(--blueS);color:var(--blue);padding:9px;border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ========== 로비 ========== -->
+<div id="lobby">
+  <h1>🔨 실시간 카드 경매</h1>
+  <p class="sub">판매자 폰이 경매장이 되고, 방 사람들이 코드로 들어와 실시간으로 입찰합니다. 서버 없이 폰끼리 직접 연결.</p>
+  <div class="card">
+    <h2>내 정보</h2>
+    <input type="text" id="nick" placeholder="닉네임 (카톡방 닉과 같게)" maxlength="12">
+    <div class="row"><input type="text" id="room" placeholder="방 인증코드" inputmode="numeric" maxlength="4"></div>
+  </div>
+  <div class="card">
+    <h2>입찰하러 가기</h2>
+    <div class="row"><input type="text" id="joinCode" placeholder="경매 코드 4자리" inputmode="numeric" maxlength="4"><button type="button" id="btnJoin" style="flex:0 0 auto">입장</button></div>
+    <p id="joinStat" class="sub" style="margin:6px 0 0"></p>
+  </div>
+  <div class="card">
+    <h2>경매 열기 (판매자)</h2>
+    <button type="button" class="soft" id="btnHost" style="width:100%">경매장 만들기</button>
+  </div>
+  <div class="card">
+    <h2>내 기록</h2>
+    <div id="myRecs" class="sub">기록 없음</div>
+  </div>
+  <p class="sub">※ 낙찰 후 거래·연락은 당사자끼리 오픈카톡으로. 페이지는 중개하지 않으며 책임은 당사자에게 있습니다. 근거 없는 취소·노쇼는 방 규정 위반이에요.</p>
+  <div class="nav"><a href="notice.html">📢 공지</a><a href="market.html">🎴 거래 게시판</a></div>
+</div>
+
+<!-- ========== 판매자 ========== -->
+<div id="host" class="hide">
+  <div class="card" style="text-align:center"><div class="sub">입찰자에게 이 코드를 알려 주세요</div><div class="code" id="hostCode">----</div><div class="people" id="hostPeople">접속 0명</div></div>
+
+  <div class="card" id="hostForm">
+    <h2>물품 등록</h2>
+    <input type="text" id="itName" placeholder="카드 이름 (예: 뮤 ex SAR)" maxlength="40">
+    <div class="row"><select id="itGrade"><option value="S급">S급</option><option value="A급" selected>A급</option><option value="B급">B급</option><option value="C급">C급</option><option value="D급">D급</option><option value="PSA/BGS 등급품">PSA/BGS 등급품</option></select><input type="text" id="itNote" placeholder="메모 (센터링, 하자 등)" maxlength="60"></div>
+    <div class="row"><input type="number" id="itStart" placeholder="시작가 (원)" inputmode="numeric" min="0" step="100"><select id="itStep"><option value="500">단위 500원</option><option value="1000" selected>단위 1,000원</option><option value="2000">단위 2,000원</option><option value="5000">단위 5,000원</option><option value="10000">단위 10,000원</option><option value="custom">단위 직접 입력</option></select></div>
+    <div class="row hide" id="stepCustomRow"><input type="number" id="itStepCustom" placeholder="입찰 단위 (원)" inputmode="numeric" min="100" step="100"></div>
+    <div class="row"><select id="itTime"><option value="60">60초</option><option value="90" selected>90초</option><option value="120">120초</option><option value="180">180초</option><option value="300">5분</option></select><select id="itExt"><option value="15" selected>막판 입찰 시 +15초</option><option value="30">막판 입찰 시 +30초</option><option value="0">연장 없음</option></select></div>
+    <div class="row"><input type="file" id="itPhoto" accept="image/*" capture="environment" style="flex:1"></div>
+    <img id="itPreview" class="hide" style="width:100%;max-height:260px;object-fit:contain;border-radius:10px;margin-top:8px;background:#eee">
+    <div class="row"><button type="button" id="btnQueue" class="soft">목록에 추가</button><button type="button" id="btnStartNow">바로 시작</button></div>
+  </div>
+
+  <div class="card queue" id="queueBox"><h2>대기 물품 <small id="queueCnt" style="font-weight:400;color:var(--ink2)"></small></h2><div id="queue"></div></div>
+
+  <div id="hostLive" class="hide"></div>
+  <div class="row"><button type="button" class="ghost" id="btnHostEnd" style="flex:1">경매장 닫기</button></div>
+</div>
+
+<!-- ========== 입찰자 ========== -->
+<div id="bidder" class="hide">
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;font-size:13.5px"><span>판매자 <b id="sellerNick"></b></span><span class="people" id="bidPeople"></span></div>
+  <div id="bidLive"><div class="card sub" style="text-align:center">판매자가 물품을 올리면 여기에 표시됩니다…</div></div>
+  <div class="row"><button type="button" class="ghost" id="btnLeave" style="flex:1">나가기</button></div>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var ROOM_CODE='7942';
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function won(n){return Number(n||0).toLocaleString('ko-KR')+'원';}
+var tt;function toast(m){var t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(function(){t.style.opacity=0;},1800);}
+function buzz(){try{if(navigator.vibrate)navigator.vibrate(50);}catch(e){}}
+function saveRec(r){try{var a=JSON.parse(localStorage.getItem('dgpk_auction')||'[]');a.push(r);localStorage.setItem('dgpk_auction',JSON.stringify(a.slice(-100)));}catch(e){}}
+function showRecs(){try{var a=JSON.parse(localStorage.getItem('dgpk_auction')||'[]');if(!a.length)return;$('myRecs').innerHTML=a.slice().reverse().slice(0,8).map(function(r){return '<div class="rec">'+(r.role==='seller'?'📤 판매':'📥 낙찰')+' · <b>'+esc(r.item)+'</b> '+won(r.price)+'<small>'+(r.role==='seller'?'낙찰자 '+esc(r.other):'판매자 '+esc(r.other))+' · '+new Date(r.t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+'</small></div>';}).join('');}catch(e){}}
+$('nick').value=localStorage.getItem('dgpk_nick')||'';$('room').value=localStorage.getItem('dgpk_room')||'';showRecs();
+function checkMe(){var n=$('nick').value.trim();if(!n){toast('닉네임을 입력하세요');return null;}if($('room').value.trim()!==ROOM_CODE){toast('방 인증코드가 틀려요');return null;}localStorage.setItem('dgpk_nick',n);localStorage.setItem('dgpk_room',ROOM_CODE);return n;}
+
+/* ================= 판매자 (호스트) ================= */
+var peer=null,conns=[],myNick='',code='',queue=[],cur=null,tick=null;
+function state(){if(!cur)return {t:'idle',seller:myNick,people:conns.length};return {t:'state',seller:myNick,people:conns.length,item:{name:cur.name,grade:cur.grade,note:cur.note,photo:cur.photo,start:cur.start,step:cur.step},price:cur.price,leader:cur.leader,bids:cur.bids.slice(-15),endsAt:cur.endsAt,ended:cur.ended,winner:cur.winner};}
+function broadcast(msg){var s=JSON.stringify(msg);conns.forEach(function(c){try{if(c.open)c.send(s);}catch(e){}});}
+function pushState(){broadcast(state());renderHostLive();}
+$('btnHost').onclick=function(){var n=checkMe();if(!n)return;myNick=n;code=String(Math.floor(1000+Math.random()*9000));$('hostCode').textContent=code;
+  peer=new Peer('dgpkauc-'+code);$('btnHost').disabled=true;$('btnHost').textContent='연결 준비 중…';
+  peer.on('open',function(){$('lobby').classList.add('hide');$('host').classList.remove('hide');window.scrollTo(0,0);});
+  peer.on('connection',function(c){c.on('open',function(){conns.push(c);c.send(JSON.stringify(state()));$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});
+    c.on('data',function(d){try{onBid(c,JSON.parse(d));}catch(e){}});
+    c.on('close',function(){conns=conns.filter(function(x){return x!==c;});$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});});
+  peer.on('error',function(err){toast('연결 오류: '+err.type);$('btnHost').disabled=false;$('btnHost').textContent='경매장 만들기';});};
+function onBid(c,m){if(m.t==='hello'){c.nick=m.nick;return;}if(m.t!=='bid'||!cur||cur.ended)return;
+  var amt=Math.floor(+m.amount||0);var min=cur.leader?cur.price+cur.step:cur.start;
+  if(amt<min){try{c.send(JSON.stringify({t:'reject',min:min}));}catch(e){}return;}
+  if(amt%100!==0){try{c.send(JSON.stringify({t:'reject',min:min,why:'100원 단위'}));}catch(e){}return;}
+  cur.price=amt;cur.leader=m.nick;cur.bids.push({nick:m.nick,amount:amt,t:Date.now()});
+  var left=cur.endsAt-Date.now();if(cur.ext>0&&left<cur.ext*1000){cur.endsAt=Date.now()+cur.ext*1000;}
+  pushState();buzz();}
+function readPhoto(file){return new Promise(function(res){if(!file){res('');return;}var img=new Image();var url=URL.createObjectURL(file);img.onload=function(){var max=720;var w=img.width,h=img.height;var sc=Math.min(1,max/Math.max(w,h));var cv=document.createElement('canvas');cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',0.72));URL.revokeObjectURL(url);};img.onerror=function(){res('');};img.src=url;});}
+var pendingPhoto='';
+$('itPhoto').onchange=function(){readPhoto(this.files[0]).then(function(d){pendingPhoto=d;var p=$('itPreview');if(d){p.src=d;p.classList.remove('hide');}else p.classList.add('hide');});};
+$('itStep').onchange=function(){$('stepCustomRow').classList.toggle('hide',this.value!=='custom');};
+function readForm(){var name=$('itName').value.trim();if(!name){toast('카드 이름을 입력하세요');return null;}var start=Math.floor(+$('itStart').value||0);if(start<=0){toast('시작가를 입력하세요');return null;}
+  var step=$('itStep').value==='custom'?Math.floor(+$('itStepCustom').value||0):+$('itStep').value;if(step<100){toast('입찰 단위를 확인하세요');return null;}
+  return {name:name,grade:$('itGrade').value,note:$('itNote').value.trim(),photo:pendingPhoto,start:start,step:step,time:+$('itTime').value,ext:+$('itExt').value};}
+function clearForm(){$('itName').value='';$('itNote').value='';$('itStart').value='';pendingPhoto='';$('itPhoto').value='';$('itPreview').classList.add('hide');}
+$('btnQueue').onclick=function(){var it=readForm();if(!it)return;queue.push(it);clearForm();renderQueue();toast('목록에 추가됨');};
+$('btnStartNow').onclick=function(){var it=readForm();if(!it)return;if(cur&&!cur.ended){toast('진행 중인 경매가 끝난 뒤 시작하세요');queue.unshift(it);clearForm();renderQueue();return;}clearForm();startItem(it);};
+function renderQueue(){$('queueCnt').textContent=queue.length?queue.length+'개':'';$('queue').innerHTML=queue.map(function(q,i){return '<div class="q">'+(q.photo?'<img src="'+q.photo+'" alt="">':'<span style="width:44px;height:44px;border-radius:6px;background:#eee;display:inline-block"></span>')+'<b>'+esc(q.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(q.grade)+' · 시작 '+won(q.start)+'</small></b><button type="button" class="soft" data-s="'+i+'" style="padding:6px 10px">시작</button><button type="button" class="ghost" data-d="'+i+'" style="padding:6px 10px">삭제</button></div>';}).join('')||'<p class="sub">대기 물품 없음</p>';
+  document.querySelectorAll('#queue [data-s]').forEach(function(b){b.onclick=function(){if(cur&&!cur.ended){toast('진행 중인 경매가 있어요');return;}var it=queue.splice(+b.dataset.s,1)[0];renderQueue();startItem(it);};});
+  document.querySelectorAll('#queue [data-d]').forEach(function(b){b.onclick=function(){queue.splice(+b.dataset.d,1);renderQueue();};});}
+function startItem(it){cur=Object.assign({},it,{price:it.start,leader:null,bids:[],endsAt:Date.now()+it.time*1000,ended:false,winner:null});
+  $('hostLive').classList.remove('hide');$('hostForm').classList.add('hide');pushState();clearInterval(tick);tick=setInterval(hostTick,250);broadcast({t:'start'});window.scrollTo(0,0);}
+function hostTick(){if(!cur||cur.ended)return;var left=cur.endsAt-Date.now();var el=$('hTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}
+  if(left<=0){cur.ended=true;cur.winner=cur.leader?{nick:cur.leader,price:cur.price}:null;clearInterval(tick);pushState();broadcast({t:'end',winner:cur.winner,item:cur.name});
+    if(cur.winner){saveRec({role:'seller',item:cur.name,price:cur.price,other:cur.winner.nick,t:Date.now()});buzz();}}}
+function renderHostLive(){if(!cur)return;var box=$('hostLive');
+  var h='<div class="card item">'+(cur.photo?'<img src="'+cur.photo+'" alt="">':'')+'<div class="nm">'+esc(cur.name)+'</div><div class="meta">'+esc(cur.grade)+(cur.note?' · '+esc(cur.note):'')+' · 시작가 '+won(cur.start)+' · 단위 '+won(cur.step)+'</div>'+
+    (cur.ended?(cur.winner?'<div class="won"><div>🎉 낙찰</div><b>'+esc(cur.winner.nick)+' · '+won(cur.winner.price)+'</b><div class="sub" style="margin:4px 0 0">낙찰자와 오픈카톡으로 연락해 거래를 진행하세요. 기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><b>유찰</b><div class="sub">입찰이 없었어요</div></div>')
+      :'<div class="timer" id="hTimer">⏱</div><div class="price"><b>'+won(cur.price)+'</b><small>'+(cur.leader?'현재 최고':'시작가 (입찰 없음)')+'</small></div><div class="leader">'+(cur.leader?'최고 입찰자 <b>'+esc(cur.leader)+'</b>':'첫 입찰을 기다리는 중')+'</div>')+
+    '<div class="hist">'+cur.bids.slice().reverse().map(function(b,i){return '<div class="'+(i===0?'top':'')+'">'+esc(b.nick)+' — '+won(b.amount)+'</div>';}).join('')+'</div>'+
+    '<div class="row">'+(cur.ended?'<button type="button" class="soft" id="hNext">다음 물품 등록</button>':'<button type="button" class="ghost" id="hCancel">이 경매 취소</button><button type="button" class="soft" id="hEndNow">지금 마감</button>')+'</div></div>';
+  box.innerHTML=h;hostTick();
+  var nx=$('hNext');if(nx)nx.onclick=function(){cur=null;$('hostLive').classList.add('hide');$('hostForm').classList.remove('hide');broadcast({t:'idle',seller:myNick,people:conns.length});renderQueue();};
+  var cc=$('hCancel');if(cc)cc.onclick=function(){if(!confirm('이 경매를 취소할까요? (입찰 무효)'))return;cur.ended=true;cur.winner=null;clearInterval(tick);broadcast({t:'end',winner:null,item:cur.name,cancel:true});pushState();};
+  var en=$('hEndNow');if(en)en.onclick=function(){if(!confirm('지금 마감하고 현재 최고가로 낙찰할까요?'))return;cur.endsAt=Date.now();hostTick();};}
+$('btnHostEnd').onclick=function(){if(!confirm('경매장을 닫을까요? 접속한 사람들이 모두 나가게 됩니다.'))return;broadcast({t:'closed'});setTimeout(function(){location.reload();},300);};
+
+/* ================= 입찰자 ================= */
+var bconn=null,bpeer=null,bstate=null,btick=null,bcode='';
+$('btnJoin').onclick=function(){var n=checkMe();if(!n)return;myNick=n;bcode=$('joinCode').value.trim();if(bcode.length!==4){toast('코드 4자리');return;}
+  $('joinStat').textContent='연결 중…';bpeer=new Peer();
+  bpeer.on('open',function(){bconn=bpeer.connect('dgpkauc-'+bcode,{reliable:true});bindB();});
+  bpeer.on('error',function(err){$('joinStat').textContent='연결 실패: '+err.type+' (코드 확인 / 판매자가 경매장을 열었는지)';});};
+function bindB(){bconn.on('open',function(){bconn.send(JSON.stringify({t:'hello',nick:myNick}));$('lobby').classList.add('hide');$('bidder').classList.remove('hide');window.scrollTo(0,0);});
+  bconn.on('data',function(d){try{onHost(JSON.parse(d));}catch(e){}});
+  bconn.on('close',function(){toast('판매자와 연결이 끊겼어요');$('bidLive').innerHTML='<div class="card"><b>연결 끊김</b><p class="sub">판매자 폰이 화면을 끄거나 나갔을 수 있어요.</p><div class="row"><button type="button" id="bRe">다시 연결</button></div></div>';$('bRe').onclick=function(){bconn=bpeer.connect('dgpkauc-'+bcode,{reliable:true});bindB();};});}
+function onHost(m){
+  if(m.t==='people'){$('bidPeople').textContent='입찰자 '+m.n+'명';return;}
+  if(m.t==='idle'){bstate=null;$('sellerNick').textContent=m.seller||'';$('bidPeople').textContent='입찰자 '+(m.people||0)+'명';$('bidLive').innerHTML='<div class="card sub" style="text-align:center">판매자가 물품을 올리면 여기에 표시됩니다…</div>';clearInterval(btick);return;}
+  if(m.t==='state'){bstate=m;$('sellerNick').textContent=m.seller||'';$('bidPeople').textContent='입찰자 '+(m.people||0)+'명';renderBid();clearInterval(btick);if(!m.ended)btick=setInterval(bidTick,250);return;}
+  if(m.t==='start'){buzz();toast('경매 시작!');return;}
+  if(m.t==='reject'){toast('입찰 실패 — 최소 '+won(m.min)+(m.why?' ('+m.why+')':''));return;}
+  if(m.t==='end'){buzz();if(m.cancel){toast('판매자가 경매를 취소했어요');return;}if(m.winner&&m.winner.nick===myNick){saveRec({role:'buyer',item:m.item,price:m.winner.price,other:(bstate&&bstate.seller)||'판매자',t:Date.now()});}return;}
+  if(m.t==='closed'){alert('판매자가 경매장을 닫았어요');location.reload();}}
+function bidTick(){if(!bstate||bstate.ended)return;var left=bstate.endsAt-Date.now();var el=$('bTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}}
+function bid(amount){if(!bstate||bstate.ended)return;bconn.send(JSON.stringify({t:'bid',nick:myNick,amount:amount}));}
+function renderBid(){var s=bstate,it=s.item;var mine=s.leader===myNick;var min=s.leader?s.price+it.step:s.start;
+  var h='<div class="card item">'+(it.photo?'<img src="'+it.photo+'" alt="">':'')+'<div class="nm">'+esc(it.name)+'</div><div class="meta">'+esc(it.grade)+(it.note?' · '+esc(it.note):'')+' · 시작가 '+won(it.start)+' · 단위 '+won(it.step)+'</div>';
+  if(s.ended){h+=s.winner?(s.winner.nick===myNick?'<div class="won"><div>🎉 내가 낙찰!</div><b>'+won(s.winner.price)+'</b><div class="sub" style="margin:4px 0 0">판매자 '+esc(s.seller)+'님과 오픈카톡으로 연락하세요. 기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><div>낙찰</div><b>'+esc(s.winner.nick)+' · '+won(s.winner.price)+'</b></div>'):'<div class="won" style="background:#eee"><b>유찰</b></div>';}
+  else{h+='<div class="timer" id="bTimer">⏱</div><div class="price"><b>'+won(s.price)+'</b><small>'+(s.leader?'현재 최고':'시작가')+'</small></div><div class="leader">'+(s.leader?(mine?'<b>내가 최고 입찰자</b> 🙌':'최고 입찰자 <b>'+esc(s.leader)+'</b>'):'아직 입찰 없음 — 시작가로 입찰 가능')+'</div>'+
+    '<div class="bidbtns"><button type="button" data-b="'+min+'" '+(mine?'disabled':'')+'>'+won(min)+'</button><button type="button" class="soft" data-b="'+(min+it.step)+'">'+won(min+it.step)+'</button><button type="button" class="soft" data-b="'+(min+it.step*2)+'">'+won(min+it.step*2)+'</button></div>'+
+    '<div class="row"><input type="number" id="bidIn" placeholder="직접 입력 (원)" inputmode="numeric" step="100" min="'+min+'"><button type="button" id="bidGo" style="flex:0 0 auto">입찰</button></div>';}
+  h+='<div class="hist">'+(s.bids||[]).slice().reverse().map(function(b,i){return '<div class="'+(i===0?'top':'')+'">'+esc(b.nick)+' — '+won(b.amount)+'</div>';}).join('')+'</div></div>';
+  $('bidLive').innerHTML=h;bidTick();
+  document.querySelectorAll('#bidLive [data-b]').forEach(function(b){b.onclick=function(){bid(+b.dataset.b);};});
+  var g=$('bidGo');if(g)g.onclick=function(){var v=Math.floor(+$('bidIn').value||0);if(v<min){toast('최소 '+won(min));return;}bid(v);};}
+$('btnLeave').onclick=function(){if(confirm('경매에서 나갈까요?'))location.reload();};
+</script>
+</body>
+</html>
