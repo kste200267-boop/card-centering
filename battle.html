@@ -86,6 +86,14 @@
   .detail img{width:100%;max-width:300px;display:block;margin:0 auto 8px;border-radius:8px}
   .detail .atk{background:var(--panel2);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px}
   .detail .atk b{display:block}
+  .mew{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 128px);z-index:9;width:54px;height:54px;border-radius:50%;padding:0;background:#fff;border:2px solid var(--pink);box-shadow:0 6px 16px rgba(0,0,0,.4);overflow:visible}
+  .mew img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .mew span{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:var(--warn);color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center}
+  .mew span.on{display:flex}
+  .hand .c{position:relative}.hand .c .rec{position:absolute;top:2px;left:2px;background:var(--yellow);color:#111;font-size:11px;font-weight:800;border-radius:999px;padding:1px 6px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .hand .c.rec1{outline:2px solid var(--yellow);outline-offset:-2px}
+  .hint{background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
+  .hint b{display:block;color:var(--yellow);margin-bottom:2px}
   .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 50px);transform:translateX(-50%);background:#000;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;max-width:90%;text-align:center}
   .big{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-size:56px;font-weight:900;color:var(--yellow);text-shadow:0 4px 20px #000}
   .big.on{display:flex}
@@ -193,6 +201,7 @@
   <div class="hand" id="mHand"></div>
 </div>
 
+<button type="button" class="mew hide" id="mewBtn" title="지금 뭐 하지?"><img src="leader.jpg" alt="도우미"><span id="mewDot"></span></button>
 <div class="sheet" id="sheet"><div class="in" id="sheetIn"></div></div>
 <div class="big" id="big"></div>
 <div class="toast" id="toast"></div>
@@ -241,7 +250,8 @@ function imgFallback(el){var list=el.getAttribute('data-alt')?el.getAttribute('d
 
 var tt;function toast(m){var t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(function(){t.style.opacity=0;},1600);}
 function big(m){var b=$('big');b.textContent=m;b.classList.add('on');setTimeout(function(){b.classList.remove('on');},1400);}
-function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function rnd(){try{if(window.crypto&&crypto.getRandomValues){var u=new Uint32Array(1);crypto.getRandomValues(u);return u[0]/4294967296;}}catch(e){}return Math.random();}
+function shuffle(a){for(var r=0;r<3;r++){for(var i=a.length-1;i>0;i--){var j=Math.floor(rnd()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}}return a;}
 function uid(){return Math.random().toString(36).slice(2,9);}
 function sheet(html){$('sheetIn').innerHTML=html;$('sheet').classList.add('on');}
 function closeSheet(){$('sheet').classList.remove('on');}
@@ -252,7 +262,7 @@ function newPlayer(nick,deckObj){
   var deck=[];
   Object.keys(deckObj.cards).forEach(function(k){var c=deckObj.cards[k];for(var i=0;i<c.n;i++)deck.push({uid:uid(),id:c.id,name:c.name,img:c.img});});
   return {nick:nick,deckName:deckObj.name,deck:shuffle(deck),hand:[],prizes:[],active:null,bench:[],discard:[],lost:[],stadium:null,
-    energyUsed:false,supporterUsed:false,attacked:false,ready:false};
+    energyUsed:false,supporterUsed:false,attacked:false,drew:false,mulligans:0,ready:false};
 }
 function slotOf(card){return {stack:[card],energy:[],tools:[],dmg:0,status:{}};}
 function topCard(s){return s.stack[s.stack.length-1];}
@@ -323,6 +333,7 @@ function onData(m){
   if(m.t==='state'){oppPub=m.pub;render();return;}
   if(m.t==='log'){log(m.text,true);return;}
   if(m.t==='big'){big(m.text);return;}
+  if(m.t==='mulligan'){log('상대 멀리건 '+m.n+'회 — 원하면 '+m.n+'장까지 추가 드로 가능 (⋯ 메뉴)',true);toast('상대 멀리건! 추가 드로 '+m.n+'장 가능');me.bonusDraw=(me.bonusDraw||0)+m.n;return;}
   if(m.t==='attack'){applyAttack(m.hits||[{target:m.target,dmg:m.dmg}],m.name,m.status);return;}
   if(m.t==='fx'){fxBanner(m.text,true);return;}
   if(m.t==='stadium'){if(me.stadium){me.discard.push(me.stadium);log('내 스타디움 '+me.stadium.name+' 트래시 (상대가 새 스타디움)');me.stadium=null;sync();}return;}
@@ -340,15 +351,21 @@ function enterGame(){
   $('btnSwap').classList.toggle('hide',!solo);
   if(solo){oppPub=pub(opp);}
   render();
-  setup(me);
+  setup(me);$('mewBtn').classList.remove('hide');
+  autoMulligan(me,true).then(function(n){if(n){if(solo){opp.bonusDraw=n;log('연습 상대 추가 드로 가능 '+n);}else send({t:'mulligan',n:n});}sync();return solo?autoMulligan(opp,false):null;}).then(function(n2){if(n2){log('상대(연습) 멀리건 '+n2+'회 — 추가 드로 '+n2+'장 가능');me.bonusDraw=(me.bonusDraw||0)+n2;}if(solo)oppPub=pub(opp);sync();setTimeout(coach,400);});
   if(solo){setup(opp);oppPub=pub(opp);var f=Math.random()<.5;turn=f?'me':'opp';(f?me:opp).first=true;turnNo=1;log('코인: '+(f?'내가 선공':'상대 선공'));if(turn==='me')startTurn();sync();}
   else if(isHost){var first=Math.random()<.5?'host':'guest';turn=first==='host'?'me':'opp';me.first=(turn==='me');turnNo=1;send({t:'first',first:first});log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();sync();}
   else sync();
 }
-function setup(p){p.hand=p.deck.splice(0,7);p.prizes=p.deck.splice(0,6);p.ready=true;}
+function setup(p){p.deck=shuffle(p.deck);p.hand=p.deck.splice(0,7);p.prizes=p.deck.splice(0,6);p.ready=true;}
+function hasBasic(p){return Promise.all(p.hand.map(function(c){return cardData(c.id).catch(function(){return null;});})).then(function(ds){return ds.some(function(d){return d&&d.category==='Pokemon'&&d.stage==='Basic';})||ds.every(function(d){return !d;});});}
+function autoMulligan(p,isMe){return hasBasic(p).then(function(ok){if(ok||p.mulligans>=8)return p.mulligans;
+  p.deck=shuffle(p.deck.concat(p.hand,p.prizes));p.hand=p.deck.splice(0,7);p.prizes=p.deck.splice(0,6);p.mulligans++;
+  if(isMe){log('기본 포켓몬 없음 → 자동 멀리건 '+p.mulligans+'회');fxBanner('멀리건! 다시 뽑는 중 ('+p.mulligans+')');}
+  return autoMulligan(p,isMe);});}
 function mulligan(){if(!confirm('멀리건: 손패를 덱에 되돌리고 셔플 후 7장 다시 뽑습니다. (기본 포켓몬이 없을 때만)'))return;
   me.deck=shuffle(me.deck.concat(me.hand,me.prizes));me.hand=me.deck.splice(0,7);me.prizes=me.deck.splice(0,6);log('멀리건 (상대는 원하면 1장 더 드로)');sync();}
-function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;fxBanner('▶ 내 턴 '+turnNo+' — 드로하세요');}
+function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;me.drew=false;fxBanner('▶ 내 턴 '+turnNo+' — 드로하세요');setTimeout(coach,300);}
 $('btnEnd').onclick=function(e){e.preventDefault();if(turn!=='me'){toast('내 턴이 아니에요');return;}
   if(!e.skip&&!confirm('턴을 종료할까요?'))return;
   var st=[];[me.active].concat(me.bench).forEach(function(x){if(x&&(x.status.poison||x.status.burn))st.push(topCard(x).name);});if(st.length)toast('포켓몬 체크: '+st.join(', ')+' 독/화상 데미지 잊지 마세요');
@@ -382,7 +399,7 @@ function render(){
   var tg=$('turnTag');tg.textContent=turn==='me'?'내 턴 '+turnNo:turn==='opp'?'상대 턴 '+turnNo:'준비';tg.className='turn'+(turn==='me'?' me':'');
   var st=$('stad');var stc=me.stadium||(oppPub&&oppPub.stadium);st.textContent=stc?'🏟 '+stc.name:'';st.onclick=function(){if(me.stadium)stadiumMenu();else if(stc)cardDetail(stc.id,stc.name);};
   $('flags').textContent=(me.energyUsed?'⚡사용 ':'⚡가능 ')+(me.supporterUsed?'서포트✔':'서포트○');
-  bind();
+  bind();markRec();
 }
 function longPress(el,onTap,onLong){var t=null,l=false;
   el.addEventListener('pointerdown',function(){l=false;t=setTimeout(function(){l=true;t=null;onLong();},480);});
@@ -401,10 +418,10 @@ $('btnLog').onclick=function(e){e.preventDefault();sheet('<h3>기록</h3><div st
 $('btnMenu').onclick=function(e){e.preventDefault();sheet('<h3>메뉴</h3><div class="acts">'+
   '<button type="button" class="soft" onclick="mulligan();closeSheet()">멀리건</button>'+
   '<button type="button" class="soft" onclick="rules.enforce=!rules.enforce;toast(\'규칙 강제 \'+(rules.enforce?\'ON\':\'OFF\'));closeSheet()">규칙 강제 '+(rules.enforce?'ON':'OFF')+'</button>'+
-  '<button type="button" class="soft" onclick="extraDraw()">1장 더 드로 (멀리건 보상)</button>'+
+  '<button type="button" class="soft" onclick="extraDraw()">1장 더 드로 (멀리건 보상'+(me.bonusDraw?' '+me.bonusDraw+'장 남음':'')+')</button>'+
   '<button type="button" class="warn" onclick="concede()">항복</button>'+
   '<button type="button" class="ghost full" onclick="if(confirm(\'로비로 나갈까요? 게임이 끝납니다.\'))location.reload()">나가기</button></div>');};
-function extraDraw(){drawN(1);closeSheet();}
+function extraDraw(){if(me.bonusDraw>0)me.bonusDraw--;drawN(1);closeSheet();}
 function concede(){if(!confirm('항복할까요?'))return;log('항복');closeSheet();gameOver(false,false);}
 
 /* ---------- 승패·전적 ---------- */
@@ -426,7 +443,7 @@ function saveRecord(iWin,oppNick){
 function showMyRec(){try{var arr=JSON.parse(localStorage.getItem('dgpk_records')||'[]');if(!arr.length)return;var w=arr.filter(function(r){return r.win;}).length;$('myRec').innerHTML='<b style="color:var(--ink)">'+w+'승 '+(arr.length-w)+'패</b> · 최근: '+arr.slice(-3).reverse().map(function(r){return (r.win?'승':'패')+' vs '+esc(r.opp);}).join(', ');}catch(e){}}
 
 /* ---------- 드로/덱 ---------- */
-function drawN(n){if(me.deck.length<n){toast('덱이 부족해요! (드로 못 하면 패배)');log('덱 없음 — 드로 불가');if(confirm('덱에서 드로할 수 없으면 패배입니다. 패배 처리할까요?'))gameOver(false,false);return;}me.hand=me.hand.concat(me.deck.splice(0,n));log(n+'장 드로');sync();}
+function drawN(n){if(me.deck.length<n){toast('덱이 부족해요! (드로 못 하면 패배)');log('덱 없음 — 드로 불가');if(confirm('덱에서 드로할 수 없으면 패배입니다. 패배 처리할까요?'))gameOver(false,false);return;}me.hand=me.hand.concat(me.deck.splice(0,n));if(turn==='me')me.drew=true;log(n+'장 드로');sync();}
 $('btnDraw').onclick=function(e){e.preventDefault();drawN(1);};
 $('btnCoin').onclick=function(e){e.preventDefault();var r=Math.random()<.5?'앞면':'뒷면';big('🪙 '+r);log('코인: '+r);send({t:'big',text:'상대 코인: '+r});};
 $('btnDice').onclick=function(e){e.preventDefault();var r=1+Math.floor(Math.random()*6);big('🎲 '+r);log('주사위: '+r);send({t:'big',text:'상대 주사위: '+r});};
@@ -610,6 +627,40 @@ function pileView(list,title,mine){if(!list.length){toast(title+' 비어 있음'
     el.addEventListener('pointermove',function(){if(t){clearTimeout(t);t=null;}});
     function move(where){var j=list.findIndex(function(c){return c.uid===el.dataset.u;});if(j<0)return;var c=list.splice(j,1)[0];if(where==='hand')me.hand.push(c);else me.deck=shuffle(me.deck.concat([c]));log(c.name+' '+title.replace('내 ','')+' → '+(where==='hand'?'손패':'덱'));el.remove();sync();}
   });}
+
+/* ---------- 초보 도우미 (뮤) ---------- */
+var recSet={};
+function coachAnalyze(){var hints=[],rec={};var o=oppPub||{};
+  if(turn!=='me'){hints.push(['⏳ 상대 턴','상대가 끝낼 때까지 기다리세요. 상대 공격이 오면 데미지가 자동으로 표시됩니다.']);return {hints:hints,rec:rec};}
+  var infos=me.hand.map(function(c){return dcache[c.id]||null;});
+  var basics=[],evos=[],energies=[],supporters=[],items=[],stadiums=[],tools=[];
+  me.hand.forEach(function(c,i){var d=infos[i];if(!d)return;
+    if(d.category==='Pokemon'){if(d.stage==='Basic')basics.push(i);else evos.push({i:i,from:d.evolveFrom});}
+    else if(d.category==='Energy')energies.push(i);
+    else if(d.trainerType==='Supporter')supporters.push(i);else if(d.trainerType==='Stadium')stadiums.push(i);else if(d.trainerType==='Tool')tools.push(i);else if(d.category==='Trainer')items.push(i);});
+  var field=[me.active].concat(me.bench).filter(Boolean);var names=field.map(function(x){return topCard(x).name.toLowerCase();});
+  if(!me.drew){hints.push(['1️⃣ 드로','덱(보라색)을 누르거나 [드로] 버튼으로 1장 뽑으세요. 턴의 첫 행동입니다.']);}
+  if(!me.active){hints.push(['🚨 배틀 포켓몬 없음','손패의 기본 포켓몬을 눌러 배틀 자리에 내세요. 없으면 벤치에서 올리세요.']);basics.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  var evoNow=evos.filter(function(e){return e.from&&names.indexOf(String(e.from).toLowerCase())>-1;});
+  if(evoNow.length){hints.push(['🧬 진화 가능','필드에 진화 전 포켓몬이 있어요. 진화 카드를 눌러 진화시키세요 (이번 턴에 낸 포켓몬은 다음 턴부터).']);evoNow.forEach(function(e){rec[me.hand[e.i].uid]=1;});}
+  if(basics.length&&me.bench.length<5){hints.push(['🪑 벤치 채우기','벤치가 '+me.bench.length+'/5. 기본 포켓몬을 벤치에 내두면 다음 턴 선택지가 늘어요.']);basics.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  if(!me.supporterUsed&&supporters.length){hints.push(['🗣 서포트 사용','서포트는 1턴 1장. 드로·서치 서포트는 먼저 쓰는 게 좋아요.']);supporters.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  if(items.length){hints.push(['🎒 굿즈 사용','굿즈는 몇 장이든 OK. 볼·서치 카드로 필요한 포켓몬을 먼저 모으세요.']);items.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  if(!me.energyUsed&&energies.length&&field.length){hints.push(['⚡ 에너지 붙이기','1턴 1장. 보통 배틀 포켓몬이나 다음 어태커에 붙입니다.']);energies.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  if(stadiums.length&&!(me.stadium)){hints.push(['🏟 스타디움','내 스타디움이 없으면 놓아두면 이득. 상대 스타디움을 밀어냅니다.']);stadiums.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  if(tools.length&&field.length){tools.forEach(function(i){rec[me.hand[i].uid]=1;});}
+  if(me.active&&!me.attacked){var ad=dcache[topCard(me.active).id];var minCost=ad&&ad.attacks&&ad.attacks.length?Math.min.apply(null,ad.attacks.map(function(a){return (a.cost||[]).length;})):null;
+    if(turnNo===1&&isFirstPlayer())hints.push(['🚫 선공 첫 턴','이번 턴은 공격 못 합니다. 벤치·에너지만 준비하고 턴 종료.']);
+    else if(minCost!=null&&me.active.energy.length>=minCost)hints.push(['⚔️ 공격 가능','에너지가 충분해요. [공격] → 기술 선택 → 대상 → 실행. 공격하면 턴이 끝납니다.']);
+    else if(minCost!=null)hints.push(['⚡ 에너지 부족','공격에 최소 '+minCost+'개 필요, 지금 '+me.active.energy.length+'개. 붙이고 나서 공격하거나 턴을 넘기세요.']);}
+  if(me.active&&(me.active.status.asleep||me.active.status.paralyzed))hints.push(['💤 상태이상','배틀 포켓몬이 잠듦/마비라 공격 불가. 후퇴로 교체를 고려하세요.']);
+  if(o.active&&o.active.dmg>0)hints.push(['🎯 상대 상황','상대 배틀 포켓몬 데미지 '+o.active.dmg+'. 카드 상세(길게 누르기)로 HP를 확인하고 마무리할 수 있는지 계산하세요.']);
+  if(hints.length<=1)hints.push(['✅ 할 게 없으면','[턴 종료]를 누르세요. 독·화상 체크는 자동 안내됩니다.']);
+  return {hints:hints,rec:rec};}
+function coach(){if(!me)return;Promise.all(me.hand.concat(me.active?[topCard(me.active)]:[]).map(function(c){return cardData(c.id).catch(function(){return null;});})).then(function(){var r=coachAnalyze();recSet=r.rec;markRec();var dot=$('mewDot');var n=Object.keys(recSet).length;dot.textContent=n;dot.classList.toggle('on',n>0&&turn==='me');});}
+function markRec(){document.querySelectorAll('#mHand .c').forEach(function(el){var c=me.hand[+el.dataset.i];var on=c&&recSet[c.uid];el.classList.toggle('rec1',!!on);var b=el.querySelector('.rec');if(on&&!b){b=document.createElement('span');b.className='rec';b.textContent='⭐';el.appendChild(b);}else if(!on&&b)b.remove();});}
+$('mewBtn').onclick=function(e){e.preventDefault();coach();var r=coachAnalyze();
+  sheet('<h3>🐾 뮤의 안내 — '+(turn==='me'?'내 턴 '+turnNo:'상대 턴')+'</h3>'+r.hints.map(function(h){return '<div class="hint"><b>'+esc(h[0])+'</b>'+esc(h[1])+'</div>';}).join('')+'<p style="font-size:12px;color:var(--ink2)">⭐ 표시된 손패 카드가 지금 쓸 만한 카드예요. 카드를 길게 누르면 효과를 한국어로 볼 수 있어요.</p><button type="button" class="ghost" onclick="closeSheet()">닫기</button>');};
 
 /* ---------- 카드 상세 (TCGdex) ---------- */
 var dcache={};
