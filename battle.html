@@ -166,8 +166,11 @@
 
   <div class="box">
     <h2>혼자 연습</h2>
-    <p style="margin:0 0 8px">양쪽을 다 내가 조작하면서 룰을 익히는 모드. 아래 [시점 전환]으로 상대 쪽을 조작합니다.</p>
-    <button type="button" class="soft" id="btnSolo" style="width:100%">혼자 연습 시작</button>
+    <div class="row" style="margin:0 0 8px"><label style="flex:0 0 auto;font-size:14px">컴퓨터 난이도</label><input type="range" id="aiLv" min="1" max="10" value="3" style="flex:1"><b id="aiLvTxt" style="flex:0 0 60px;text-align:right">Lv.3</b></div>
+    <p id="aiDesc" style="font-size:12.5px;color:var(--ink2);margin:0 0 8px"></p>
+    <button type="button" id="btnAI" style="width:100%">🤖 컴퓨터와 대전</button>
+    <p style="margin:10px 0 6px;font-size:12.5px;color:var(--ink2)">또는 양쪽을 다 내가 조작하며 룰 익히기 ([시점 전환] 사용)</p>
+    <button type="button" class="soft" id="btnSolo" style="width:100%">양쪽 직접 조작</button>
   </div>
 
   <div class="box">
@@ -287,15 +290,17 @@ function newPlayer(nick,deckObj){
   return {nick:nick,deckName:deckObj.name,deck:shuffle(deck),hand:[],prizes:[],active:null,bench:[],discard:[],lost:[],stadium:null,
     energyUsed:false,supporterUsed:false,attacked:false,drew:false,mulligans:0,ready:false};
 }
-function slotOf(card){return {stack:[card],energy:[],tools:[],dmg:0,status:{}};}
+function slotOf(card){return {stack:[card],energy:[],tools:[],dmg:0,status:{},turnPlayed:turnNo};}
 function topCard(s){return s.stack[s.stack.length-1];}
 function pub(p){ /* 상대에게 보낼 공개 정보 */
   return {nick:p.nick,deckName:p.deckName,hand:p.hand.length,deck:p.deck.length,prizes:p.prizes.length,active:p.active,bench:p.bench,discard:p.discard,lost:p.lost,stadium:p.stadium,energyUsed:p.energyUsed,supporterUsed:p.supporterUsed,attacked:p.attacked,ready:p.ready};
 }
 
-var me=null, opp=null, oppPub=null, solo=false, conn=null, peer=null, isHost=false;
+var me=null, opp=null, oppPub=null, solo=false, ai=false, aiLv=3, conn=null, peer=null, isHost=false;
 var turn=null /* 'me'|'opp' */, turnNo=0, logs=[];
-var rules={enforce:true,timer:90};var timerLeft=0,timerIv=null;
+var rules={enforce:true,timer:90};
+var AI_DESC={1:'무작위로 냅니다. 완전 초보용.',2:'벤치는 채우지만 공격은 대충.',3:'진화·에너지 기본은 하지만 약점 계산 없음.',4:'가장 센 기술을 고릅니다. 굿즈 사용 시작.',5:'서포트·굿즈를 활용하고 기절 우선.',6:'약점·저항력 계산, 보스로 벤치 저격.',7:'후퇴·에너지 배분까지. 대회 초심자 수준.',8:'다음 어태커 미리 준비, 손패 관리.',9:'최적 데미지·프라이즈 계산. 빡셈.',10:'9단계 + 첫 손패 8장, 매 턴 2장 드로 (핸디캡).'};
+$('aiLv').oninput=function(){aiLv=+this.value;$('aiLvTxt').textContent='Lv.'+aiLv;$('aiDesc').textContent=AI_DESC[aiLv];};aiLv=+($('aiLv').value=localStorage.getItem('dgpk_ailv')||'3');$('aiLv').oninput();var timerLeft=0,timerIv=null;
 $('timerSel').value=localStorage.getItem('dgpk_timer')||'90';
 
 /* ---------- 로비 ---------- */
@@ -320,6 +325,8 @@ $('nick').value=localStorage.getItem('dgpk_nick')||'';$('roomCodeIn').value=loca
 fillDecks();
 $('btnPaste').onclick=function(e){e.preventDefault();$('codeIn').classList.toggle('hide');};
 
+$('btnAI').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);localStorage.setItem('dgpk_ailv',String(aiLv));solo=true;ai=true;isHost=true;
+  me=newPlayer(s.nick,s.deck);opp=newPlayer('컴퓨터 Lv.'+aiLv,s.deck);enterGame();};
 $('btnSolo').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);solo=true;isHost=true;
   me=newPlayer(s.nick,s.deck);opp=newPlayer('연습 상대',s.deck);enterGame();};
 
@@ -372,11 +379,11 @@ function log(text,fromOpp){var who=fromOpp?'[상대] ':(solo?'':'[나] ');logs.p
 /* ---------- 게임 시작 ---------- */
 function enterGame(){
   $('lobby').classList.add('hide');$('game').classList.remove('hide');
-  $('btnSwap').classList.toggle('hide',!solo);
+  $('btnSwap').classList.toggle('hide',!solo||ai);
   if(solo){oppPub=pub(opp);}
   render();
   setup(me);$('mewBtn').classList.remove('hide');
-  autoMulligan(me,true).then(function(n){if(n){if(solo){opp.bonusDraw=n;log('연습 상대 추가 드로 가능 '+n);}else send({t:'mulligan',n:n});}sync();return solo?autoMulligan(opp,false):null;}).then(function(n2){if(n2){log('상대(연습) 멀리건 '+n2+'회 — 추가 드로 '+n2+'장 가능');me.bonusDraw=(me.bonusDraw||0)+n2;}if(solo)oppPub=pub(opp);sync();setTimeout(coach,400);});
+  autoMulligan(me,true).then(function(n){if(n){if(solo){opp.bonusDraw=n;log('연습 상대 추가 드로 가능 '+n);}else send({t:'mulligan',n:n});}sync();return solo?autoMulligan(opp,false):null;}).then(function(n2){if(n2){log('상대(연습) 멀리건 '+n2+'회 — 추가 드로 '+n2+'장 가능');me.bonusDraw=(me.bonusDraw||0)+n2;}if(solo)oppPub=pub(opp);sync();setTimeout(coach,400);if(ai){aiPrep().then(function(){if(aiLv>=10){opp.hand=opp.hand.concat(opp.deck.splice(0,1));}if(turn==='opp')setTimeout(aiTurn,900);});}});
   if(solo){setup(opp);oppPub=pub(opp);var f=Math.random()<.5;turn=f?'me':'opp';(f?me:opp).first=true;turnNo=1;log('코인: '+(f?'내가 선공':'상대 선공'));if(turn==='me')startTurn();sync();}
   else if(isHost){var first=Math.random()<.5?'host':'guest';turn=first==='host'?'me':'opp';me.first=(turn==='me');turnNo=1;send({t:'first',first:first,timer:rules.timer});log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();sync();}
   else sync();
@@ -400,6 +407,7 @@ $('btnEnd').onclick=function(e){e.preventDefault();if(turn!=='me'){toast('내 �
   var st=[];[me.active].concat(me.bench).forEach(function(x){if(x&&(x.status.poison||x.status.burn))st.push(topCard(x).name);});if(st.length)toast('포켓몬 체크: '+st.join(', ')+' 독/화상 데미지 잊지 마세요');
   if(me.active&&me.active.status.paralyzed){me.active.status.paralyzed=false;log('마비 해제 (턴 종료)');}
   log('턴 종료');turnNo++;
+  if(ai){turn='opp';startTimer(false);sync();setTimeout(aiTurn,700);return;}
   if(solo){turn='opp';var t=me;me=opp;opp=t;/* 시점 전환 없이 상대 턴 시작 */me.energyUsed=false;me.supporterUsed=false;me.attacked=false;me.drew=false;turn='me';toast('상대(연습) 턴 — 시점이 전환됐어요');startTimer(true);sync();return;}
   turn='opp';send({t:'turn',turn:'me',no:turnNo});fxBanner('상대 턴',true);startTimer(false);render();};
 $('btnSwap').onclick=function(e){e.preventDefault();if(!solo)return;var t=me;me=opp;opp=t;turn=turn==='me'?'opp':'me';sync();toast('시점: '+me.nick);};
@@ -598,7 +606,7 @@ function attackTargets(atk){var o=oppPub||{};var targets=[];if(o.active)targets.
       log(an+'의 '+atk.name+' → '+hits.map(function(h){return (h.target<0?'배틀':'벤치'+(h.target+1))+' '+h.dmg;}).join(', ')+(plan.status?' · '+STATUS[plan.status]:''));
       hits.forEach(function(h){var r=fxHit('o',h.target);fxPop('-'+h.dmg,r);});
       if(plan.self){me.active.dmg+=plan.self;fxHit('m',-1);}
-      if(solo){applyAttackTo(opp,hits,plan.status);oppPub=pub(opp);}else send({t:'attack',hits:hits,name:an+'의 '+atk.name,status:plan.status});
+      if(solo){applyAttackTo(opp,hits,plan.status);oppPub=pub(opp);if(ai)setTimeout(aiCheckKO,500);}else send({t:'attack',hits:hits,name:an+'의 '+atk.name,status:plan.status});
       sync();closeSheet();setTimeout(function(){if(confirm('공격하면 턴이 끝납니다. 턴을 종료할까요?'))$('btnEnd').onclick({preventDefault:function(){},skip:true});},600);};
   }
   draw();
@@ -658,6 +666,120 @@ function pileView(list,title,mine){if(!list.length){toast(title+' 비어 있음'
   if(!mine){document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var c=list.find(function(x){return x.uid===el.dataset.u;});if(c)cardDetail(c.id,c.name);};});return;}
   document.querySelectorAll('#sheetIn [data-deck]').forEach(function(b){b.onclick=function(e){e.stopPropagation();var j=list.findIndex(function(c){return c.uid===b.dataset.deck;});if(j<0)return;var c=list.splice(j,1)[0];me.deck=shuffle(me.deck.concat([c]));log(c.name+' → 덱(셔플)');b.closest('.c').remove();sync();};});
   document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var j=list.findIndex(function(c){return c.uid===el.dataset.u;});if(j<0)return;var c=list.splice(j,1)[0];me.hand.push(c);log(c.name+' '+title.replace('내 ','')+' → 손패');el.remove();sync();};});}
+
+/* ---------- 컴퓨터 상대 (AI) ---------- */
+var enCache={};
+function cardDataEn(id){if(enCache[id])return Promise.resolve(enCache[id]);return fetch(API+'en/cards/'+id).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){enCache[id]=d;return d;}).catch(function(){enCache[id]=null;return null;});}
+function aiPrep(){var ids={};opp.deck.concat(opp.hand,opp.prizes).forEach(function(c){ids[c.id]=1;});me.deck.concat(me.hand,me.prizes).forEach(function(c){ids[c.id]=1;});
+  return Promise.all(Object.keys(ids).map(function(id){return cardData(id).catch(function(){return null;});})).then(function(){return Promise.all(Object.keys(ids).map(function(id){var d=dcache[id];return (d&&d.category==='Trainer')?cardDataEn(id):null;}));});}
+function D(c){return c?(dcache[c.id]||null):null;}
+function enName(c){var e=enCache[c.id];return e&&e.name?e.name:(D(c)&&D(c).name)||c.name;}
+function isBasic(c){var d=D(c);return d&&d.category==='Pokemon'&&d.stage==='Basic';}
+function energyType(c){var n=(enName(c)+' '+c.name);var d=D(c);if(d&&d.energyType==='Special')return '*';
+  var map=[['Grass','풀'],['Fire','불꽃'],['Water','물'],['Lightning','번개'],['Psychic','초'],['Fighting','격투'],['Darkness','악'],['Metal','강철']];for(var i=0;i<map.length;i++){if(n.indexOf(map[i][0])>-1||n.indexOf(map[i][1])>-1)return map[i][0];}return '*';}
+function canPay(slot,cost){var pool=slot.energy.map(energyType);cost=(cost||[]).slice();
+  for(var i=0;i<cost.length;i++){if(cost[i]==='Colorless')continue;var j=pool.indexOf(cost[i]);if(j<0)j=pool.indexOf('*');if(j<0)return false;pool.splice(j,1);}
+  var cl=cost.filter(function(x){return x==='Colorless';}).length;return pool.length>=cl;}
+function hpOf(slot){var d=D(topCard(slot));return d&&d.hp?d.hp:200;}
+function typesOf(slot){var d=D(topCard(slot));return d&&d.types?d.types:[];}
+function calcDmg(atkSlot,atk,defSlot){var base=parseDmg(atk.damage);if(!base)return 0;var dd=D(topCard(defSlot));var t=typesOf(atkSlot);var v=base;
+  if(aiLv>=6&&dd){(dd.weaknesses||[]).forEach(function(w){if(t.indexOf(w.type)>-1)v=v*2;});(dd.resistances||[]).forEach(function(r){if(t.indexOf(r.type)>-1)v=Math.max(0,v-30);});}
+  return v;}
+function prizeCount(slot){var n=topCard(slot).name;return /VMAX|VSTAR/.test(n)?3:(/\bex\b|\bV\b|GX|ex$| ex/i.test(n)?2:1);}
+function pick(arr){return arr[Math.floor(rnd()*arr.length)];}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function aiLog(t){log('🤖 '+t,true);}
+function aiSync(){oppPub=pub(opp);render();}
+
+/* KO 판정: 상대(AI) 포켓몬이 HP 이상 데미지 → 처리, 내 포켓몬도 마찬가지 */
+function aiCheckKO(){var changed=false;
+  /* AI 쪽 */
+  var slots=[[-1,opp.active]].concat(opp.bench.map(function(s,i){return [i,s];}));
+  slots.forEach(function(x){var s=x[1];if(!s||s.dmg<hpOf(s))return;var n=prizeCount(s);var name=topCard(s).name;
+    if(x[0]<0)opp.active=null;else opp.bench.splice(opp.bench.indexOf(s),1);opp.discard=opp.discard.concat(allCards(s));changed=true;
+    fxKO('o',x[0]);fxBanner('💀 '+name+' 기절! 프라이즈 '+n+'장');log(name+' 기절 → 프라이즈 '+n+'장 자동 획득');
+    for(var k=0;k<n&&me.prizes.length;k++)me.hand.push(me.prizes.splice(Math.floor(rnd()*me.prizes.length),1)[0]);});
+  if(changed){aiSync();sync();if(!me.prizes.length){gameOver(true,false);return;}
+    if(!opp.active){if(!opp.bench.length){gameOver(true,false);return;}aiPromote();aiSync();}}
+  /* 내 쪽 */
+  var mine=[[-1,me.active]].concat(me.bench.map(function(s,i){return [i,s];}));var lost=false;
+  mine.forEach(function(x){var s=x[1];if(!s||s.dmg<hpOf(s))return;var n=prizeCount(s);var name=topCard(s).name;
+    if(x[0]<0)me.active=null;else me.bench.splice(me.bench.indexOf(s),1);me.discard=me.discard.concat(allCards(s));lost=true;
+    fxKO('m',x[0]);fxBanner('💀 내 '+name+' 기절 — 컴퓨터 프라이즈 '+n+'장',true);log('내 '+name+' 기절 → 컴퓨터 프라이즈 '+n+'장');
+    for(var k=0;k<n&&opp.prizes.length;k++)opp.hand.push(opp.prizes.splice(0,1)[0]);});
+  if(lost){sync();aiSync();if(!opp.prizes.length){gameOver(false,false);return;}
+    if(!me.active){if(!me.bench.length){gameOver(false,false);return;}toast('벤치에서 새 배틀 포켓몬을 올리세요!');fxBanner('벤치 포켓몬을 배틀로 올리세요');}}}
+function aiPromote(){var best=null,bs=-1;opp.bench.forEach(function(s){var sc=(aiLv>=4?bestAttack(s,me.active).dmg:0)+s.energy.length*10+hpOf(s)/10-s.dmg/10+rnd()*5;if(sc>bs){bs=sc;best=s;}});
+  if(!best)return;opp.bench.splice(opp.bench.indexOf(best),1);opp.active=best;aiLog(topCard(best).name+' 배틀로');}
+function bestAttack(slot,def){var d=D(topCard(slot));var out={atk:null,dmg:0};if(!d||!d.attacks)return out;
+  d.attacks.forEach(function(a){if(!canPay(slot,a.cost))return;var v=def?calcDmg(slot,a,def):parseDmg(a.damage);if(aiLv<=3)v=v+rnd()*40;if(!out.atk||v>out.dmg){out.atk=a;out.dmg=v;}});return out;}
+function aiAffordableSoon(slot){var d=D(topCard(slot));if(!d||!d.attacks)return 99;var m=99;d.attacks.forEach(function(a){var need=Math.max(0,(a.cost||[]).length-slot.energy.length);if(need<m)m=need;});return m;}
+
+function aiTurn(){if(ended||!ai)return;
+  var steps=[];
+  function step(f,ms){steps.push([f,ms||500]);}
+  /* 1 드로 */
+  step(function(){opp.energyUsed=false;opp.supporterUsed=false;if(!opp.deck.length){aiLog('덱 없음 — 드로 불가, 패배');gameOver(true,false);return 'stop';}
+    var n=aiLv>=10?2:1;opp.hand=opp.hand.concat(opp.deck.splice(0,n));aiLog(n+'장 드로');},400);
+  /* 2 서포트 (간단 효과) */
+  step(function(){if(aiLv<5||rnd()<0.15)return;var sup=opp.hand.filter(function(c){var d=D(c);return d&&d.trainerType==='Supporter';});if(!sup.length)return;
+    var pri=sup.map(function(c){var n=enName(c).toLowerCase();var sc=0;
+      if(/professor|research/.test(n))sc=opp.hand.length<=4?9:2;else if(/iono/.test(n))sc=(me.hand.length>=6?8:3);else if(/judge/.test(n))sc=me.hand.length>=6?6:2;else if(/boss|orders/.test(n))sc=0;else sc=1;return {c:c,sc:sc};}).sort(function(a,b){return b.sc-a.sc;});
+    var c=pri[0].c;var n=enName(c).toLowerCase();var i=opp.hand.indexOf(c);opp.hand.splice(i,1);opp.discard.push(c);opp.supporterUsed=true;
+    if(/professor|research/.test(n)){opp.discard=opp.discard.concat(opp.hand);opp.hand=opp.deck.splice(0,7);aiLog(c.name+' — 손패 버리고 7장 드로');}
+    else if(/iono/.test(n)){opp.deck=shuffle(opp.deck.concat(opp.hand));opp.hand=opp.deck.splice(0,Math.min(6,opp.prizes.length));me.deck=shuffle(me.deck.concat(me.hand));me.hand=me.deck.splice(0,Math.min(6,me.prizes.length));aiLog(c.name+' — 서로 손패 덱 아래로, 프라이즈 수만큼 드로');toast('컴퓨터가 '+c.name+' 사용 — 내 손패가 바뀌었어요');}
+    else if(/judge/.test(n)){opp.deck=shuffle(opp.deck.concat(opp.hand));opp.hand=opp.deck.splice(0,4);me.deck=shuffle(me.deck.concat(me.hand));me.hand=me.deck.splice(0,4);aiLog(c.name+' — 서로 4장');toast('컴퓨터가 '+c.name+' 사용 — 내 손패 4장으로');}
+    else{opp.hand=opp.hand.concat(opp.deck.splice(0,aiLv>=8?2:1));aiLog(c.name+' 사용 (효과 단순화: 드로)');}},700);
+  /* 3 굿즈 (볼·포핀·사탕·스위치) */
+  step(function(){if(aiLv<4)return;var items=opp.hand.filter(function(c){var d=D(c);return d&&d.category==='Trainer'&&(!d.trainerType||d.trainerType==='Item');});
+    items.forEach(function(c){var n=enName(c).toLowerCase();var i=opp.hand.indexOf(c);if(i<0)return;
+      if(/poffin|nest ball/.test(n)&&opp.bench.length<5){var found=opp.deck.filter(function(x){return isBasic(x)&&(!/poffin/.test(n)||(D(x).hp||0)<=70);});if(!found.length)return;opp.hand.splice(i,1);opp.discard.push(c);
+        var k=/poffin/.test(n)?2:1;for(var q=0;q<k&&opp.bench.length<5;q++){var pk=aiLv>=7?found.sort(function(a,b){return (D(b).hp||0)-(D(a).hp||0);})[0]:pick(found);if(!pk)break;found.splice(found.indexOf(pk),1);opp.deck.splice(opp.deck.indexOf(pk),1);opp.bench.push(slotOf(pk));aiLog(c.name+' → '+pk.name+' 벤치');}opp.deck=shuffle(opp.deck);}
+      else if(/ultra ball/.test(n)&&opp.hand.length>=3){var pool=opp.deck.filter(function(x){var d=D(x);return d&&d.category==='Pokemon';});if(!pool.length)return;
+        var want=pool.filter(function(x){var d=D(x);return d.evolveFrom&&[opp.active].concat(opp.bench).filter(Boolean).some(function(sl){return topCard(sl).name.toLowerCase()===String(d.evolveFrom).toLowerCase();});});var pk=want.length?want[0]:(opp.bench.length<5?pool.filter(isBasic)[0]:null);if(!pk)return;
+        opp.hand.splice(i,1);opp.discard.push(c);var disc=opp.hand.filter(function(x){var d=D(x);return d&&d.category==='Energy';}).concat(opp.hand).slice(0,2);disc.forEach(function(x){opp.hand.splice(opp.hand.indexOf(x),1);opp.discard.push(x);});
+        opp.deck.splice(opp.deck.indexOf(pk),1);opp.hand.push(pk);opp.deck=shuffle(opp.deck);aiLog(c.name+' → '+pk.name+' 손패로');}
+      else if(/rare candy/.test(n)){var st2=opp.hand.filter(function(x){var d=D(x);return d&&d.stage==='Stage2';});for(var a=0;a<st2.length;a++){var d2=D(st2[a]);var tgt=[opp.active].concat(opp.bench).filter(Boolean).find(function(sl){var bd=D(topCard(sl));return bd&&bd.stage==='Basic'&&sl.stack.length===1&&evolvesTo(topCard(sl),d2.name);});if(tgt){opp.hand.splice(i,1);opp.discard.push(c);opp.hand.splice(opp.hand.indexOf(st2[a]),1);tgt.stack.push(st2[a]);tgt.status={};aiLog('레어 캔디 → '+st2[a].name);break;}}}
+      else if(/^switch$|air balloon|switch cart/.test(n)&&aiLv>=7&&opp.active&&opp.bench.length){var better=opp.bench.filter(function(sl){return bestAttack(sl,me.active).dmg>bestAttack(opp.active,me.active).dmg+20;})[0];if(better){opp.hand.splice(i,1);opp.discard.push(c);var a0=opp.active;opp.active=better;opp.bench[opp.bench.indexOf(better)]=a0;aiLog(c.name+' → '+topCard(better).name+' 교체');}}
+    });},700);
+  /* 4 벤치 기본 포켓몬 */
+  step(function(){var basics=opp.hand.filter(isBasic);if(!opp.active&&basics.length){var b=basics.shift();opp.hand.splice(opp.hand.indexOf(b),1);opp.active=slotOf(b);aiLog(b.name+' 배틀로');}
+    var maxB=aiLv<=1?1:aiLv<=3?2:5;basics.forEach(function(b){if(opp.bench.length>=maxB)return;if(aiLv<=2&&rnd()<0.4)return;opp.hand.splice(opp.hand.indexOf(b),1);opp.bench.push(slotOf(b));aiLog(b.name+' 벤치');});},600);
+  /* 5 진화 */
+  step(function(){if(aiLv<=1&&rnd()<0.6)return;var evos=opp.hand.filter(function(c){var d=D(c);return d&&d.category==='Pokemon'&&d.stage!=='Basic';});
+    evos.forEach(function(c){var d=D(c);var tgt=[opp.active].concat(opp.bench).filter(Boolean).find(function(sl){return sl.turnPlayed!==turnNo&&topCard(sl).name.toLowerCase()===String(d.evolveFrom||'').toLowerCase();});
+      if(!tgt&&d.stage==='MEGA'||!tgt&&/mega/i.test(c.name)){tgt=[opp.active].concat(opp.bench).filter(Boolean).find(function(sl){return sl.turnPlayed!==turnNo&&evolvesTo(topCard(sl),c.name);});}
+      if(tgt){opp.hand.splice(opp.hand.indexOf(c),1);tgt.stack.push(c);tgt.status={};aiLog(topCard(tgt).name+' 진화 완료');}});},600);
+  /* 6 에너지 */
+  step(function(){var en=opp.hand.filter(function(c){var d=D(c);return d&&d.category==='Energy';});if(!en.length||!opp.active)return;
+    var cands=[opp.active].concat(opp.bench).filter(Boolean);var tgt;
+    if(aiLv<=2)tgt=pick(cands);
+    else{var need=cands.map(function(sl){return {sl:sl,need:aiAffordableSoon(sl),dmg:bestAttack(sl,me.active).dmg};});
+      var act=need[0];if(act.need>0)tgt=act.sl;else{var nx=need.slice(1).sort(function(a,b){return a.need-b.need;})[0];tgt=(aiLv>=8&&nx&&nx.need<=1)?nx.sl:act.sl;}}
+    var tt=typesOf(tgt);var e=en.find(function(c){return tt.indexOf(energyType(c))>-1;})||en.find(function(c){return energyType(c)==='*';})||en[0];
+    opp.hand.splice(opp.hand.indexOf(e),1);tgt.energy.push(e);opp.energyUsed=true;aiLog(e.name+' → '+topCard(tgt).name);},600);
+  /* 7 보스 (벤치 저격) */
+  step(function(){if(aiLv<6||opp.supporterUsed||!me.bench.length||!opp.active)return;var boss=opp.hand.find(function(c){return /boss|orders/.test(enName(c).toLowerCase());});if(!boss)return;
+    var ba=bestAttack(opp.active,null);if(!ba.atk)return;var kill=me.bench.map(function(sl,i){return {sl:sl,i:i,ko:sl.dmg+calcDmg(opp.active,ba.atk,sl)>=hpOf(sl),pz:prizeCount(sl)};}).filter(function(x){return x.ko;}).sort(function(a,b){return b.pz-a.pz;})[0];
+    var actKo=me.active&&me.active.dmg+calcDmg(opp.active,ba.atk,me.active)>=hpOf(me.active);if(!kill||actKo&&kill.pz<=prizeCount(me.active))return;
+    opp.hand.splice(opp.hand.indexOf(boss),1);opp.discard.push(boss);opp.supporterUsed=true;var a0=me.active;me.active=kill.sl;me.bench[kill.i]=a0;aiLog('보스의 지령! '+topCard(kill.sl).name+'을(를) 배틀로 끌어냄');fxBanner('컴퓨터: 보스의 지령 → '+topCard(kill.sl).name,true);sync();},800);
+  /* 8 후퇴 */
+  step(function(){if(aiLv<7||!opp.active||!opp.bench.length)return;var cur=bestAttack(opp.active,me.active);if(cur.atk)return;var d=D(topCard(opp.active));var cost=d&&d.retreat!=null?d.retreat:2;if(opp.active.energy.length<cost)return;
+    var better=opp.bench.filter(function(sl){return bestAttack(sl,me.active).atk;}).sort(function(a,b){return bestAttack(b,me.active).dmg-bestAttack(a,me.active).dmg;})[0];if(!better)return;
+    for(var k=0;k<cost;k++)opp.discard.push(opp.active.energy.pop());var a0=opp.active;a0.status={};opp.active=better;opp.bench[opp.bench.indexOf(better)]=a0;aiLog(topCard(a0).name+' 후퇴 → '+topCard(better).name);},600);
+  /* 9 공격 */
+  step(function(){if(!opp.active||!me.active)return;if(turnNo===1&&opp.first){aiLog('선공 첫 턴 — 공격 불가');return;}if(opp.active.status.asleep||opp.active.status.paralyzed){aiLog('상태이상으로 공격 불가');return;}
+    var ba=bestAttack(opp.active,me.active);if(!ba.atk){aiLog('에너지 부족 — 공격 못 함');return;}
+    if(opp.active.status.confused&&rnd()<0.5){opp.active.dmg+=30;aiLog('혼란 코인 뒷면 — 자신에게 30');return;}
+    var dmg=calcDmg(opp.active,ba.atk,me.active);var hits=[{target:-1,dmg:dmg}];var eff=(ba.atk.effect||'');var st=null;
+    if(aiLv>=5&&/Burned|화상/.test(eff))st='burn';else if(aiLv>=5&&/Poisoned|독/.test(eff))st='poison';else if(aiLv>=5&&/Asleep|잠듦/.test(eff)&&rnd()<0.5)st='asleep';else if(aiLv>=5&&/Paralyzed|마비/.test(eff)&&rnd()<0.5)st='paralyzed';
+    applyAttack(hits,topCard(opp.active).name+'의 '+ba.atk.name,st);opp.attacked=true;setTimeout(aiCheckKO,600);},900);
+  /* 10 턴 종료 */
+  step(function(){if(ended)return 'stop';[opp.active].concat(opp.bench).forEach(function(sl){if(!sl)return;if(sl.status.poison)sl.dmg+=10;if(sl.status.burn)sl.dmg+=20;if(sl.status.paralyzed)sl.status.paralyzed=false;});
+    turnNo++;turn='me';startTurn();aiLog('턴 종료');setTimeout(aiCheckKO,300);},700);
+  var i=0;function run(){if(i>=steps.length||ended){aiSync();return;}var st=steps[i++];var r;try{r=st[0]();}catch(e){console.error(e);}aiSync();if(r==='stop')return;setTimeout(run,st[1]);}
+  run();}
+function evolvesTo(card,name){var d=D(card);var n=String(name).toLowerCase();var base=(d&&d.name?d.name:card.name).toLowerCase();if(n.indexOf(base)>-1)return true;var en=enName(card).toLowerCase();return n.indexOf(en)>-1;}
 
 /* ---------- 초보 도우미 (뮤) ---------- */
 var recSet={};
