@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>덱 추천 · 대구 포켓몬 카드 방</title>
+<style>
+  :root{--bg:#F8F4FB;--paper:#fff;--ink:#1D1B16;--ink2:#5B5850;--line:#E6DEEE;--pink:#D64A9B;--pinkS:#FBE8F3;--blue:#5A7BD6;--blueS:#EAEFFC;--ok:#2E7D32;--warn:#C0392B;--yel:#FFF7D6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+  *,*::before,*::after{box-sizing:inherit}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5;word-break:keep-all}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 60px}
+  h1{margin:0 0 4px;font-size:22px}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 14px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--pink);color:#fff;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  button.soft{background:var(--blueS);color:var(--blue)}button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2)}
+  button:disabled{opacity:.5}
+  .q{font-size:16px;font-weight:700;margin:0 0 10px}
+  .opts{display:grid;gap:8px}
+  .opts button{text-align:left;background:var(--paper);color:var(--ink);border:1px solid var(--line);padding:12px 14px;font-weight:500}
+  .opts button.on{border-color:var(--pink);background:var(--pinkS)}
+  .prog{height:6px;background:var(--line);border-radius:3px;margin-bottom:12px;overflow:hidden}.prog i{display:block;height:100%;background:var(--pink);width:0;transition:width .3s}
+  .res{display:flex;gap:10px;align-items:flex-start}
+  .res .pct{flex:0 0 64px;height:64px;border-radius:50%;background:var(--pinkS);color:var(--pink);font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center}
+  .res b{display:block;font-size:16px}.res small{color:var(--ink2);display:block;font-size:12.5px}
+  .tier{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--yel);margin-left:4px}
+  .desc{font-size:13.5px;color:var(--ink2);margin:8px 0}
+  .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .row button,.row a{flex:1;text-align:center;text-decoration:none;font-size:14px}
+  .row a{background:var(--blueS);color:var(--blue);padding:10px;border-radius:10px;font-weight:600}
+  .type{font-size:12px;color:var(--ink2);margin-top:6px}
+  .bar{display:flex;gap:4px;margin-top:6px}.bar span{flex:1;height:5px;border-radius:3px;background:var(--line)}.bar span.on{background:var(--blue)}
+  .lbl{font-size:11px;color:var(--ink2);display:flex;justify-content:space-between}
+  .log{font-size:12.5px;color:var(--ink2);white-space:pre-line;max-height:160px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px}
+  textarea{width:100%;font:inherit;font-size:12.5px;padding:8px;border:1px solid var(--line);border-radius:10px;min-height:110px}
+  input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:10px}
+  .all .it{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .all .it:last-child{border:0}.all .it b{flex:1}.all .it .no{color:var(--ink2);font-size:12px}
+  .nav{display:flex;gap:6px;margin-top:10px}.nav a{flex:1;text-align:center;background:var(--blueS);color:var(--blue);padding:9px;border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧭 내 스타일 덱 찾기</h1>
+  <p class="sub">질문 7개에 답하면 공식 대회 상위 20개 덱 중 나와 맞는 덱을 골라주고, 그 덱을 바로 만들어 줍니다.</p>
+
+  <div class="card" id="quiz">
+    <div class="prog"><i id="prog"></i></div>
+    <p class="q" id="qtext"></p>
+    <div class="opts" id="opts"></div>
+    <div class="row"><button type="button" class="ghost" id="prev">이전</button></div>
+  </div>
+
+  <div id="result" class="hide"></div>
+
+  <div class="card">
+    <b>📋 20개 덱 전체 보기</b>
+    <div class="all" id="all"></div>
+  </div>
+
+  <div class="card">
+    <b>📥 Limitless 덱 리스트 붙여넣기</b>
+    <p class="sub" style="margin:4px 0 8px">limitlesstcg.com 덱 페이지의 [Copy to Clipboard] 내용을 붙여넣으면 내 덱으로 만들어 줍니다. (한 줄에 "4 Dreepy TWM 128" 형식)</p>
+    <input type="text" id="impName" placeholder="덱 이름">
+    <textarea id="impText" placeholder="4 Dreepy TWM 128&#10;4 Drakloak TWM 129&#10;…"></textarea>
+    <div class="row"><button type="button" id="impBtn">덱 만들기</button></div>
+    <div class="log hide" id="impLog"></div>
+  </div>
+
+  <div class="nav"><a href="deck.html">🃏 덱 빌더</a><a href="battle.html">⚔️ 대전</a><a href="notice.html">📢 공지</a></div>
+</div>
+
+<script>
+var API='https://api.tcgdex.net/v2/en/';
+var META=[{"id": "dragapult", "tier": 1, "share": "36%", "style": {"aggro": 4, "control": 2, "complex": 4, "evo": 5, "consist": 4}, "diff": "중상", "desc": "2진화 드래펄트로 상대 벤치까지 데미지 카운터를 흩뿌리는 현 환경 1티어. 손패 관리와 데미지 배분 계산이 승부를 가름.", "name": "드래펄트 ex", "en": "Dragapult ex", "src": "https://limitlesstcg.com/decks/list/29003", "cards": [[4, "Dreepy", "TWM", 128], [4, "Drakloak", "TWM", 129], [3, "Dragapult ex", "TWM", 130], [2, "Budew", "ASC", 16], [2, "Munkidori", "TWM", 95], [1, "Dunsparce", "JTG", 120], [1, "Dudunsparce", "TEF", 129], [1, "Meowth ex", "POR", 62], [1, "Fezandipiti ex", "ASC", 142], [4, "Lillie's Determination", "MEG", 119], [3, "Boss's Orders", "MEG", 114], [2, "Crispin", "SCR", 133], [1, "Rosa's Encouragement", "POR", 84], [1, "Judge", "POR", 76], [4, "Poké Pad", "POR", 81], [4, "Buddy-Buddy Poffin", "TEF", 144], [4, "Crushing Hammer", "POR", 71], [3, "Night Stretcher", "ASC", 196], [3, "Ultra Ball", "MEG", 131], [1, "Unfair Stamp", "TWM", 165], [1, "Special Red Card", "CRI", 82], [2, "Risky Ruins", "MEG", 127], [3, "Fire Energy", "MEE", 10], [3, "Psychic Energy", "MEE", 13], [2, "Darkness Energy", "MEE", 15]]}, {"id": "basicbox", "tier": 1, "share": "12%", "style": {"aggro": 5, "control": 1, "complex": 2, "evo": 1, "consist": 4}, "diff": "하", "desc": "진화 없이 기본 ex 포켓몬만 꽉 채운 박스 덱. 첫 턴부터 에너지 스위치로 몰아치는 직관적인 공격형.", "name": "베이직 박스 (메가 캥카·오거폰)", "en": "Basic Box", "src": "https://limitlesstcg.com/decks/list/29001", "cards": [[4, "Mega Kangaskhan ex", "MEG", 104], [3, "Meowth ex", "POR", 62], [2, "Latias ex", "SSP", 76], [2, "Teal Mask Ogerpon ex", "TWM", 25], [2, "Lillie's Clefairy ex", "JTG", 56], [1, "Chien-Pao", "SSP", 56], [1, "Raging Bolt ex", "TEF", 123], [1, "Iron Leaves ex", "TEF", 25], [1, "Fezandipiti ex", "ASC", 142], [1, "Enamorus", "TWM", 93], [1, "Iron Crown ex", "TEF", 81], [1, "Wellspring Mask Ogerpon ex", "TWM", 64], [4, "Crispin", "SCR", 133], [2, "Cyrano", "SSP", 170], [2, "Boss's Orders", "MEG", 114], [1, "Ciphermaniac's Codebreaking", "TEF", 145], [4, "Energy Switch", "MEG", 115], [4, "Ultra Ball", "MEG", 131], [2, "Night Stretcher", "ASC", 196], [1, "Special Red Card", "CRI", 82], [1, "Glass Trumpet", "SCR", 135], [1, "Hero's Cape", "TEF", 152], [4, "Area Zero Underdepths", "SCR", 131], [6, "Grass Energy", "MEE", 9], [3, "Psychic Energy", "MEE", 13], [2, "Fighting Energy", "MEE", 14], [2, "Lightning Energy", "MEE", 12], [1, "Water Energy", "MEE", 11]]}, {"id": "zoroark", "tier": 1, "share": "8%", "style": {"aggro": 3, "control": 3, "complex": 5, "evo": 3, "consist": 3}, "diff": "상", "desc": "N의 조로아크가 트래시의 포켓몬 기술을 복사하는 툴박스 덱. 상황마다 다른 답을 꺼내는 재미가 있지만 알아야 할 게 많음.", "name": "N의 조로아크 ex", "en": "N's Zoroark ex", "src": "https://limitlesstcg.com/decks/list/29034", "cards": [[4, "N's Zorua", "JTG", 97], [4, "N's Zoroark ex", "JTG", 98], [1, "Buneary", "PFL", 83], [1, "Mega Lopunny ex", "PFL", 84], [1, "Tatsugiri", "TWM", 131], [1, "Fezandipiti ex", "ASC", 142], [1, "Pecharunt ex", "SFA", 39], [1, "N's Reshiram", "JTG", 116], [1, "N's Zekrom", "ASC", 155], [1, "Yveltal", "MEG", 88], [1, "Munkidori", "TWM", 95], [4, "Lillie's Determination", "MEG", 119], [3, "Boss's Orders", "MEG", 114], [2, "Judge", "POR", 76], [1, "Black Belt's Training", "JTG", 143], [1, "Cyrano", "SSP", 170], [1, "Xerosic's Machinations", "SFA", 64], [4, "Buddy-Buddy Poffin", "TEF", 144], [4, "Ultra Ball", "MEG", 131], [3, "N's PP Up", "JTG", 153], [3, "Poké Pad", "POR", 81], [2, "Night Stretcher", "ASC", 196], [1, "Secret Box", "TWM", 163], [1, "Special Red Card", "CRI", 82], [1, "Binding Mochi", "PRE", 95], [1, "Air Balloon", "ASC", 181], [2, "Team Rocket's Watchtower", "DRI", 180], [1, "Gravity Mountain", "SSP", 177], [8, "Darkness Energy", "MEE", 15]]}, {"id": "alakazam", "tier": 2, "share": "8%", "style": {"aggro": 2, "control": 4, "complex": 4, "evo": 5, "consist": 3}, "diff": "중상", "desc": "후딘의 특성으로 손패를 가득 채우고 파워풀 핸드로 큰 데미지. 손패 개수를 관리하는 두뇌형 덱.", "name": "후딘 파워풀 핸드", "en": "Alakazam Powerful Hand", "src": "https://limitlesstcg.com/decks/list/29005", "cards": [[4, "Abra", "MEG", 54], [4, "Kadabra", "MEG", 55], [3, "Alakazam", "MEG", 56], [1, "Alakazam", "TWM", 82], [3, "Dunsparce", "JTG", 120], [2, "Dudunsparce", "TEF", 129], [1, "Fezandipiti ex", "ASC", 142], [1, "Lillie's Clefairy ex", "JTG", 56], [1, "Genesect", "SFA", 40], [1, "Elgyem", "BLK", 40], [4, "Dawn", "PFL", 87], [3, "Hilda", "WHT", 84], [2, "Boss's Orders", "MEG", 114], [1, "Eri", "TEF", 146], [4, "Poké Pad", "POR", 81], [4, "Buddy-Buddy Poffin", "TEF", 144], [2, "Wondrous Patch", "PFL", 94], [2, "Rare Candy", "MEG", 125], [1, "Night Stretcher", "ASC", 196], [1, "Sacred Ash", "DRI", 168], [1, "Special Red Card", "CRI", 82], [2, "Handheld Fan", "TWM", 150], [1, "Air Balloon", "ASC", 181], [3, "Nighttime Mine", "ASC", 197], [1, "Battle Cage", "PFL", 85], [4, "Telepathic Psychic Energy", "POR", 88], [2, "Psychic Energy", "MEE", 13], [1, "Enriching Energy", "SSP", 191]]}, {"id": "slowking", "tier": 2, "share": "6%", "style": {"aggro": 1, "control": 5, "complex": 3, "evo": 2, "consist": 4}, "diff": "중", "desc": "야도킹으로 상대 기술을 막고 견제하며 천천히 이기는 컨트롤 덱. 상대가 답답해하는 걸 즐기는 사람용.", "name": "야도킹 컨트롤", "en": "Slowking Seek Inspiration", "src": "https://limitlesstcg.com/decks/list/29004", "cards": [[4, "Slowpoke", "SCR", 57], [3, "Slowking", "SCR", 58], [2, "Kyurem", "SFA", 47], [2, "Metagross", "CRI", 61], [2, "Mega Kangaskhan ex", "MEG", 104], [2, "Latias ex", "SSP", 76], [1, "Annihilape", "SSP", 100], [1, "Annihilape", "PBL", 41], [1, "Lillie's Clefairy ex", "JTG", 56], [1, "Meowth ex", "POR", 62], [1, "Fezandipiti ex", "ASC", 142], [4, "Lillie's Determination", "MEG", 119], [3, "Ciphermaniac's Codebreaking", "TEF", 145], [1, "Lana's Aid", "TWM", 155], [1, "Surfer", "SSP", 187], [4, "Ultra Ball", "MEG", 131], [4, "Poké Pad", "POR", 81], [3, "Wondrous Patch", "PFL", 94], [2, "Night Stretcher", "ASC", 196], [1, "Switch", "MEG", 130], [1, "Secret Box", "TWM", 163], [1, "Brave Bangle", "WHT", 80], [1, "Powerglass", "SFA", 63], [4, "Academy at Night", "SFA", 54], [4, "Telepathic Psychic Energy", "POR", 88], [4, "Psychic Energy", "MEE", 13], [2, "Boomerang Energy", "TWM", 166]]}, {"id": "excadrill", "name": "메가 몰드류 ex", "en": "Mega Excadrill ex", "src": "https://limitlesstcg.com/decks/list/29041", "tier": 2, "share": "4%", "style": {"aggro": 5, "control": 1, "complex": 2, "evo": 2, "consist": 4}, "diff": "하", "desc": "한 방이 큰 메가 진화 어태커. 단순하고 강한 정면 승부."}, {"id": "festival", "name": "페스티벌 리드 (애프룡·타르튀르)", "en": "Festival Lead", "src": "https://limitlesstcg.com/decks/list/29019", "tier": 2, "share": "3%", "style": {"aggro": 3, "control": 4, "complex": 3, "evo": 3, "consist": 3}, "diff": "중", "desc": "스타디움을 유지하며 상대를 잠그는 락 계열."}, {"id": "crustle", "tier": 2, "share": "3%", "name": "암팰리스 미스터리 록", "en": "Crustle Mysterious Rock Inn", "src": "https://limitlesstcg.com/decks/list/29031", "style": {"aggro": 2, "control": 5, "complex": 3, "evo": 2, "consist": 3}, "diff": "중", "desc": "상대 기술을 무력화시키며 버티는 방어형."}, {"id": "dhelmise", "tier": 2, "share": "2%", "name": "타타륜·다크펫", "en": "Dhelmise Hide n' Sneak", "src": "https://limitlesstcg.com/decks/list/29017", "style": {"aggro": 3, "control": 3, "complex": 4, "evo": 3, "consist": 2}, "diff": "상", "desc": "변칙 콤보로 상대 허를 찌르는 로그 덱."}, {"id": "clefairy", "tier": 2, "share": "2%", "name": "릴리에의 삐삐 ex", "en": "Lillie's Clefairy ex", "src": "https://limitlesstcg.com/decks/list/29016", "style": {"aggro": 4, "control": 2, "complex": 2, "evo": 1, "consist": 3}, "diff": "하", "desc": "드래곤 타입 저격에 특화된 가벼운 공격 덱."}, {"id": "lopunny", "tier": 2, "share": "2%", "name": "메가 토끼링 ex", "en": "Mega Lopunny ex", "src": "https://limitlesstcg.com/decks/list/29010", "style": {"aggro": 5, "control": 2, "complex": 3, "evo": 3, "consist": 3}, "diff": "중", "desc": "빠른 진화와 높은 화력, 야느와르몽으로 프라이즈 가속."}, {"id": "lucario", "tier": 2, "share": "2%", "name": "메가 루카리오 ex", "en": "Mega Lucario ex", "src": "https://limitlesstcg.com/decks/list/29018", "style": {"aggro": 5, "control": 1, "complex": 2, "evo": 3, "consist": 4}, "diff": "하", "desc": "격투 타입의 정직한 강타. 초보에게도 추천."}, {"id": "ragingbolt", "tier": 3, "share": "2%", "name": "무쇠바퀴 ex (고동치는달)", "en": "Raging Bolt ex", "src": "https://limitlesstcg.com/decks/list/29105", "style": {"aggro": 5, "control": 1, "complex": 2, "evo": 1, "consist": 3}, "diff": "하", "desc": "에너지를 버려 한 방에 끝내는 초공격형 원샷."}, {"id": "grimmsnarl", "tier": 3, "share": "2%", "name": "마리의 오롱털 ex", "en": "Marnie's Grimmsnarl ex", "src": "https://limitlesstcg.com/decks/list/29080", "style": {"aggro": 4, "control": 3, "complex": 3, "evo": 4, "consist": 3}, "diff": "중", "desc": "악 타입 진화 어태커에 눈여아 방해를 섞은 중간형."}, {"id": "hydrapple", "tier": 3, "share": "2%", "name": "애프룡 ex", "en": "Hydrapple ex", "src": "https://limitlesstcg.com/decks/list/29002", "style": {"aggro": 4, "control": 2, "complex": 3, "evo": 5, "consist": 4}, "diff": "중", "desc": "풀 타입 2진화. 볼티모어 준우승 덱."}, {"id": "sharpedo", "tier": 3, "share": "1%", "name": "메가 샤크니아 ex", "en": "Mega Sharpedo ex", "src": "https://limitlesstcg.com/decks/list/29119", "style": {"aggro": 5, "control": 1, "complex": 2, "evo": 3, "consist": 3}, "diff": "하", "desc": "물 타입 속공. 상대가 준비되기 전에 끝내는 스타일."}, {"id": "honchkrow", "tier": 3, "share": "1%", "name": "로켓단의 돈크로우", "en": "Rocket's Honchkrow", "src": "https://limitlesstcg.com/decks/list/29061", "style": {"aggro": 2, "control": 5, "complex": 4, "evo": 3, "consist": 3}, "diff": "상", "desc": "상대 자원을 갉아먹는 밀 계열 컨트롤."}, {"id": "garchomp", "tier": 3, "share": "1%", "name": "난천의 한카리아스 ex", "en": "Cynthia's Garchomp ex", "src": "https://limitlesstcg.com/decks/list/29087", "style": {"aggro": 4, "control": 2, "complex": 3, "evo": 5, "consist": 3}, "diff": "중", "desc": "2진화 드래곤 어태커. 진화 라인 굴리기를 좋아하면."}, {"id": "mewtwo", "tier": 3, "share": "1%", "name": "로켓단의 뮤츠 ex", "en": "Rocket's Mewtwo ex", "src": "https://limitlesstcg.com/decks/list/29029", "style": {"aggro": 4, "control": 2, "complex": 3, "evo": 2, "consist": 3}, "diff": "중", "desc": "에너지 가속 후 뮤츠로 대미지. 로켓단 테마."}, {"id": "starmie", "tier": 3, "share": "1%", "name": "메가 아쿠스타 ex", "en": "Mega Starmie ex", "src": "https://limitlesstcg.com/decks/list/29020", "style": {"aggro": 4, "control": 2, "complex": 3, "evo": 3, "consist": 3}, "diff": "중", "desc": "물 타입 메가 진화, 벤치 저격형."}];
+
+/* Limitless 세트 코드 → 세트 이름 */
+var SETNAMES={SVI:'Scarlet & Violet',PAL:'Paldea Evolved',OBF:'Obsidian Flames',MEW:'151',PAR:'Paradox Rift',PAF:'Paldean Fates',TEF:'Temporal Forces',TWM:'Twilight Masquerade',SFA:'Shrouded Fable',SCR:'Stellar Crown',SSP:'Surging Sparks',PRE:'Prismatic Evolutions',JTG:'Journey Together',DRI:'Destined Rivals',BLK:'Black Bolt',WHT:'White Flare',MEG:'Mega Evolution',PFL:'Phantasmal Flames',POR:'Perfect Order',CRI:'Chaos Rising',ASC:'Ascended Heroes',PBL:'Pitch Black',MEE:'Mega Evolution Energies',SVP:'SV Black Star Promos',MEP:'ME Black Star Promos'};
+
+/* ---------- 퀴즈 ---------- */
+var Q=[
+ {q:"게임에서 제일 기분 좋은 순간은?",o:[["상대 포켓몬을 한 방에 날릴 때",{aggro:2}],["상대가 아무것도 못 하고 끙끙댈 때",{control:2}],["복잡한 콤보가 딱 맞아떨어질 때",{complex:2}],["안정적으로 계획대로 굴러갈 때",{consist:2}]]},
+ {q:"덱을 고를 때 더 끌리는 쪽은?",o:[["기본 포켓몬 위주, 바로 싸우기",{evo:-2,aggro:1}],["진화 라인을 키워서 강한 어태커 완성",{evo:2}],["상관없음, 이기는 덱이면 됨",{consist:1}]]},
+ {q:"규칙과 카드 효과를 익히는 건?",o:[["최대한 단순한 게 좋다",{complex:-2}],["적당히, 몇 개는 외울 수 있다",{complex:0}],["복잡할수록 재밌다",{complex:2}]]},
+ {q:"지고 있을 때 나는?",o:[["더 세게 밀어붙인다",{aggro:2}],["상대 자원을 끊어서 뒤집을 틈을 만든다",{control:2}],["역전 콤보를 찾는다",{complex:1,consist:-1}]]},
+ {q:"경기 길이는?",o:[["짧고 굵게, 5턴 안에 끝",{aggro:2,control:-1}],["길게 가도 괜찮다, 천천히 조여가기",{control:2,aggro:-1}],["상관없다",{}]]},
+ {q:"카드 살 예산은?",o:[["최소로, 저렴한 덱",{budget:1}],["적당히",{}],["강하면 얼마든지",{budget:-1}]]},
+ {q:"대회 성적 vs 재미?",o:[["무조건 이기는 덱 (1티어)",{tier:2}],["재밌으면 2~3티어도 좋다",{tier:-1}],["남들 안 쓰는 덱이 좋다",{tier:-2,complex:1}]]}
+];
+var ans=[],cur=0;
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function showQ(){var q=Q[cur];$('prog').style.width=(cur/Q.length*100)+'%';$('qtext').textContent=(cur+1)+'. '+q.q;
+  $('opts').innerHTML=q.o.map(function(o,i){return '<button type="button" data-i="'+i+'" class="'+(ans[cur]===i?'on':'')+'">'+esc(o[0])+'</button>';}).join('');
+  document.querySelectorAll('#opts button').forEach(function(b){b.onclick=function(){ans[cur]=+b.dataset.i;if(cur<Q.length-1){cur++;showQ();}else finish();};});
+  $('prev').disabled=cur===0;}
+$('prev').onclick=function(){if(cur>0){cur--;showQ();}};
+function finish(){var s={aggro:0,control:0,complex:0,evo:0,consist:0,budget:0,tier:0};
+  ans.forEach(function(a,i){var w=Q[i].o[a][1];for(var k in w)s[k]+=w[k];});
+  var scored=META.map(function(m){var st=m.style;var d=0;
+    d+=Math.abs((st.aggro-3)-s.aggro*0.9); d+=Math.abs((st.control-3)-s.control*0.9); d+=Math.abs((st.complex-3)-s.complex*0.9); d+=Math.abs((st.evo-3)-s.evo*0.9); d+=Math.abs((st.consist-3)-s.consist*0.7);
+    d+=(s.tier>0?(m.tier-1)*1.2:s.tier<0?(3-m.tier)*0.8:0);
+    var pct=Math.max(35,Math.round(100-d*6.5));return {m:m,pct:pct};}).sort(function(a,b){return b.pct-a.pct;});
+  var top=scored.slice(0,3);
+  $('quiz').classList.add('hide');var r=$('result');r.classList.remove('hide');
+  r.innerHTML='<div class="card"><b>🎯 내 스타일 결과</b><p class="sub" style="margin:4px 0 0">'+styleLabel(s)+'</p></div>'+top.map(function(t,i){return deckCard(t.m,t.pct,i===0);}).join('')+
+    '<div class="row"><button type="button" class="ghost" onclick="ans=[];cur=0;$(\'result\').classList.add(\'hide\');$(\'quiz\').classList.remove(\'hide\');showQ();window.scrollTo(0,0)">다시 하기</button></div>';
+  bindBuild();window.scrollTo(0,0);}
+function styleLabel(s){var a=[];a.push(s.aggro>=s.control?'⚔️ 공격형':'🛡️ 컨트롤형');a.push(s.complex>=1?'🧠 콤보 선호':s.complex<=-1?'🎯 단순 선호':'⚖️ 균형');a.push(s.evo>=1?'🧬 진화 덱':s.evo<=-1?'⚡ 기본 포켓몬 덱':'🎲 상관없음');return a.join(' · ');}
+function bars(st){return ['aggro','control','complex','evo','consist'].map(function(k,i){var lab=['공격','견제','복잡도','진화','안정'][i];return '<div class="lbl"><span>'+lab+'</span></div><div class="bar">'+[1,2,3,4,5].map(function(n){return '<span class="'+(n<=st[k]?'on':'')+'"></span>';}).join('')+'</div>';}).join('');}
+function deckCard(m,pct,first){return '<div class="card"><div class="res"><div class="pct">'+(pct!=null?pct+'%':'')+'</div><div style="flex:1"><b>'+esc(m.name)+'<span class="tier">'+m.tier+'티어 · '+esc(m.share)+'</span></b><small>'+esc(m.en)+' · 난이도 '+esc(m.diff)+'</small></div></div>'+
+  '<p class="desc">'+esc(m.desc)+'</p>'+bars(m.style)+
+  '<div class="row">'+(m.cards?'<button type="button" data-build="'+m.id+'">'+(first?'⚡ 이 덱 바로 만들기':'이 덱 만들기')+'</button>':'<button type="button" class="soft" data-src="'+m.src+'">Limitless에서 리스트 복사 →</button>')+'<a href="'+m.src+'" target="_blank" rel="noopener">대회 리스트 보기</a></div>'+
+  (m.cards?'':'<p class="type">아직 카드 목록이 안 들어간 덱이에요. 링크에서 [Copy to Clipboard] 후 아래 붙여넣기 칸에 넣으면 바로 만들어집니다.</p>')+'<div class="log hide" id="log-'+m.id+'"></div></div>';}
+function bindBuild(){document.querySelectorAll('[data-build]').forEach(function(b){b.onclick=function(){var m=META.find(function(x){return x.id===b.dataset.build;});buildDeck(m.name,m.cards,$('log-'+m.id),b);};});
+  document.querySelectorAll('[data-src]').forEach(function(b){b.onclick=function(){window.open(b.dataset.src,'_blank');$('impText').focus();};});}
+$('all').innerHTML=META.map(function(m,i){return '<div class="it"><span class="no">'+(i+1)+'</span><b>'+esc(m.name)+'</b><span class="no">'+m.tier+'T · '+esc(m.share)+(m.cards?'':' · 목록 필요')+'</span><button type="button" class="soft" style="padding:5px 9px;font-size:12.5px" data-show="'+m.id+'">보기</button></div>';}).join('');
+document.querySelectorAll('[data-show]').forEach(function(b){b.onclick=function(){var m=META.find(function(x){return x.id===b.dataset.show;});$('quiz').classList.add('hide');var r=$('result');r.classList.remove('hide');r.innerHTML=deckCard(m,null,true)+'<div class="row"><button type="button" class="ghost" onclick="ans=[];cur=0;$(\'result\').classList.add(\'hide\');$(\'quiz\').classList.remove(\'hide\');showQ();window.scrollTo(0,0)">퀴즈로 돌아가기</button></div>';bindBuild();window.scrollTo(0,0);};});
+
+/* ---------- 덱 생성 (TCGdex 영어 데이터로 카드 찾기) ---------- */
+var setsP=null,setMap={};
+function loadSets(){if(setsP)return setsP;setsP=fetch(API+'sets').then(function(r){return r.json();}).then(function(list){list.forEach(function(s){setMap[String(s.name).toLowerCase()]=s.id;});return setMap;});return setsP;}
+function setId(code){var nm=(SETNAMES[code]||'').toLowerCase();if(!nm)return null;if(setMap[nm])return setMap[nm];for(var k in setMap){if(k===nm)return setMap[k];}for(var k2 in setMap){if(k2.indexOf(nm)===0)return setMap[k2];}return null;}
+var nameCache={};
+function findCard(name,code,num){var key=name.toLowerCase();
+  var p=nameCache[key]?Promise.resolve(nameCache[key]):fetch(API+'cards?name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(a){nameCache[key]=Array.isArray(a)?a:[];return nameCache[key];}).catch(function(){return [];});
+  return p.then(function(list){if(!list.length)return null;var sid=setId(code);var n=String(num);
+    var exact=list.filter(function(c){return String(c.name).toLowerCase()===key;});var pool=exact.length?exact:list;
+    var hit=pool.find(function(c){return sid&&c.id.indexOf(sid+'-')===0&&String(parseInt(c.localId,10))===String(parseInt(n,10));})
+      ||pool.find(function(c){return sid&&c.id.indexOf(sid+'-')===0;})
+      ||pool.find(function(c){return String(parseInt(c.localId,10))===String(parseInt(n,10));})
+      ||pool[pool.length-1];
+    return hit;});}
+function buildDeck(name,cards,logEl,btn){if(btn){btn.disabled=true;btn.textContent='만드는 중…';}
+  if(logEl){logEl.classList.remove('hide');logEl.textContent='카드 정보 불러오는 중…';}
+  var deck={name:name,lang:'en',cards:{}},miss=[],done=0;
+  loadSets().then(function(){var chain=Promise.resolve();
+    cards.forEach(function(c){chain=chain.then(function(){return findCard(c[1],c[2],c[3]).then(function(hit){done++;if(logEl)logEl.textContent='카드 찾는 중… '+done+'/'+cards.length;
+      if(!hit){miss.push(c[0]+' '+c[1]+' '+c[2]+' '+c[3]);return;}
+      var e=deck.cards[hit.id]||(deck.cards[hit.id]={id:hit.id,name:hit.name,img:hit.image||'',n:0});e.n+=c[0];});});});
+    return chain;}).then(function(){
+    var total=0;for(var k in deck.cards)total+=deck.cards[k].n;
+    var arr=[];try{arr=JSON.parse(localStorage.getItem('dgpk_decks')||'[]');}catch(e){}
+    var i=arr.findIndex(function(d){return d.name===deck.name;});deck.saved=Date.now();if(i>-1)arr[i]=deck;else arr.push(deck);
+    localStorage.setItem('dgpk_decks',JSON.stringify(arr));localStorage.setItem('dgpk_lang','en');
+    var msg='✔ "'+name+'" 저장 완료 ('+total+'장)'+(miss.length?'\n못 찾은 카드 '+miss.length+'장 — 덱 빌더에서 직접 추가하세요:\n'+miss.join('\n'):'');
+    if(logEl)logEl.textContent=msg;
+    if(btn){btn.disabled=false;btn.textContent='✔ 저장됨 — 대전 페이지에서 선택';}
+    var code=btoa(unescape(encodeURIComponent(JSON.stringify({name:deck.name,lang:'en',cards:deck.cards}))));
+    if(logEl)logEl.innerHTML+='<div class="row"><a href="battle.html">⚔️ 대전으로</a><a href="deck.html">🃏 덱 빌더에서 수정</a></div><p class="type">덱 코드 (카톡 공유용): <textarea readonly style="min-height:60px">'+code+'</textarea></p>';
+  }).catch(function(){if(logEl)logEl.textContent='카드 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';if(btn){btn.disabled=false;btn.textContent='다시 시도';}});}
+
+/* ---------- 붙여넣기 임포트 ---------- */
+$('impBtn').onclick=function(){var t=$('impText').value,name=$('impName').value.trim()||'가져온 덱';var cards=[];
+  t.split(/\n/).forEach(function(line){var m=line.trim().match(/^(\d+)\s+(.+?)\s+([A-Z]{2,4})\s+(\d+[a-zA-Z]?)$/);if(m)cards.push([+m[1],m[2],m[3],m[4]]);});
+  if(!cards.length){alert('형식을 못 읽었어요. "4 Dreepy TWM 128" 같은 줄이 필요합니다.');return;}
+  buildDeck(name,cards,$('impLog'),$('impBtn'));};
+
+showQ();
+</script>
+</body>
+</html>
