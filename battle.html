@@ -125,7 +125,7 @@
     <div class="row"><input type="text" id="roomCodeIn" placeholder="방 인증코드" inputmode="numeric" maxlength="4"><input type="text" id="pin" placeholder="내 PIN 4자리 (기록 보호용)" inputmode="numeric" maxlength="4"></div>
     <p style="font-size:12px;color:var(--ink2);margin:6px 0 0">PIN은 이 닉네임의 전적을 남이 못 올리게 막는 용도예요. 처음 정한 PIN을 기억해 두세요.</p>
     <div class="row"><select id="deckSel"><option value="">덱을 고르세요</option></select></div>
-    <div class="row"><button type="button" class="soft" id="btnPaste">덱 코드 붙여넣기</button><a href="deck.html" style="text-align:center;color:var(--blue);font-size:13px">덱 만들기 →</a></div>
+    <div class="row"><button type="button" class="soft" id="btnPaste">덱 코드 붙여넣기</button><a href="meta.html" style="text-align:center;color:var(--blue);font-size:13px">🧭 스타일 덱 추천</a><a href="deck.html" style="text-align:center;color:var(--blue);font-size:13px">덱 만들기 →</a></div>
     <input type="text" id="codeIn" class="hide" placeholder="덱 코드" style="margin-top:8px">
   </div>
 
@@ -223,6 +223,8 @@ function jpCodes(setId){var s=String(setId||'');if(!s)return [];var out=[s];if(s
   return out.filter(function(v,i){return out.indexOf(v)===i;});}
 function imgCands(c,q){q=q||'low';var out=[];
   var id=String((c&&c.id)||'');var m=id.match(/^([^-]+)-(\d+)$/);
+  var base0=c&&c.img;var enFirst=base0&&/\/(en|fr|de|es|it|pt)\//.test(base0);
+  if(enFirst){var t0=base0.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);if(t0)out.push(base0+'/'+q+'.webp');}
   if(m){var num=m[2];var pad=('000'+num).slice(-3);var un=String(parseInt(num,10));
     jpCodes(m[1]).forEach(function(code){out.push(LIMITLESS+code+'/'+code+'_'+pad+'_R_JP.png');if(un!==pad)out.push(LIMITLESS+code+'/'+code+'_'+un+'_R_JP.png');});}
   var base=c&&c.img;if(base){var t=base.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);
