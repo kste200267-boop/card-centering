@@ -55,6 +55,10 @@
   .pile.prize{background:linear-gradient(135deg,#6b4b2f,#b07a3c)}
   .mid{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px}
   .mid .log{flex:1;min-width:0;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mid .timer{font-weight:800;font-size:13px;min-width:34px;text-align:center;border-radius:6px;padding:2px 6px;background:var(--panel2)}
+  .mid .timer.low{background:var(--warn);color:#fff;animation:pulse .6s infinite}
+  .mid .timer:empty{display:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
   .mid .stad{font-size:11px;background:var(--panel2);border-radius:6px;padding:2px 7px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
   .mid .stad:empty{display:none}
   .mid .turn{font-weight:800;padding:2px 8px;border-radius:999px;background:var(--panel2)}
@@ -188,7 +192,7 @@
       </div>
     </div>
 
-    <div class="mid"><span class="turn" id="turnTag">준비</span><span class="log" id="logLine">시작 전</span><span class="stad" id="stad" title="스타디움"></span><button type="button" class="sm ghost" id="btnLog">기록</button></div>
+    <div class="mid"><span class="turn" id="turnTag">준비</span><span class="timer" id="timer"></span><span class="log" id="logLine">시작 전</span><span class="stad" id="stad" title="스타디움"></span><button type="button" class="sm ghost" id="btnLog">기록</button></div>
 
     <div class="side me">
       <div class="center">
@@ -285,7 +289,8 @@ function pub(p){ /* 상대에게 보낼 공개 정보 */
 
 var me=null, opp=null, oppPub=null, solo=false, conn=null, peer=null, isHost=false;
 var turn=null /* 'me'|'opp' */, turnNo=0, logs=[];
-var rules={enforce:true};
+var rules={enforce:true,timer:90};var timerLeft=0,timerIv=null;
+$('timerSel').value=localStorage.getItem('dgpk_timer')||'90';
 
 /* ---------- 로비 ---------- */
 function getDecks(){try{return JSON.parse(localStorage.getItem(LS_DECKS)||'[]');}catch(e){return[];}}
@@ -309,10 +314,10 @@ $('nick').value=localStorage.getItem('dgpk_nick')||'';$('roomCodeIn').value=loca
 fillDecks();
 $('btnPaste').onclick=function(e){e.preventDefault();$('codeIn').classList.toggle('hide');};
 
-$('btnSolo').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;solo=true;isHost=true;
+$('btnSolo').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);solo=true;isHost=true;
   me=newPlayer(s.nick,s.deck);opp=newPlayer('연습 상대',s.deck);enterGame();};
 
-$('btnHost').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;
+$('btnHost').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;rules.timer=+$('timerSel').value;localStorage.setItem('dgpk_timer',$('timerSel').value);
   var code=String(Math.floor(1000+Math.random()*9000));$('roomCode').textContent=code;$('hostBox').classList.remove('hide');$('btnHost').disabled=true;
   me=newPlayer(s.nick,s.deck);isHost=true;
   peer=new Peer('dgpk-'+code);
@@ -353,7 +358,7 @@ function onData(m){
   if(m.t==='msg'){pushChat(m.text,false);if(!chatOpen)fxBanner('💬 '+m.text,true);log('💬 '+m.text,true);buzz();return;}
   if(m.t==='result'){gameOver(m.win?false:true,true);return;}
   if(m.t==='turn'){turn='me';turnNo=m.no;startTurn();buzz();render();return;}
-  if(m.t==='first'){turn=m.first==='host'?(isHost?'me':'opp'):(isHost?'opp':'me');me.first=(turn==='me');turnNo=1;log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();render();return;}
+  if(m.t==='first'){if(m.timer!=null)rules.timer=m.timer;turn=m.first==='host'?(isHost?'me':'opp'):(isHost?'opp':'me');me.first=(turn==='me');turnNo=1;log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();else startTimer(false);render();return;}
 }
 function sync(){if(solo){oppPub=pub(opp);}else send({t:'state',pub:pub(me)});render();}
 function log(text,fromOpp){var who=fromOpp?'[상대] ':(solo?'':'[나] ');logs.push(who+text);if(logs.length>200)logs.shift();$('logLine').textContent=who+text;if(!fromOpp&&!solo)send({t:'log',text:text});}
@@ -367,7 +372,7 @@ function enterGame(){
   setup(me);$('mewBtn').classList.remove('hide');
   autoMulligan(me,true).then(function(n){if(n){if(solo){opp.bonusDraw=n;log('연습 상대 추가 드로 가능 '+n);}else send({t:'mulligan',n:n});}sync();return solo?autoMulligan(opp,false):null;}).then(function(n2){if(n2){log('상대(연습) 멀리건 '+n2+'회 — 추가 드로 '+n2+'장 가능');me.bonusDraw=(me.bonusDraw||0)+n2;}if(solo)oppPub=pub(opp);sync();setTimeout(coach,400);});
   if(solo){setup(opp);oppPub=pub(opp);var f=Math.random()<.5;turn=f?'me':'opp';(f?me:opp).first=true;turnNo=1;log('코인: '+(f?'내가 선공':'상대 선공'));if(turn==='me')startTurn();sync();}
-  else if(isHost){var first=Math.random()<.5?'host':'guest';turn=first==='host'?'me':'opp';me.first=(turn==='me');turnNo=1;send({t:'first',first:first});log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();sync();}
+  else if(isHost){var first=Math.random()<.5?'host':'guest';turn=first==='host'?'me':'opp';me.first=(turn==='me');turnNo=1;send({t:'first',first:first,timer:rules.timer});log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();sync();}
   else sync();
 }
 function setup(p){p.deck=shuffle(p.deck);p.hand=p.deck.splice(0,7);p.prizes=p.deck.splice(0,6);p.ready=true;}
@@ -378,14 +383,19 @@ function autoMulligan(p,isMe){return hasBasic(p).then(function(ok){if(ok||p.mull
   return autoMulligan(p,isMe);});}
 function mulligan(){if(!confirm('멀리건: 손패를 덱에 되돌리고 셔플 후 7장 다시 뽑습니다. (기본 포켓몬이 없을 때만)'))return;
   me.deck=shuffle(me.deck.concat(me.hand,me.prizes));me.hand=me.deck.splice(0,7);me.prizes=me.deck.splice(0,6);log('멀리건 (상대는 원하면 1장 더 드로)');sync();}
-function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;me.drew=false;fxBanner('▶ 내 턴 '+turnNo+' — 드로하세요');setTimeout(coach,300);}
+function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;me.drew=false;fxBanner('▶ 내 턴 '+turnNo+' — 드로하세요'+(rules.timer?' ('+rules.timer+'초)':''));setTimeout(coach,300);startTimer(true);}
+function startTimer(mine){stopTimer();if(!rules.timer){$('timer').textContent='';return;}timerLeft=rules.timer;paintTimer();
+  timerIv=setInterval(function(){timerLeft--;paintTimer();if(timerLeft===15&&mine){toast('15초 남았어요!');buzz();}
+    if(timerLeft<=0){stopTimer();if(mine&&turn==='me'){log('시간 초과 — 자동 턴 종료');fxBanner('⏱ 시간 초과 — 턴 자동 종료',true);closeSheet();$('btnEnd').onclick({preventDefault:function(){},skip:true});}}},1000);}
+function stopTimer(){if(timerIv){clearInterval(timerIv);timerIv=null;}}
+function paintTimer(){var t=$('timer');if(!rules.timer){t.textContent='';return;}t.textContent='⏱'+timerLeft;t.classList.toggle('low',timerLeft<=15);}
 $('btnEnd').onclick=function(e){e.preventDefault();if(turn!=='me'){toast('내 턴이 아니에요');return;}
   if(!e.skip&&!confirm('턴을 종료할까요?'))return;
   var st=[];[me.active].concat(me.bench).forEach(function(x){if(x&&(x.status.poison||x.status.burn))st.push(topCard(x).name);});if(st.length)toast('포켓몬 체크: '+st.join(', ')+' 독/화상 데미지 잊지 마세요');
   if(me.active&&me.active.status.paralyzed){me.active.status.paralyzed=false;log('마비 해제 (턴 종료)');}
   log('턴 종료');turnNo++;
-  if(solo){turn='opp';var t=me;me=opp;opp=t;/* 시점 전환 없이 상대 턴 시작 */me.energyUsed=false;me.supporterUsed=false;me.attacked=false;turn='me';toast('상대(연습) 턴 — 시점이 전환됐어요');sync();return;}
-  turn='opp';send({t:'turn',turn:'me',no:turnNo});fxBanner('상대 턴',true);render();};
+  if(solo){turn='opp';var t=me;me=opp;opp=t;/* 시점 전환 없이 상대 턴 시작 */me.energyUsed=false;me.supporterUsed=false;me.attacked=false;me.drew=false;turn='me';toast('상대(연습) 턴 — 시점이 전환됐어요');startTimer(true);sync();return;}
+  turn='opp';send({t:'turn',turn:'me',no:turnNo});fxBanner('상대 턴',true);startTimer(false);render();};
 $('btnSwap').onclick=function(e){e.preventDefault();if(!solo)return;var t=me;me=opp;opp=t;turn=turn==='me'?'opp':'me';sync();toast('시점: '+me.nick);};
 
 /* ---------- 렌더 ---------- */
@@ -414,13 +424,7 @@ function render(){
   $('flags').textContent=(me.energyUsed?'⚡사용 ':'⚡가능 ')+(me.supporterUsed?'서포트✔':'서포트○');
   bind();markRec();
 }
-function longPress(el,onTap,onLong){var t=null,l=false,sx=0,sy=0;
-  el.addEventListener('pointerdown',function(e){l=false;sx=e.clientX;sy=e.clientY;if(t)clearTimeout(t);t=setTimeout(function(){t=null;l=true;onLong();},480);});
-  el.addEventListener('pointermove',function(e){if(t&&(Math.abs(e.clientX-sx)>12||Math.abs(e.clientY-sy)>12)){clearTimeout(t);t=null;}});
-  el.addEventListener('pointerup',function(){if(t){clearTimeout(t);t=null;}});
-  el.addEventListener('pointercancel',function(){if(t){clearTimeout(t);t=null;}});
-  el.addEventListener('click',function(e){e.preventDefault();if(l){l=false;return;}onTap();});
-  el.addEventListener('contextmenu',function(e){e.preventDefault();});}
+function longPress(el,onTap,onLong){el.onclick=function(e){e.preventDefault();onTap();};}
 function bind(){
   document.querySelectorAll('#mHand .c').forEach(function(el){longPress(el,function(){handMenu(+el.dataset.i);},function(){var c=me.hand[+el.dataset.i];cardDetail(c.id,c.name);});});
   document.querySelectorAll('.slot[data-k="m"]').forEach(function(el){longPress(el,function(){var i=+el.dataset.i;var s=i<0?me.active:me.bench[i];if(s)fieldMenu(s,i);else emptySlot(i);},function(){var i=+el.dataset.i;var s=i<0?me.active:me.bench[i];if(s)cardDetail(topCard(s).id,topCard(s).name);});});
@@ -440,7 +444,7 @@ function concede(){if(!confirm('항복할까요?'))return;log('항복');closeShe
 
 /* ---------- 승패·전적 ---------- */
 var ended=false;
-function gameOver(iWin,fromOpp){if(ended)return;ended=true;
+function gameOver(iWin,fromOpp){if(ended)return;ended=true;stopTimer();$('timer').textContent='';
   var oppNick=(oppPub&&oppPub.nick)||opp&&opp.nick||'상대';
   big(iWin?'🏆 승리!':'패배…');log(iWin?'승리!':'패배');
   if(!fromOpp&&!solo)send({t:'result',win:iWin});
@@ -485,7 +489,7 @@ function prizeMenu(){if(!me.prizes.length){toast('프라이즈 없음');return;}
 /* ---------- 손패 ---------- */
 function isBasicGuess(c){return true;}
 function handMenu(i){var c=me.hand[i];
-  var pv='<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+'</b><span id="hmType">정보 확인 중…</span><br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세 (한국어)</a></div></div>';
+  var pv='<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+'</b><span id="hmType">정보 확인 중…</span><br><button type="button" class="sm soft" style="margin-top:6px" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\')">📖 카드 설명 보기</button></div></div>';
   sheet(pv+'<div class="acts" id="hmActs"><button type="button" class="ghost full" onclick="closeSheet()">닫기</button></div>');
   cardData(c.id).then(function(d){renderHandActs(i,c,d);}).catch(function(){renderHandActs(i,c,null);});}
 function renderHandActs(i,c,d){var acts=$('hmActs');if(!acts)return;var t=$('hmType');
@@ -508,7 +512,7 @@ function renderHandActs(i,c,d){var acts=$('hmActs');if(!acts)return;var t=$('hmT
   acts.innerHTML=h;}
 function playStadium(i){var c=me.hand.splice(i,1)[0];if(me.stadium){me.discard.push(me.stadium);log('스타디움 '+me.stadium.name+' 교체');}me.stadium=c;log('스타디움 '+c.name+' 놓음');
   if(solo){if(opp.stadium){opp.discard.push(opp.stadium);opp.stadium=null;oppPub=pub(opp);}}else send({t:'stadium',name:c.name});sync();closeSheet();}
-function stadiumMenu(){var c=me.stadium;sheet('<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+'</b>내 스타디움<br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세</a></div></div><div class="acts"><button type="button" class="warn full" onclick="me.discard.push(me.stadium);log(\'스타디움 \'+me.stadium.name+\' 트래시\');me.stadium=null;sync();closeSheet()">트래시 (효과로 제거)</button><button type="button" class="ghost full" onclick="closeSheet()">닫기</button></div>');}
+function stadiumMenu(){var c=me.stadium;sheet('<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+'</b>내 스타디움<br><button type="button" class="sm soft" style="margin-top:6px" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\')">📖 카드 설명 보기</button></div></div><div class="acts"><button type="button" class="warn full" onclick="me.discard.push(me.stadium);log(\'스타디움 \'+me.stadium.name+\' 트래시\');me.stadium=null;sync();closeSheet()">트래시 (효과로 제거)</button><button type="button" class="ghost full" onclick="closeSheet()">닫기</button></div>');}
 function toActive(i){var c=me.hand.splice(i,1)[0];me.active=slotOf(c);log(c.name+' 배틀 포켓몬으로');sync();closeSheet();}
 function toBench(i){if(me.bench.length>=8){toast('벤치가 꽉 찼어요');return;}if(rules.enforce&&me.bench.length>=5&&!confirm('벤치 5장 초과 — 특수 효과(스타디움 등)로 늘어난 경우에만 확인'))return;var c=me.hand.splice(i,1)[0];me.bench.push(slotOf(c));log(c.name+' 벤치에');sync();closeSheet();}
 function handTo(i,where){var c=me.hand.splice(i,1)[0];if(where==='discard')me.discard.push(c);else if(where==='lost')me.lost.push(c);else if(where==='deckTop')me.deck.unshift(c);else me.deck.push(c);log(c.name+' → '+({discard:'트래시',lost:'로스트존',deckTop:'덱 위',deckBottom:'덱 아래'})[where]);sync();closeSheet();}
@@ -602,7 +606,7 @@ function applyAttack(hits,an,status){buzz();applyAttackTo(me,hits,status);
 /* ---------- 필드 ---------- */
 function fieldMenu(s,i){var c=topCard(s);var isA=i<0;
   var stBtn=Object.keys(STATUS).map(function(k){return '<button type="button" class="sm '+(s.status[k]?'':'ghost')+'" onclick="tog('+i+',\''+k+'\')">'+STATUS[k]+'</button>';}).join('');
-  sheet('<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+(isA?' (배틀)':' (벤치'+(i+1)+')')+'</b>데미지 '+s.dmg+' · 에너지 '+s.energy.length+'장'+(s.tools.length?' · 도구 '+s.tools.length:'')+(s.stack.length>1?' · 진화 '+s.stack.length+'단':'')+'<br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세 보기</a></div></div>'+
+  sheet('<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+(isA?' (배틀)':' (벤치'+(i+1)+')')+'</b>데미지 '+s.dmg+' · 에너지 '+s.energy.length+'장'+(s.tools.length?' · 도구 '+s.tools.length:'')+(s.stack.length>1?' · 진화 '+s.stack.length+'단':'')+'<br><button type="button" class="sm soft" style="margin-top:6px" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\')">📖 카드 설명 보기</button></div></div>'+
    '<div class="acts"><button type="button" class="warn" onclick="dmg('+i+',10)">데미지 +10</button><button type="button" class="soft" onclick="dmg('+i+',-10)">데미지 −10</button>'+
    '<button type="button" class="warn" onclick="dmg('+i+',30)">+30</button><button type="button" class="soft" onclick="dmg('+i+',0,true)">직접 입력</button>'+
    '<div class="full" style="display:flex;gap:4px;flex-wrap:wrap">'+stBtn+'</div>'+
@@ -639,16 +643,15 @@ function ko(i){var s=getSlot(i);if(!confirm(topCard(s).name+' 기절 처리? (�
 function fieldTo(i,where){var s=getSlot(i);var cards=allCards(s);if(!confirm(topCard(s).name+' 카드 '+cards.length+'장 전부 이동?'))return;removeSlot(i);
   if(where==='hand')me.hand=me.hand.concat(cards);else if(where==='lost')me.lost=me.lost.concat(cards);else me.deck=shuffle(me.deck.concat(cards));log(topCard(s).name+' 전부 → '+({hand:'손패',lost:'로스트존',deck:'덱'})[where]);sync();closeSheet();}
 function emptySlot(i){if(!me.hand.length){toast('손패에서 카드를 골라 내세요');return;}toast('손패의 카드를 눌러 "벤치에 내기"');}
-function oppSlot(s){var c=topCard(s);sheet('<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+'</b>데미지 '+s.dmg+' · 에너지 '+s.energy.length+'장'+(s.stack.length>1?' · 진화 '+s.stack.length+'단':'')+'<br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세 보기</a></div></div>'+
+function oppSlot(s){var c=topCard(s);sheet('<div class="preview">'+imgTagOf(c)+'<div class="info"><b>'+esc(c.name)+'</b>데미지 '+s.dmg+' · 에너지 '+s.energy.length+'장'+(s.stack.length>1?' · 진화 '+s.stack.length+'단':'')+'<br><button type="button" class="sm soft" style="margin-top:6px" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\')">📖 카드 설명 보기</button></div></div>'+
   (s.energy.length||s.tools.length?'<div class="list">'+s.energy.concat(s.tools).map(function(x){return '<div class="c">'+imgTagOf(x)+'<div class="n">'+esc(x.name)+'</div></div>';}).join('')+'</div>':'')+
   (s.stack.length>1?'<p style="font-size:12px;color:var(--ink2)">진화 스택: '+s.stack.map(function(x){return esc(x.name);}).join(' → ')+'</p>':''));}
 function pileView(list,title,mine){if(!list.length){toast(title+' 비어 있음');return;}
-  sheet('<h3>'+title+' ('+list.length+'장)'+(mine?' — 누르면 손패로':'')+'</h3><div class="list">'+list.slice().reverse().map(function(c){return '<div class="c" data-u="'+c.uid+'">'+imgTagOf(c)+'<div class="n">'+esc(c.name)+'</div></div>';}).join('')+'</div>'+(mine?'<p style="font-size:12px;color:var(--ink2)">길게 누르면 덱으로(셔플)</p>':''));
-  if(!mine)return;
-  document.querySelectorAll('#sheetIn .c').forEach(function(el){
-    longPress(el,function(){move('hand');},function(){move('deck');});
-    function move(where){var j=list.findIndex(function(c){return c.uid===el.dataset.u;});if(j<0)return;var c=list.splice(j,1)[0];if(where==='hand')me.hand.push(c);else me.deck=shuffle(me.deck.concat([c]));log(c.name+' '+title.replace('내 ','')+' → '+(where==='hand'?'손패':'덱'));el.remove();sync();}
-  });}
+  sheet('<h3>'+title+' ('+list.length+'장)'+(mine?' — 누르면 손패로':' — 누르면 설명')+'</h3><div class="list">'+list.slice().reverse().map(function(c){return '<div class="c" data-u="'+c.uid+'">'+imgTagOf(c)+'<div class="n">'+esc(c.name)+'</div>'+(mine?'<button type="button" class="sm ghost" style="width:100%;border-radius:0 0 6px 6px" data-info="'+c.id+'" data-nm="'+esc(c.name)+'">📖</button><button type="button" class="sm ghost" style="width:100%;border-radius:0" data-deck="'+c.uid+'">덱으로</button>':'')+'</div>';}).join('')+'</div>');
+  document.querySelectorAll('#sheetIn [data-info]').forEach(function(b){b.onclick=function(e){e.stopPropagation();cardDetail(b.dataset.info,b.dataset.nm);};});
+  if(!mine){document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var c=list.find(function(x){return x.uid===el.dataset.u;});if(c)cardDetail(c.id,c.name);};});return;}
+  document.querySelectorAll('#sheetIn [data-deck]').forEach(function(b){b.onclick=function(e){e.stopPropagation();var j=list.findIndex(function(c){return c.uid===b.dataset.deck;});if(j<0)return;var c=list.splice(j,1)[0];me.deck=shuffle(me.deck.concat([c]));log(c.name+' → 덱(셔플)');b.closest('.c').remove();sync();};});
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var j=list.findIndex(function(c){return c.uid===el.dataset.u;});if(j<0)return;var c=list.splice(j,1)[0];me.hand.push(c);log(c.name+' '+title.replace('내 ','')+' → 손패');el.remove();sync();};});}
 
 /* ---------- 초보 도우미 (뮤) ---------- */
 var recSet={};
@@ -682,7 +685,7 @@ function coachAnalyze(){var hints=[],rec={};var o=oppPub||{};
 function coach(){if(!me)return;Promise.all(me.hand.concat(me.active?[topCard(me.active)]:[]).map(function(c){return cardData(c.id).catch(function(){return null;});})).then(function(){var r=coachAnalyze();recSet=r.rec;markRec();var dot=$('mewDot');var n=Object.keys(recSet).length;dot.textContent=n;dot.classList.toggle('on',n>0&&turn==='me');});}
 function markRec(){document.querySelectorAll('#mHand .c').forEach(function(el){var c=me.hand[+el.dataset.i];var on=c&&recSet[c.uid];el.classList.toggle('rec1',!!on);var b=el.querySelector('.rec');if(on&&!b){b=document.createElement('span');b.className='rec';b.textContent='⭐';el.appendChild(b);}else if(!on&&b)b.remove();});}
 $('mewBtn').onclick=function(e){e.preventDefault();coach();var r=coachAnalyze();
-  sheet('<h3>🐾 뮤의 안내 — '+(turn==='me'?'내 턴 '+turnNo:'상대 턴')+'</h3>'+r.hints.map(function(h){return '<div class="hint"><b>'+esc(h[0])+'</b>'+esc(h[1])+'</div>';}).join('')+'<p style="font-size:12px;color:var(--ink2)">⭐ 표시된 손패 카드가 지금 쓸 만한 카드예요. 카드를 길게 누르면 효과를 한국어로 볼 수 있어요.</p><button type="button" class="ghost" onclick="closeSheet()">닫기</button>');};
+  sheet('<h3>🐾 뮤의 안내 — '+(turn==='me'?'내 턴 '+turnNo:'상대 턴')+'</h3>'+r.hints.map(function(h){return '<div class="hint"><b>'+esc(h[0])+'</b>'+esc(h[1])+'</div>';}).join('')+'<p style="font-size:12px;color:var(--ink2)">⭐ 표시된 손패 카드가 지금 쓸 만한 카드예요. 카드를 누르고 [📖 카드 설명 보기]를 누르면 효과를 한국어로 볼 수 있어요.</p><button type="button" class="ghost" onclick="closeSheet()">닫기</button>');};
 
 /* ---------- 카드 상세 (TCGdex) ---------- */
 var dcache={};
