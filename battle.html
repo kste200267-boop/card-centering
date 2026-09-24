@@ -60,7 +60,7 @@
   .mid .turn{font-weight:800;padding:2px 8px;border-radius:999px;background:var(--panel2)}
   .mid .turn.me{background:var(--ok);color:#111}
   .hand{display:flex;gap:6px;overflow-x:auto;padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 8px);background:var(--panel);min-height:112px}
-  .hand .c{flex:0 0 62px;border-radius:6px;overflow:hidden;background:var(--panel2);cursor:pointer}
+  .hand .c{-webkit-touch-callout:none;flex:0 0 62px;border-radius:6px;overflow:hidden;background:var(--panel2);cursor:pointer}
   .hand .c img{width:100%;display:block;aspect-ratio:63/88;object-fit:cover}
   .hand .empty{color:var(--ink2);font-size:12.5px;align-self:center;padding:0 6px}
   .tools{display:flex;gap:6px;padding:6px 10px;background:var(--panel);overflow-x:auto}
@@ -414,11 +414,12 @@ function render(){
   $('flags').textContent=(me.energyUsed?'⚡사용 ':'⚡가능 ')+(me.supporterUsed?'서포트✔':'서포트○');
   bind();markRec();
 }
-function longPress(el,onTap,onLong){var t=null,l=false;
-  el.addEventListener('pointerdown',function(){l=false;t=setTimeout(function(){l=true;t=null;onLong();},480);});
-  el.addEventListener('pointermove',function(){if(t){clearTimeout(t);t=null;}});
-  el.addEventListener('pointerup',function(e){e.preventDefault();if(t){clearTimeout(t);t=null;if(!l)onTap();}});
+function longPress(el,onTap,onLong){var t=null,l=false,sx=0,sy=0;
+  el.addEventListener('pointerdown',function(e){l=false;sx=e.clientX;sy=e.clientY;if(t)clearTimeout(t);t=setTimeout(function(){t=null;l=true;onLong();},480);});
+  el.addEventListener('pointermove',function(e){if(t&&(Math.abs(e.clientX-sx)>12||Math.abs(e.clientY-sy)>12)){clearTimeout(t);t=null;}});
+  el.addEventListener('pointerup',function(){if(t){clearTimeout(t);t=null;}});
   el.addEventListener('pointercancel',function(){if(t){clearTimeout(t);t=null;}});
+  el.addEventListener('click',function(e){e.preventDefault();if(l){l=false;return;}onTap();});
   el.addEventListener('contextmenu',function(e){e.preventDefault();});}
 function bind(){
   document.querySelectorAll('#mHand .c').forEach(function(el){longPress(el,function(){handMenu(+el.dataset.i);},function(){var c=me.hand[+el.dataset.i];cardDetail(c.id,c.name);});});
@@ -644,10 +645,8 @@ function oppSlot(s){var c=topCard(s);sheet('<div class="preview">'+imgTagOf(c)+'
 function pileView(list,title,mine){if(!list.length){toast(title+' 비어 있음');return;}
   sheet('<h3>'+title+' ('+list.length+'장)'+(mine?' — 누르면 손패로':'')+'</h3><div class="list">'+list.slice().reverse().map(function(c){return '<div class="c" data-u="'+c.uid+'">'+imgTagOf(c)+'<div class="n">'+esc(c.name)+'</div></div>';}).join('')+'</div>'+(mine?'<p style="font-size:12px;color:var(--ink2)">길게 누르면 덱으로(셔플)</p>':''));
   if(!mine)return;
-  document.querySelectorAll('#sheetIn .c').forEach(function(el){var t=null,l=false;
-    el.addEventListener('pointerdown',function(){l=false;t=setTimeout(function(){l=true;move('deck');},500);});
-    el.addEventListener('pointerup',function(){if(t){clearTimeout(t);t=null;if(!l)move('hand');}});
-    el.addEventListener('pointermove',function(){if(t){clearTimeout(t);t=null;}});
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){
+    longPress(el,function(){move('hand');},function(){move('deck');});
     function move(where){var j=list.findIndex(function(c){return c.uid===el.dataset.u;});if(j<0)return;var c=list.splice(j,1)[0];if(where==='hand')me.hand.push(c);else me.deck=shuffle(me.deck.concat([c]));log(c.name+' '+title.replace('내 ','')+' → '+(where==='hand'?'손패':'덱'));el.remove();sync();}
   });}
 
