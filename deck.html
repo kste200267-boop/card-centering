@@ -128,6 +128,8 @@ function jpCodes(setId){var s=String(setId||'');if(!s)return [];var out=[s];if(s
   return out.filter(function(v,i){return out.indexOf(v)===i;});}
 function imgCands(c,q){q=q||'low';var out=[];
   var id=String((c&&c.id)||'');var m=id.match(/^([^-]+)-(\d+)$/);
+  var base0=c&&c.img;var enFirst=base0&&/\/(en|fr|de|es|it|pt)\//.test(base0);
+  if(enFirst){var t0=base0.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);if(t0)out.push(base0+'/'+q+'.webp');}
   if(m){var num=m[2];var pad=('000'+num).slice(-3);var un=String(parseInt(num,10));
     jpCodes(m[1]).forEach(function(code){out.push(LIMITLESS+code+'/'+code+'_'+pad+'_R_JP.png');if(un!==pad)out.push(LIMITLESS+code+'/'+code+'_'+un+'_R_JP.png');});}
   var base=c&&c.img;if(base){var t=base.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);
