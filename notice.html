@@ -108,6 +108,8 @@
   .grade tr:last-child td,.grade tr:last-child th{border-bottom:0}
   .g-S{color:#B8860B}.g-A{color:#2E7D32}.g-B{color:#2F5DA8}.g-C{color:#8E6A1F}.g-D{color:#B04A2A}.g-F{color:var(--red)}
 
+  .poster{width:100%;display:block;border-radius:12px;border:1px solid var(--line);box-shadow:0 6px 18px rgba(214,74,155,.15)}
+
   /* 카드샵 한눈에 표 */
   .shoptab-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px -4px 12px}
   .shoptab{border-collapse:collapse;font-size:13px;min-width:100%;white-space:nowrap}
@@ -251,7 +253,7 @@ var UPDATED = "2026년 9월 21일 기준";
 
 var MUST = {
   title: "⭐ 오픈프로필은 무조건 필수입니다",
-  text: "입장 후 20분 안에 오픈프로필로 바꾸지 않으면 강퇴됩니다 (재가입은 가능). 바꾸는 방법은 아래 '오픈프로필 만들기' 메뉴를 보세요."
+  text: "입장 후 20분 안에 오픈프로필로 바꾸지 않으면 강퇴됩니다 (재가입은 가능). 바꾸는 방법은 아래 '오픈프로필 만들기' 메뉴, 방 규정은 '방 규정' 메뉴를 보세요."
 };
 
 var MENUS = [
@@ -311,6 +313,8 @@ var MENUS = [
     title: "방 규정",
     desc: "예절 · 금지 · 카드샵/업체 · 거래 · 제재",
     body: '\
+      <a href="rules_poster.jpg" target="_blank"><img class="poster" src="rules_poster.jpg" alt="카톡방 이용 규정 포스터"></a>\
+      <p class="legend" style="text-align:center">포스터를 누르면 크게 볼 수 있어요 · 아래는 글 버전</p>\
       <h3>1. 입장과 발언</h3>\
       <ul><li><b>오픈프로필 필수</b> — 20분 안에 안 바꾸면 강퇴(재가입 가능). <span class="legend">개인정보 보호·사기 예방</span></li>\
       <li>많은 사람이 봅니다. 반말·조롱·정치·혐오 발언 금지</li>\
