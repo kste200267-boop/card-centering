@@ -144,6 +144,12 @@
   .shopc-b .hours{font-size:13.5px;margin:0 0 6px}
   .shopc-b .link-btn{margin:8px 0}
   .heart{color:var(--red)}
+  .sec.hot{border:2px solid var(--red);box-shadow:0 8px 24px rgba(214,74,155,.18);background:linear-gradient(180deg,#fff 0%,#FFF3F9 100%)}
+  .sec.hot .sec-head .t::after{content:"NEW";margin-left:8px;font-size:10px;font-weight:800;color:#fff;background:var(--red);border-radius:999px;padding:2px 7px;vertical-align:middle;animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .gamehero{background:linear-gradient(135deg,#F5C842,#F0783C);color:#3a2000;border-radius:12px;padding:14px 16px;font-weight:700;font-size:16px;margin-bottom:10px;line-height:1.35}
+  .gamehero small{display:block;font-weight:500;font-size:12.5px;margin-top:4px;opacity:.85}
+  .link-btn.hot{background:var(--red)!important;font-size:16px;padding:14px!important}
 
   .pray{text-align:center;background:var(--yellow-soft);border:1px dashed var(--yellow);border-radius:10px;padding:10px 12px;margin:-2px 0 10px;font-size:14px}
   .pray b{display:block;font-size:16px;margin-top:2px}
@@ -203,6 +209,7 @@
    - MUST    : 맨 위 노란 필수 공지
    - MENUS   : 메뉴 목록. 항목을 복사해서 붙여넣으면 메뉴가 추가됩니다.
        id   : 영문, 겹치지 않게
+       hot  : true 면 빨간 테두리 + NEW 배지로 강조
        type : 아이콘 종류 (위 ICONS 목록 중 하나: fire, water, electric, grass, psychic, fighting, steel, normal, dark, card)
        title: 메뉴 이름
        desc : 메뉴 타일에 보이는 한 줄 설명
@@ -319,6 +326,30 @@ var MENUS = [
   },
 
   {
+    id: "game",
+    type: "fire",
+    hot: true,
+    title: "⚔️ 카드 대전",
+    desc: "방 멤버끼리 실제 룰로 실시간 1:1 · 덱 추천 · 랭킹",
+    body: '\
+      <div class="gamehero">🎮 폰으로 바로 붙는 포켓몬 카드 대전<br><small>실제 TCG 룰 그대로 · 서버 없이 폰끼리 직접 연결 · 방 인증코드 7942</small></div>\
+      <a class="link-btn hot" href="battle.html">⚔️ 1:1 대전 시작</a>\
+      <a class="link-btn" href="meta.html">🧭 내 스타일 덱 찾기 (대회 상위 20덱 자동 생성)</a>\
+      <a class="link-btn soft" href="deck.html">🃏 덱 직접 만들기</a>\
+      <a class="link-btn soft" href="rank.html">🏆 대전 랭킹</a>\
+      <h3>처음이면 이렇게</h3>\
+      <ol class="steps">\
+        <li><b>덱 만들기</b> — 귀찮으면 [내 스타일 덱 찾기]에서 질문 7개 답하고 "이 덱 바로 만들기"</li>\
+        <li><b>대전 페이지</b>에서 닉네임·인증코드 7942·PIN 4자리 입력</li>\
+        <li>한 명이 [방 만들기] → 코드 4자리를 카톡으로 → 상대가 [참가]</li>\
+        <li>모르겠으면 화면 오른쪽 아래 <b>뮤 버튼</b> — 지금 뭘 해야 하는지, 쓸 카드에 ⭐ 표시</li>\
+        <li>카드를 <b>길게 누르면</b> 효과를 한국어로 볼 수 있어요. [혼자 연습]으로 먼저 익혀도 OK</li>\
+      </ol>\
+      <div class="note">경기가 끝나면 전적이 자동 저장돼요. PIN은 내 닉네임 기록을 남이 못 올리게 막는 용도라 처음 정한 걸 기억해 두세요.</div>\
+      <div class="warn">베타예요. 안 되는 게 있으면 스크린샷과 함께 방 대장 SoR에게 알려주세요.</div>'
+  },
+
+  {
     id: "private",
     type: "dark",
     title: "비공개 방 전환",
@@ -424,18 +455,12 @@ var MENUS = [
     id: "tools",
     type: "steel",
     title: "우리 방 도구",
-    desc: "센터링 · 도감 · 박스깡 · 대전",
+    desc: "센터링 · 도감 · 박스깡",
     body: '\
       <a class="link-btn soft" href="index.html">센터링 계산기</a>\
       <a class="link-btn soft" href="pokedex.html">포켓몬 카드 도감</a>\
       <a class="link-btn soft" href="boxbreak.html">박스깡 시뮬레이터</a>\
-      <a class="link-btn soft" href="market.html">거래 게시판</a>\
-      <h3>⚔️ 1:1 대전 (베타)</h3>\
-      <p class="legend">실제 TCG 룰로 방 멤버끼리 실시간 대전. 덱 빌더에서 60장 덱을 만들고, 대전 페이지에서 방 코드 4자리로 붙습니다.</p>\
-      <a class="link-btn" href="meta.html">🧭 내 스타일 덱 찾기 (대회 상위 20덱)</a>\
-      <a class="link-btn" href="deck.html">덱 빌더</a>\
-      <a class="link-btn" href="battle.html">1:1 대전</a>\
-      <a class="link-btn soft" href="rank.html">🏆 대전 랭킹</a>'
+      <a class="link-btn soft" href="market.html">거래 게시판</a>'
   }
 
 ];
@@ -456,7 +481,7 @@ var MENUS = [
   MENUS.forEach(function(m){
     var ic = ICONS[m.type] || ICONS.normal;
     var sec = document.createElement('section');
-    sec.className = 'sec';
+    sec.className = 'sec' + (m.hot ? ' hot' : '');
     sec.id = 'sec-' + m.id;
     sec.innerHTML =
       '<button type="button" class="sec-head" aria-expanded="false">' +
