@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>덱 빌더 · 대구 포켓몬 카드 방</title>
+<style>
+  :root{--bg:#F8F4FB;--paper:#fff;--ink:#1D1B16;--ink2:#5B5850;--line:#E6DEEE;--pink:#D64A9B;--pinkS:#FBE8F3;--blue:#5A7BD6;--blueS:#EAEFFC;--ok:#2E7D32;--warn:#C0392B;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+  *,*::before,*::after{box-sizing:inherit}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5;word-break:keep-all;-webkit-text-size-adjust:100%}
+  a{color:var(--blue)}
+  .top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);padding:10px 12px}
+  .top h1{margin:0 0 8px;font-size:18px}
+  .row{display:flex;gap:6px;align-items:center}
+  input,select,button{font:inherit}
+  input[type=text],select{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  button{border:0;border-radius:10px;padding:9px 12px;background:var(--pink);color:#fff;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+  button.soft{background:var(--blueS);color:var(--blue)}
+  button.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+  button:disabled{opacity:.45}
+  .wrap{padding:10px 10px 120px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  @media(min-width:520px){.grid{grid-template-columns:repeat(6,1fr)}}
+  .card{position:relative;background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+  .card img{width:100%;display:block;aspect-ratio:63/88;object-fit:cover;background:#eee}
+  .card .nm{font-size:10.5px;padding:3px 4px;line-height:1.2;height:30px;overflow:hidden;color:var(--ink2)}
+  .card .cnt{position:absolute;top:4px;right:4px;background:var(--pink);color:#fff;font-size:12px;font-weight:700;border-radius:999px;min-width:20px;height:20px;line-height:20px;text-align:center;padding:0 5px}
+  .card .cnt.z{display:none}
+  .msg{color:var(--ink2);font-size:13px;padding:10px 2px}
+  /* 덱 패널 */
+  .deckbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--paper);border-top:1px solid var(--line);padding:8px 12px env(safe-area-inset-bottom,8px)}
+  .deckbar .st{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px}
+  .deckbar .st b{font-size:16px}
+  .deckbar .st .bad{color:var(--warn)}.deckbar .st .good{color:var(--ok)}
+  .sheet{display:none;position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.35)}
+  .sheet.on{display:block}
+  .sheet .in{position:absolute;left:0;right:0;bottom:0;max-height:88%;background:var(--paper);border-radius:16px 16px 0 0;padding:12px 12px env(safe-area-inset-bottom,12px);overflow:auto}
+  .sheet h2{margin:0 0 8px;font-size:16px}
+  .dl{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+  .dl img{width:38px;border-radius:4px}
+  .dl .n{flex:1;font-size:14px}
+  .dl .n small{display:block;color:var(--ink2);font-size:12px}
+  .dl button{padding:5px 10px;font-size:14px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+  .chip{font-size:12px;background:var(--blueS);color:var(--blue);border-radius:999px;padding:3px 9px}
+  textarea{width:100%;font:inherit;font-size:12px;padding:8px;border:1px solid var(--line);border-radius:10px;min-height:80px}
+  .detail img{width:100%;max-width:320px;display:block;margin:0 auto 8px;border-radius:10px}
+  .detail .atk{background:var(--bg);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13.5px}
+  .detail .atk b{display:block}
+  .nav{display:flex;gap:6px;margin-top:6px}
+  .nav a{flex:1;text-align:center;background:var(--blueS);color:var(--blue);padding:8px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🃏 덱 빌더</h1>
+  <div class="row">
+    <select id="setSel"><option>세트 불러오는 중…</option></select>
+    <select id="langSel" style="flex:0 0 78px"><option value="ko">한국어</option><option value="ja">일본어</option><option value="en">영어</option></select>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <input type="text" id="q" placeholder="카드 이름 검색 (현재 세트)">
+    <button type="button" class="soft" id="btnDecks">내 덱</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="msg" id="msg">세트를 고르면 카드가 나옵니다. 카드를 누르면 덱에 담기고, 길게 누르면 상세가 보여요.</div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="deckbar">
+  <div class="st"><span id="deckName">새 덱</span><b><span id="cnt">0</span>/60</b><span id="chk"></span></div>
+  <div class="row">
+    <button type="button" class="soft" id="btnOpen">덱 보기</button>
+    <button type="button" id="btnSave">저장</button>
+    <button type="button" class="ghost" id="btnCode">덱 코드</button>
+    <a href="battle.html" style="flex:1;text-align:center;background:var(--ink);color:#fff;padding:9px;border-radius:10px;text-decoration:none;font-weight:600">대전 →</a>
+  </div>
+</div>
+
+<!-- 시트들 -->
+<div class="sheet" id="shDeck"><div class="in">
+  <h2>현재 덱 <small id="deckSum" style="font-weight:400;color:var(--ink2)"></small></h2>
+  <div class="row"><input type="text" id="deckNameIn" placeholder="덱 이름"><button type="button" class="ghost" id="btnClear">비우기</button></div>
+  <div id="deckList"></div>
+  <div class="nav"><a href="#" id="closeDeck">닫기</a></div>
+</div></div>
+
+<div class="sheet" id="shDecks"><div class="in">
+  <h2>저장된 덱</h2>
+  <div id="decksList"></div>
+  <p class="msg">이 브라우저에 저장됩니다. 다른 기기로 옮기려면 덱 코드를 카톡으로 보내고 그쪽에서 붙여넣기.</p>
+  <div class="nav"><a href="#" id="newDeck">+ 새 덱</a><a href="#" id="closeDecks">닫기</a></div>
+</div></div>
+
+<div class="sheet" id="shCode"><div class="in">
+  <h2>덱 코드</h2>
+  <textarea id="codeOut" readonly></textarea>
+  <div class="row" style="margin:6px 0"><button type="button" class="soft" id="btnCopy">복사</button></div>
+  <h2 style="margin-top:12px">코드 붙여넣기</h2>
+  <textarea id="codeIn" placeholder="받은 덱 코드를 붙여넣고 불러오기"></textarea>
+  <div class="row" style="margin:6px 0"><button type="button" id="btnImport">불러오기</button></div>
+  <div class="nav"><a href="#" id="closeCode">닫기</a></div>
+</div></div>
+
+<div class="sheet" id="shDetail"><div class="in detail" id="detailIn"></div></div>
+
+<script>
+var API = 'https://api.tcgdex.net/v2/';
+var LANGS = ['ko','ja','en'];
+var lang = localStorage.getItem('dgpk_lang') || 'ko';
+var sets = [], curSet = null, cards = [], detailCache = {};
+var deck = { name:'새 덱', lang:lang, cards:{} }; // id -> {id,name,img,n,cat}
+var LS_DECKS = 'dgpk_decks';
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function img(c, q){ return c.image ? c.image + '/' + (q||'low') + '.webp' : ''; }
+function total(){ var n=0; for(var k in deck.cards) n+=deck.cards[k].n; return n; }
+function show(id,on){ $(id).classList.toggle('on', on!==false); }
+
+/* ---------- 세트 ---------- */
+function loadSets(){
+  $('langSel').value = lang;
+  fetch(API + lang + '/sets').then(function(r){ return r.json(); }).then(function(list){
+    sets = list.filter(function(s){ return /^(sv|me|s|sm)/i.test(s.id); }).reverse();
+    var sel = $('setSel'); sel.innerHTML = '';
+    sets.forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=s.name+' ('+s.id+')'; sel.appendChild(o); });
+    if(sets.length){ sel.value = sets[0].id; loadSet(sets[0].id); }
+    else $('msg').textContent = '이 언어로는 세트 목록이 없어요. 언어를 바꿔 보세요.';
+  }).catch(function(){ $('msg').textContent = '카드 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'; });
+}
+function loadSet(id){
+  $('msg').textContent = '불러오는 중…'; $('grid').innerHTML='';
+  fetch(API + lang + '/sets/' + id).then(function(r){ return r.json(); }).then(function(s){
+    curSet = s; cards = s.cards || [];
+    $('msg').textContent = s.name + ' · ' + cards.length + '장';
+    render();
+  }).catch(function(){ $('msg').textContent = '세트를 불러오지 못했어요.'; });
+}
+function render(){
+  var q = $('q').value.trim().toLowerCase();
+  var g = $('grid'); g.innerHTML = '';
+  cards.filter(function(c){ return !q || (c.name||'').toLowerCase().indexOf(q)>-1; }).forEach(function(c){
+    var d = document.createElement('div'); d.className='card';
+    var n = deck.cards[c.id] ? deck.cards[c.id].n : 0;
+    d.innerHTML = '<img loading="lazy" src="'+img(c)+'" alt=""><div class="nm">'+esc(c.name)+'<br>#'+esc(c.localId)+'</div><span class="cnt'+(n?'':' z')+'">'+n+'</span>';
+    var t=null, longed=false;
+    d.addEventListener('pointerdown', function(){ longed=false; t=setTimeout(function(){ longed=true; openDetail(c); },480); });
+    d.addEventListener('pointermove', function(){ if(t){ clearTimeout(t); t=null; } });
+    d.addEventListener('pointerup', function(e){ e.preventDefault(); if(t){ clearTimeout(t); t=null; if(!longed) add(c); } });
+    d.addEventListener('pointercancel', function(){ if(t){ clearTimeout(t); t=null; } });
+    d.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    g.appendChild(d);
+  });
+}
+
+/* ---------- 덱 ---------- */
+function add(c){
+  var e = deck.cards[c.id] || (deck.cards[c.id] = {id:c.id, name:c.name, img:c.image, n:0});
+  var sameName = 0; for(var k in deck.cards) if(deck.cards[k].name===c.name) sameName += deck.cards[k].n;
+  var isEnergy = /에너지|Energy|エネルギー/.test(c.name) && !/특수|Special/.test(c.name);
+  if(total() >= 60){ toast('60장이 꽉 찼어요'); return; }
+  if(!isEnergy && sameName >= 4){ toast('같은 이름은 4장까지'); return; }
+  e.n++; e.img = c.image; update();
+}
+function sub(id){ var e=deck.cards[id]; if(!e) return; e.n--; if(e.n<=0) delete deck.cards[id]; update(); }
+function update(){
+  var n = total(); $('cnt').textContent = n;
+  var chk = $('chk'); chk.textContent = n===60 ? '✔ 60장' : (60-n)+'장 남음'; chk.className = n===60?'good':'bad';
+  $('deckName').textContent = deck.name;
+  render(); renderDeck();
+}
+function renderDeck(){
+  var box=$('deckList'); box.innerHTML='';
+  var list = Object.keys(deck.cards).map(function(k){ return deck.cards[k]; }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+  $('deckSum').textContent = total()+'장 · '+list.length+'종';
+  list.forEach(function(e){
+    var d=document.createElement('div'); d.className='dl';
+    d.innerHTML='<img src="'+(e.img?e.img+'/low.webp':'')+'" alt=""><div class="n">'+esc(e.name)+'<small>'+esc(e.id)+'</small></div><button type="button" class="ghost">−</button><b>'+e.n+'</b><button type="button" class="soft">+</button>';
+    d.querySelectorAll('button')[0].onclick=function(ev){ ev.preventDefault(); sub(e.id); };
+    d.querySelectorAll('button')[1].onclick=function(ev){ ev.preventDefault(); add({id:e.id,name:e.name,image:e.img,localId:''}); };
+    box.appendChild(d);
+  });
+  $('deckNameIn').value = deck.name;
+}
+function getDecks(){ try{ return JSON.parse(localStorage.getItem(LS_DECKS)||'[]'); }catch(e){ return []; } }
+function saveDeck(){
+  deck.name = $('deckNameIn').value.trim() || deck.name || '새 덱'; deck.lang = lang;
+  var decks = getDecks(); var i = decks.findIndex(function(d){ return d.name===deck.name; });
+  var copy = JSON.parse(JSON.stringify(deck)); copy.saved = Date.now();
+  if(i>-1) decks[i]=copy; else decks.push(copy);
+  try{ localStorage.setItem(LS_DECKS, JSON.stringify(decks)); toast('저장됨: '+deck.name); }catch(e){ toast('저장 실패 (저장공간)'); }
+  update();
+}
+function renderDecks(){
+  var box=$('decksList'); box.innerHTML='';
+  var decks=getDecks(); if(!decks.length){ box.innerHTML='<p class="msg">저장된 덱이 없어요.</p>'; return; }
+  decks.forEach(function(d,i){
+    var n=0; for(var k in d.cards) n+=d.cards[k].n;
+    var row=document.createElement('div'); row.className='dl';
+    row.innerHTML='<div class="n">'+esc(d.name)+'<small>'+n+'장 · '+new Date(d.saved).toLocaleDateString('ko-KR')+'</small></div><button type="button" class="soft">열기</button><button type="button" class="ghost">삭제</button>';
+    row.querySelectorAll('button')[0].onclick=function(e){ e.preventDefault(); deck=JSON.parse(JSON.stringify(d)); if(deck.lang && deck.lang!==lang){ lang=deck.lang; localStorage.setItem('dgpk_lang',lang); loadSets(); } update(); show('shDecks',false); };
+    row.querySelectorAll('button')[1].onclick=function(e){ e.preventDefault(); if(!confirm('"'+d.name+'" 덱을 삭제할까요?')) return; decks.splice(i,1); localStorage.setItem(LS_DECKS,JSON.stringify(decks)); renderDecks(); };
+    box.appendChild(row);
+  });
+}
+function toCode(){ return btoa(unescape(encodeURIComponent(JSON.stringify({name:deck.name,lang:deck.lang,cards:deck.cards})))); }
+function fromCode(s){
+  try{ var o=JSON.parse(decodeURIComponent(escape(atob(s.trim())))); if(!o.cards) throw 0; deck={name:o.name||'가져온 덱',lang:o.lang||lang,cards:o.cards}; update(); toast('불러옴: '+deck.name); return true; }
+  catch(e){ toast('코드가 올바르지 않아요'); return false; }
+}
+
+/* ---------- 상세 ---------- */
+function openDetail(c){
+  var box=$('detailIn'); box.innerHTML='<img src="'+img(c,'high')+'" alt=""><p class="msg">상세 불러오는 중…</p>'; show('shDetail');
+  $('shDetail').onclick=function(e){ if(e.target===$('shDetail')) show('shDetail',false); };
+  var p = detailCache[c.id] ? Promise.resolve(detailCache[c.id]) : fetch(API+lang+'/cards/'+c.id).then(function(r){ return r.json(); }).then(function(d){ detailCache[c.id]=d; return d; });
+  p.then(function(d){
+    var h='<img src="'+img(c,'high')+'" alt=""><h2>'+esc(d.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(d.category)+(d.stage?' · '+esc(d.stage):'')+(d.hp?' · HP '+d.hp:'')+'</small></h2>';
+    if(d.types) h+='<div class="chips">'+d.types.map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join('')+(d.evolveFrom?'<span class="chip">← '+esc(d.evolveFrom)+'</span>':'')+'</div>';
+    (d.abilities||[]).forEach(function(a){ h+='<div class="atk"><b>[특성] '+esc(a.name)+'</b>'+esc(a.effect||'')+'</div>'; });
+    (d.attacks||[]).forEach(function(a){ h+='<div class="atk"><b>'+(a.cost||[]).map(function(x){return x[0];}).join('')+' '+esc(a.name)+(a.damage?' — '+esc(a.damage):'')+'</b>'+esc(a.effect||'')+'</div>'; });
+    if(d.effect) h+='<div class="atk">'+esc(d.effect)+'</div>';
+    var meta=[]; if(d.weaknesses) meta.push('약점 '+d.weaknesses.map(function(w){return w.type+w.value;}).join(',')); if(d.resistances) meta.push('저항 '+d.resistances.map(function(w){return w.type+w.value;}).join(',')); if(d.retreat!=null) meta.push('후퇴 '+d.retreat);
+    if(meta.length) h+='<p class="msg">'+meta.join(' · ')+'</p>';
+    h+='<div class="row"><button type="button" id="dAdd">덱에 담기</button><button type="button" class="ghost" id="dClose">닫기</button></div>';
+    box.innerHTML=h; $('dAdd').onclick=function(e){ e.preventDefault(); add(c); }; $('dClose').onclick=function(e){ e.preventDefault(); show('shDetail',false); };
+  }).catch(function(){ box.innerHTML+='<p class="msg">상세를 불러오지 못했어요.</p>'; });
+}
+
+var tt; function toast(m){ var t=$('toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#1D1B16;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:20;opacity:0;transition:opacity .2s'; document.body.appendChild(t);} t.textContent=m; t.style.opacity=1; clearTimeout(tt); tt=setTimeout(function(){ t.style.opacity=0; },1500); }
+
+/* ---------- 이벤트 ---------- */
+$('setSel').onchange=function(){ loadSet(this.value); };
+$('langSel').onchange=function(){ lang=this.value; localStorage.setItem('dgpk_lang',lang); loadSets(); };
+$('q').oninput=render;
+$('btnOpen').onclick=function(e){ e.preventDefault(); renderDeck(); show('shDeck'); };
+$('closeDeck').onclick=function(e){ e.preventDefault(); deck.name=$('deckNameIn').value.trim()||deck.name; update(); show('shDeck',false); };
+$('btnClear').onclick=function(e){ e.preventDefault(); if(confirm('덱을 비울까요?')){ deck.cards={}; update(); } };
+$('btnSave').onclick=function(e){ e.preventDefault(); if($('shDeck').classList.contains('on')) deck.name=$('deckNameIn').value.trim()||deck.name; saveDeck(); };
+$('btnDecks').onclick=function(e){ e.preventDefault(); renderDecks(); show('shDecks'); };
+$('closeDecks').onclick=function(e){ e.preventDefault(); show('shDecks',false); };
+$('newDeck').onclick=function(e){ e.preventDefault(); deck={name:'새 덱 '+(getDecks().length+1),lang:lang,cards:{}}; update(); show('shDecks',false); };
+$('btnCode').onclick=function(e){ e.preventDefault(); $('codeOut').value=toCode(); show('shCode'); };
+$('closeCode').onclick=function(e){ e.preventDefault(); show('shCode',false); };
+$('btnCopy').onclick=function(e){ e.preventDefault(); $('codeOut').select(); try{ document.execCommand('copy'); toast('복사됨'); }catch(x){} };
+$('btnImport').onclick=function(e){ e.preventDefault(); if(fromCode($('codeIn').value)) show('shCode',false); };
+['shDeck','shDecks','shCode'].forEach(function(id){ $(id).onclick=function(e){ if(e.target===$(id)) show(id,false); }; });
+
+loadSets(); update();
+</script>
+</body>
+</html>
