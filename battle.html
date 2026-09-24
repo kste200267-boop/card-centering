@@ -92,6 +92,24 @@
   .hand .noimg,.list .noimg{border-radius:6px 6px 0 0}
   .preview .noimg{width:96px;font-size:12px}
   .detail .noimg{width:100%;max-width:300px;margin:0 auto 8px;font-size:16px}
+  @keyframes hit{0%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-3deg)}40%{transform:translateX(6px) rotate(3deg)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}100%{transform:translateX(0)}}
+  @keyframes flash{0%{box-shadow:0 0 0 0 rgba(255,80,80,.9)}100%{box-shadow:0 0 0 14px rgba(255,80,80,0)}}
+  @keyframes pop{0%{opacity:0;transform:translate(-50%,0) scale(.6)}20%{opacity:1;transform:translate(-50%,-10px) scale(1.2)}100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
+  @keyframes kof{0%{opacity:1;filter:grayscale(0)}100%{opacity:0;filter:grayscale(1);transform:scale(.6) rotate(12deg)}}
+  @keyframes banner{0%{transform:translateY(-120%);opacity:0}15%{transform:translateY(0);opacity:1}85%{transform:translateY(0);opacity:1}100%{transform:translateY(-120%);opacity:0}}
+  @keyframes glow{0%,100%{box-shadow:0 0 0 2px var(--ok)}50%{box-shadow:0 0 12px 4px var(--ok)}}
+  .slot.hit{animation:hit .5s ease,flash .6s ease}
+  .slot.kof{animation:kof .7s ease forwards}
+  .slot.glow{animation:glow 1.2s ease infinite}
+  .dmgpop{position:fixed;z-index:26;left:50%;font-size:30px;font-weight:900;color:#fff;text-shadow:0 2px 8px #000,0 0 12px var(--warn);pointer-events:none;animation:pop 1.1s ease forwards}
+  .banner{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 40px);z-index:26;text-align:center;pointer-events:none;animation:banner 2s ease forwards}
+  .banner span{display:inline-block;background:var(--ok);color:#111;font-weight:900;font-size:18px;padding:8px 22px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .banner.op span{background:var(--pink);color:#fff}
+  .atkrow{background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:6px;text-align:left;width:100%;border:0;color:var(--ink);font:inherit;cursor:pointer}
+  .atkrow b{display:block;font-size:14.5px}.atkrow small{color:var(--ink2);font-size:12px;display:block;margin-top:2px}
+  .atkrow .cost{color:var(--yellow);font-weight:700;margin-right:6px}
+  .fx{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .fx button{font-size:12.5px;padding:7px 10px}
 </style>
 </head>
 <body>
@@ -279,6 +297,11 @@ $('btnJoin').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)ret
   joinedCode=code;peer.on('open',function(){conn=peer.connect('dgpk-'+code,{reliable:true});bindConn();});
   peer.on('error',function(err){$('joinStat').textContent='연결 실패: '+err.type+' (코드 확인 / 상대가 방을 만들었는지)';});
 };
+function fxHit(k,i){var el=document.querySelector('.slot[data-k="'+k+'"][data-i="'+i+'"]');if(!el)return;el.classList.remove('hit');void el.offsetWidth;el.classList.add('hit');
+  var r=el.getBoundingClientRect();return r;}
+function fxPop(text,rect){var d=document.createElement('div');d.className='dmgpop';d.textContent=text;if(rect){d.style.left=(rect.left+rect.width/2)+'px';d.style.top=(rect.top+rect.height/2)+'px';}else{d.style.top='40%';}document.body.appendChild(d);setTimeout(function(){d.remove();},1100);}
+function fxBanner(text,op){var d=document.createElement('div');d.className='banner'+(op?' op':'');d.innerHTML='<span>'+esc(text)+'</span>';document.body.appendChild(d);setTimeout(function(){d.remove();},2000);}
+function fxKO(k,i){var el=document.querySelector('.slot[data-k="'+k+'"][data-i="'+i+'"]');if(el)el.classList.add('kof');}
 function buzz(){try{if(navigator.vibrate)navigator.vibrate(60);}catch(e){}}
 function bindConn(){
   conn.on('open',function(){send({t:'hello',pub:pub(me)});if(reconnecting){reconnecting=false;toast('다시 연결됨');sync();}});
@@ -294,7 +317,8 @@ function onData(m){
   if(m.t==='state'){oppPub=m.pub;render();return;}
   if(m.t==='log'){log(m.text,true);return;}
   if(m.t==='big'){big(m.text);return;}
-  if(m.t==='attack'){applyAttack(m.target,m.dmg,m.name);return;}
+  if(m.t==='attack'){applyAttack(m.hits||[{target:m.target,dmg:m.dmg}],m.name,m.status);return;}
+  if(m.t==='fx'){fxBanner(m.text,true);return;}
   if(m.t==='msg'){big(m.text);log('💬 '+m.text,true);buzz();return;}
   if(m.t==='result'){gameOver(m.win?false:true,true);return;}
   if(m.t==='turn'){turn='me';turnNo=m.no;startTurn();buzz();render();return;}
@@ -317,13 +341,14 @@ function enterGame(){
 function setup(p){p.hand=p.deck.splice(0,7);p.prizes=p.deck.splice(0,6);p.ready=true;}
 function mulligan(){if(!confirm('멀리건: 손패를 덱에 되돌리고 셔플 후 7장 다시 뽑습니다. (기본 포켓몬이 없을 때만)'))return;
   me.deck=shuffle(me.deck.concat(me.hand,me.prizes));me.hand=me.deck.splice(0,7);me.prizes=me.deck.splice(0,6);log('멀리건 (상대는 원하면 1장 더 드로)');sync();}
-function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;toast('내 턴 '+turnNo+' — 드로하세요');}
+function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;fxBanner('▶ 내 턴 '+turnNo+' — 드로하세요');}
 $('btnEnd').onclick=function(e){e.preventDefault();if(turn!=='me'){toast('내 턴이 아니에요');return;}
   if(!e.skip&&!confirm('턴을 종료할까요?'))return;
   var st=[];[me.active].concat(me.bench).forEach(function(x){if(x&&(x.status.poison||x.status.burn))st.push(topCard(x).name);});if(st.length)toast('포켓몬 체크: '+st.join(', ')+' 독/화상 데미지 잊지 마세요');
+  if(me.active&&me.active.status.paralyzed){me.active.status.paralyzed=false;log('마비 해제 (턴 종료)');}
   log('턴 종료');turnNo++;
   if(solo){turn='opp';var t=me;me=opp;opp=t;/* 시점 전환 없이 상대 턴 시작 */me.energyUsed=false;me.supporterUsed=false;me.attacked=false;turn='me';toast('상대(연습) 턴 — 시점이 전환됐어요');sync();return;}
-  turn='opp';send({t:'turn',turn:'me',no:turnNo});render();};
+  turn='opp';send({t:'turn',turn:'me',no:turnNo});fxBanner('상대 턴',true);render();};
 $('btnSwap').onclick=function(e){e.preventDefault();if(!solo)return;var t=me;me=opp;opp=t;turn=turn==='me'?'opp':'me';sync();toast('시점: '+me.nick);};
 
 /* ---------- 렌더 ---------- */
@@ -450,21 +475,60 @@ $('btnMsg').onclick=function(e){e.preventDefault();var list=['잠시만요 ⏳',
   sheet('<h3>메시지</h3><div class="acts">'+list.map(function(m){return '<button type="button" class="soft" data-m="'+m+'">'+m+'</button>';}).join('')+'<button type="button" class="ghost full" data-m="">직접 입력</button></div>');
   document.querySelectorAll('#sheetIn button').forEach(function(b){b.onclick=function(){var m=b.dataset.m||prompt('메시지')||'';if(!m)return;send({t:'msg',text:m});log('💬 '+m);closeSheet();};});};
 
-/* ---------- 공격 ---------- */
+/* ---------- 공격 (카드 기술 목록 + 효과 버튼) ---------- */
+function cardData(id){var lang=localStorage.getItem('dgpk_lang')||'ko';if(dcache[id])return Promise.resolve(dcache[id]);
+  return fetch(API+lang+'/cards/'+id).then(function(r){return r.json();}).then(function(d){dcache[id]=d;return d;});}
+function parseDmg(t){var m=String(t||'').match(/\d+/);return m?+m[0]:0;}
+function costStr(cost){var map={Grass:'草',Fire:'炎',Water:'水',Lightning:'雷',Psychic:'超',Fighting:'闘',Darkness:'悪',Metal:'鋼',Fairy:'妖',Dragon:'竜',Colorless:'無'};return (cost||[]).map(function(c){return map[c]||c[0];}).join('');}
 $('btnAttack').onclick=function(e){e.preventDefault();
-  if(rules.enforce){if(turn!=='me'){toast('내 턴이 아니에요');return;}if(!me.active){toast('배틀 포켓몬이 없어요');return;}if(me.attacked){toast('이번 턴 이미 공격했어요');return;}if(turnNo===1&&isFirstPlayer()){toast('선공 첫 턴은 공격 불가');return;}}
-  var o=oppPub||{};var targets=[];if(o.active)targets.push({i:-1,label:'배틀: '+topCard(o.active).name});(o.bench||[]).forEach(function(s,j){targets.push({i:j,label:'벤치'+(j+1)+': '+topCard(s).name});});
+  if(rules.enforce){if(turn!=='me'){toast('내 턴이 아니에요');return;}if(!me.active){toast('배틀 포켓몬이 없어요');return;}if(me.attacked){toast('이번 턴 이미 공격했어요');return;}if(turnNo===1&&isFirstPlayer()){toast('선공 첫 턴은 공격 불가');return;}
+    if(me.active.status.asleep||me.active.status.paralyzed){toast(topCard(me.active).name+'이(가) '+(me.active.status.asleep?'잠듦':'마비')+' 상태 — 공격 불가');return;}}
+  var c=topCard(me.active);sheet('<h3>'+esc(c.name)+' — 기술 선택</h3><p style="color:var(--ink2)">불러오는 중…</p>');
+  cardData(c.id).then(function(d){var atks=d.attacks||[];var h='<h3>'+esc(c.name)+' — 기술 선택</h3>'+(me.active.status.confused?'<p style="font-size:12.5px;color:var(--warn)">혼란 상태: 공격 전 코인, 뒷면이면 자신에게 30</p>':'')+
+      '<p style="font-size:12px;color:var(--ink2);margin:0 0 6px">에너지 '+me.active.energy.length+'장 붙어 있음</p>';
+    atks.forEach(function(a,k){h+='<button type="button" class="atkrow" data-k="'+k+'"><b><span class="cost">'+costStr(a.cost)+'</span>'+esc(a.name)+(a.damage?' — '+esc(a.damage):'')+'</b>'+(a.effect?'<small>'+esc(a.effect)+'</small>':'')+'</button>';});
+    h+='<button type="button" class="atkrow" data-k="-1"><b>직접 입력</b><small>기술 정보가 없거나 다른 계산이 필요할 때</small></button>';
+    $('sheetIn').innerHTML=h;
+    document.querySelectorAll('#sheetIn .atkrow').forEach(function(b){b.onclick=function(){var k=+b.dataset.k;attackTargets(k>=0?atks[k]:{name:'공격',damage:''});};});
+  }).catch(function(){attackTargets({name:'공격',damage:''});});
+};
+function attackTargets(atk){var o=oppPub||{};var targets=[];if(o.active)targets.push({i:-1,label:'배틀: '+topCard(o.active).name});(o.bench||[]).forEach(function(s,j){targets.push({i:j,label:'벤치'+(j+1)+': '+topCard(s).name});});
   if(!targets.length){toast('상대 필드에 포켓몬이 없어요');return;}
-  sheet('<h3>공격 — 대상 선택</h3><p style="font-size:12px;color:var(--ink2);margin:0 0 6px">약점·저항력·효과를 계산한 최종 데미지를 입력하세요. 상대 화면에 자동 반영됩니다.</p><div class="acts">'+targets.map(function(t,k){return '<button type="button" class="soft full" data-k="'+k+'">'+esc(t.label)+'</button>';}).join('')+'</div>');
-  document.querySelectorAll('#sheetIn button').forEach(function(b){b.onclick=function(){var t=targets[+b.dataset.k];
-    var opts=[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,180,200,220,240,260,280,300];
-    sheet('<h3>'+esc(t.label)+' — 데미지</h3><div class="acts" style="grid-template-columns:repeat(4,1fr)">'+opts.map(function(v){return '<button type="button" class="soft" data-v="'+v+'">'+v+'</button>';}).join('')+'<button type="button" class="ghost full" data-v="-1">직접 입력</button></div>');
-    document.querySelectorAll('#sheetIn button').forEach(function(bb){bb.onclick=function(){var d=+bb.dataset.v;if(d<0){var v=prompt('데미지',"30");if(v===null)return;d=Math.max(0,+v||0);}
-      var an=topCard(me.active).name;me.attacked=true;log(an+'의 공격 → '+t.label+' '+d+' 데미지');
-      if(solo){applyAttackTo(opp,t.i,d,an);oppPub=pub(opp);}else send({t:'attack',target:t.i,dmg:d,name:an});
-      sync();closeSheet();if(confirm('공격하면 턴이 끝납니다. 턴을 종료할까요?'))$('btnEnd').onclick({preventDefault:function(){},skip:true});};});};});};
-function applyAttackTo(p,i,d,an){var s=i<0?p.active:p.bench[i];if(!s)return;s.dmg+=d;}
-function applyAttack(i,d,an){var s=i<0?me.active:me.bench[i];if(!s){toast('상대 공격 대상이 없어요');return;}s.dmg+=d;big('💥 '+d);buzz();log('상대 '+an+' 공격 → '+topCard(s).name+' +'+d+' (총 '+s.dmg+')',true);sync();}
+  var base=parseDmg(atk.damage);var plan={name:atk.name,hits:{},status:null,self:0};if(targets[0].i===-1)plan.hits[-1]=base;
+  function draw(){var h='<h3>'+esc(atk.name)+(atk.damage?' — '+esc(atk.damage):'')+'</h3>'+(atk.effect?'<p style="font-size:12.5px;color:var(--ink2);margin:0 0 8px">'+esc(atk.effect)+'</p>':'')+
+     '<p style="font-size:12px;color:var(--ink2);margin:0 0 4px">대상별 최종 데미지 (약점 ×2 / 저항 −30 / 효과 계산 후)</p>';
+    targets.forEach(function(t){var v=plan.hits[t.i]||0;h+='<div class="row" style="margin-top:6px"><span style="flex:1;font-size:13.5px">'+esc(t.label)+'</span><button type="button" class="sm ghost" data-t="'+t.i+'" data-d="-10">−10</button><b style="flex:0 0 44px;text-align:center">'+v+'</b><button type="button" class="sm soft" data-t="'+t.i+'" data-d="10">+10</button><button type="button" class="sm soft" data-t="'+t.i+'" data-d="x2">×2</button></div>';});
+    h+='<p style="font-size:12px;color:var(--ink2);margin:10px 0 4px">효과 처리</p><div class="fx">'+
+      '<button type="button" class="soft" data-fx="coin">🪙 코인</button>'+
+      Object.keys(STATUS).map(function(k){return '<button type="button" class="'+(plan.status===k?'':'soft')+'" data-fx="st" data-k="'+k+'">상대 '+STATUS[k]+'</button>';}).join('')+
+      '<button type="button" class="soft" data-fx="self">자신에게 데미지</button><button type="button" class="soft" data-fx="discardE">내 에너지 버리기</button><button type="button" class="soft" data-fx="draw">드로</button></div>'+
+      (plan.self?'<p style="font-size:12.5px;color:var(--warn)">자신에게 '+plan.self+' 데미지</p>':'')+
+      '<div class="acts" style="margin-top:8px"><button type="button" class="warn full" id="atkGo">공격 실행</button><button type="button" class="ghost full" onclick="closeSheet()">취소</button></div>';
+    $('sheetIn').innerHTML=h;
+    document.querySelectorAll('#sheetIn [data-t]').forEach(function(b){b.onclick=function(){var t=+b.dataset.t,d=b.dataset.d;var v=plan.hits[t]||0;plan.hits[t]=d==='x2'?v*2:Math.max(0,v+ +d);draw();};});
+    document.querySelectorAll('#sheetIn [data-fx]').forEach(function(b){b.onclick=function(){var f=b.dataset.fx;
+      if(f==='coin'){var r=Math.random()<.5?'앞면':'뒷면';big('🪙 '+r);log('코인: '+r);send({t:'big',text:'상대 코인: '+r});}
+      else if(f==='st'){plan.status=plan.status===b.dataset.k?null:b.dataset.k;draw();}
+      else if(f==='self'){var v=prompt('자신에게 줄 데미지',"30");if(v!==null){plan.self=+v||0;draw();}}
+      else if(f==='discardE'){var n=+prompt('버릴 에너지 수',"1")||0;for(var k=0;k<n&&me.active.energy.length;k++)me.discard.push(me.active.energy.pop());log('에너지 '+n+'장 트래시');sync();}
+      else if(f==='draw'){var n2=+prompt('드로 수',"1")||0;if(n2)drawN(n2);}
+    };});
+    $('atkGo').onclick=function(){var hits=[];Object.keys(plan.hits).forEach(function(k){if(plan.hits[k]>0)hits.push({target:+k,dmg:plan.hits[k]});});
+      if(!hits.length&&!plan.status&&!confirm('데미지 0으로 공격할까요? (효과만 있는 기술)'))return;
+      var an=topCard(me.active).name;me.attacked=true;
+      log(an+'의 '+atk.name+' → '+hits.map(function(h){return (h.target<0?'배틀':'벤치'+(h.target+1))+' '+h.dmg;}).join(', ')+(plan.status?' · '+STATUS[plan.status]:''));
+      hits.forEach(function(h){var r=fxHit('o',h.target);fxPop('-'+h.dmg,r);});
+      if(plan.self){me.active.dmg+=plan.self;fxHit('m',-1);}
+      if(solo){applyAttackTo(opp,hits,plan.status);oppPub=pub(opp);}else send({t:'attack',hits:hits,name:an+'의 '+atk.name,status:plan.status});
+      sync();closeSheet();setTimeout(function(){if(confirm('공격하면 턴이 끝납니다. 턴을 종료할까요?'))$('btnEnd').onclick({preventDefault:function(){},skip:true});},600);};
+  }
+  draw();
+}
+function applyAttackTo(p,hits,status){hits.forEach(function(h){var s=h.target<0?p.active:p.bench[h.target];if(s)s.dmg+=h.dmg;});if(status&&p.active){if(status==='asleep'||status==='paralyzed'||status==='confused'){p.active.status.asleep=p.active.status.paralyzed=p.active.status.confused=false;}p.active.status[status]=true;}}
+function applyAttack(hits,an,status){buzz();applyAttackTo(me,hits,status);
+  hits.forEach(function(h){var r=fxHit('m',h.target);fxPop('-'+h.dmg,r);});
+  var total=hits.reduce(function(a,h){return a+h.dmg;},0);big('💥 '+total);
+  log('상대 '+an+' → '+hits.map(function(h){var s=h.target<0?me.active:me.bench[h.target];return (s?topCard(s).name:'?')+' +'+h.dmg+(s?' (총 '+s.dmg+')':'');}).join(', ')+(status?' · '+STATUS[status]:''),true);sync();}
 
 /* ---------- 필드 ---------- */
 function fieldMenu(s,i){var c=topCard(s);var isA=i<0;
@@ -474,11 +538,20 @@ function fieldMenu(s,i){var c=topCard(s);var isA=i<0;
    '<button type="button" class="warn" onclick="dmg('+i+',30)">+30</button><button type="button" class="soft" onclick="dmg('+i+',0,true)">직접 입력</button>'+
    '<div class="full" style="display:flex;gap:4px;flex-wrap:wrap">'+stBtn+'</div>'+
    (isA?'<button type="button" class="soft full" onclick="retreat()">후퇴/교체 (벤치와 바꾸기)</button>':'<button type="button" class="soft full" onclick="promote('+i+')">배틀 포켓몬으로</button>')+
+   '<button type="button" class="soft" onclick="useAbility('+i+')">특성 사용</button><button type="button" class="soft" onclick="dmg('+i+',-9999)">전부 회복</button>'+
    '<button type="button" class="soft" onclick="attachedView('+i+')">붙은 카드 관리</button><button type="button" class="soft" onclick="devolve('+i+')">퇴화(진화 취소)</button>'+
    '<button type="button" class="warn full" onclick="ko('+i+')">기절 → 전부 트래시</button>'+
    '<button type="button" class="ghost" onclick="fieldTo('+i+',\'hand\')">전부 손패로</button><button type="button" class="ghost" onclick="fieldTo('+i+',\'deck\')">전부 덱으로(셔플)</button>'+
    '<button type="button" class="ghost" onclick="fieldTo('+i+',\'lost\')">전부 로스트존</button><button type="button" class="ghost" onclick="closeSheet()">닫기</button></div>');}
 function getSlot(i){return i<0?me.active:me.bench[i];}
+function useAbility(i){var s=getSlot(i),c=topCard(s);sheet('<h3>'+esc(c.name)+' 특성</h3><p style="color:var(--ink2)">불러오는 중…</p>');
+  cardData(c.id).then(function(d){var ab=d.abilities||[];if(!ab.length){$('sheetIn').innerHTML='<h3>'+esc(c.name)+'</h3><p style="color:var(--ink2)">특성이 없는 카드예요.</p><button type="button" class="ghost" onclick="closeSheet()">닫기</button>';return;}
+    var h='<h3>'+esc(c.name)+' 특성</h3>';ab.forEach(function(a,k){h+='<button type="button" class="atkrow" data-k="'+k+'"><b>'+esc(a.name)+'</b><small>'+esc(a.effect||'')+'</small></button>';});
+    h+='<div class="fx"><button type="button" class="soft" data-fx="coin">🪙 코인</button><button type="button" class="soft" data-fx="draw">드로</button><button type="button" class="soft" data-fx="search">덱 검색</button></div><button type="button" class="ghost" onclick="closeSheet()">닫기</button>';
+    $('sheetIn').innerHTML=h;
+    document.querySelectorAll('#sheetIn .atkrow').forEach(function(b){b.onclick=function(){var a=ab[+b.dataset.k];log(c.name+' 특성 「'+a.name+'」 사용');send({t:'fx',text:c.name+' 특성 「'+a.name+'」'});fxBanner('특성: '+a.name);var el=document.querySelector('.slot[data-k="m"][data-i="'+i+'"]');if(el){el.classList.add('glow');setTimeout(function(){el.classList.remove('glow');},2400);}};});
+    document.querySelectorAll('#sheetIn [data-fx]').forEach(function(b){b.onclick=function(){var f=b.dataset.fx;if(f==='coin'){var r=Math.random()<.5?'앞면':'뒷면';big('🪙 '+r);log('코인: '+r);send({t:'big',text:'상대 코인: '+r});}else if(f==='draw'){var n=+prompt('드로 수',"1")||0;if(n)drawN(n);}else searchDeck();};});
+  }).catch(function(){$('sheetIn').innerHTML='<h3>'+esc(c.name)+'</h3><p style="color:var(--ink2)">카드 정보를 못 불러왔어요. 특성 사용은 기록으로 남겨요.</p><button type="button" class="soft" onclick="log(\''+esc(c.name)+' 특성 사용\');closeSheet()">기록 남기기</button>';});}
 function dmg(i,d,ask){var s=getSlot(i);if(ask){var v=prompt('데미지 카운터 총량',s.dmg);if(v===null)return;s.dmg=Math.max(0,+v||0);}else s.dmg=Math.max(0,s.dmg+d);log(topCard(s).name+' 데미지 '+s.dmg);sync();fieldMenu(s,i);}
 function tog(i,k){var s=getSlot(i);if(k==='asleep'||k==='paralyzed'||k==='confused'){var was=s.status[k];s.status.asleep=s.status.paralyzed=s.status.confused=false;s.status[k]=!was;}else s.status[k]=!s.status[k];log(topCard(s).name+' '+STATUS[k]+(s.status[k]?' 걸림':' 해제'));sync();fieldMenu(s,i);}
 function retreat(){if(!me.bench.length){toast('벤치가 없어요');return;}
@@ -491,7 +564,7 @@ function attachedView(i){var s=getSlot(i);var all=s.energy.map(function(c){retur
   document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var x=all[+el.dataset.k];var arr=s[x.k];var j=arr.indexOf(x.c);if(j>-1)arr.splice(j,1);me.discard.push(x.c);log(x.c.name+' 떼서 트래시');el.remove();sync();};});}
 function allCards(s){return s.stack.concat(s.energy,s.tools);}
 function removeSlot(i){if(i<0){var a=me.active;me.active=null;return a;}return me.bench.splice(i,1)[0];}
-function ko(i){var s=getSlot(i);if(!confirm(topCard(s).name+' 기절 처리? (붙은 카드 포함 전부 트래시)'))return;removeSlot(i);me.discard=me.discard.concat(allCards(s));log(topCard(s).name+' 기절! 상대가 프라이즈를 가져갑니다');send({t:'big',text:'상대 '+topCard(s).name+' 기절 — 프라이즈 획득!'});sync();closeSheet();
+function ko(i){var s=getSlot(i);if(!confirm(topCard(s).name+' 기절 처리? (붙은 카드 포함 전부 트래시)'))return;fxKO('m',i);fxBanner('💀 '+topCard(s).name+' 기절');send({t:'fx',text:'💀 '+topCard(s).name+' 기절 — 프라이즈 가져가세요'});removeSlot(i);me.discard=me.discard.concat(allCards(s));log(topCard(s).name+' 기절! 상대가 프라이즈를 가져갑니다');send({t:'big',text:'상대 '+topCard(s).name+' 기절 — 프라이즈 획득!'});sync();closeSheet();
   if(!me.active&&!me.bench.length){log('필드에 포켓몬 없음 — 패배');gameOver(false,false);}
   else if(!me.active)toast('벤치에서 새 배틀 포켓몬을 올리세요');}
 function fieldTo(i,where){var s=getSlot(i);var cards=allCards(s);if(!confirm(topCard(s).name+' 카드 '+cards.length+'장 전부 이동?'))return;removeSlot(i);
