@@ -20,6 +20,12 @@
   button{border:0;border-radius:10px;padding:11px 14px;background:var(--pink);color:#fff;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
   button.soft{background:var(--blueS);color:var(--blue)}button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2)}button.ok{background:var(--ok)}
   button:disabled{opacity:.5}
+  .previews{display:flex;gap:6px;margin-top:8px}.previews div{position:relative;flex:1;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#eee}.previews img{width:100%;height:100%;object-fit:cover;display:block}.previews button{position:absolute;top:4px;right:4px;padding:2px 7px;font-size:12px;background:rgba(0,0,0,.6)}
+  .gal{position:relative}.gal img{width:100%;max-height:360px;object-fit:contain;border-radius:12px;background:#eee;display:block}.gal .dots{text-align:center;font-size:12px;color:var(--ink2);margin-top:4px}.gal .arr{position:absolute;top:45%;background:rgba(0,0,0,.45);color:#fff;border-radius:50%;width:34px;height:34px;padding:0;font-size:18px}.gal .l{left:6px}.gal .r{right:6px}
+  .bigcount{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);pointer-events:none}.bigcount.on{display:flex}.bigcount b{font-size:38vw;line-height:1;color:#fff;text-shadow:0 8px 30px rgba(0,0,0,.6);animation:bump .9s ease}
+  @keyframes bump{0%{transform:scale(1.6);opacity:0}30%{transform:scale(1);opacity:1}100%{opacity:1}}
+  .plist{font-size:12.5px;color:var(--ink2);margin-top:6px;word-break:break-all}
+  .buynow{background:var(--gold);color:#111}
   .code{font-size:36px;letter-spacing:8px;text-align:center;font-weight:900;color:var(--pink);margin:6px 0}
   .hide{display:none!important}
   .item img{width:100%;max-height:360px;object-fit:contain;border-radius:12px;background:#eee;display:block}
@@ -57,6 +63,7 @@
     <h2>내 정보</h2>
     <input type="text" id="nick" placeholder="닉네임 (카톡방 닉과 같게)" maxlength="12">
     <div class="row"><input type="text" id="room" placeholder="방 인증코드" inputmode="numeric" maxlength="4"></div>
+    <div class="row"><input type="text" id="kakao" placeholder="내 오픈카톡 링크 (open.kakao.com/o/…) — 낙찰 시 상대에게만 전달"></div>
   </div>
   <div class="card">
     <h2>입찰하러 가기</h2>
@@ -77,7 +84,7 @@
 
 <!-- ========== 판매자 ========== -->
 <div id="host" class="hide">
-  <div class="card" style="text-align:center"><div class="sub">입찰자에게 이 코드를 알려 주세요</div><div class="code" id="hostCode">----</div><div class="people" id="hostPeople">접속 0명</div></div>
+  <div class="card" style="text-align:center"><div class="sub">입찰자에게 이 코드를 알려 주세요</div><div class="code" id="hostCode">----</div><div class="people" id="hostPeople">접속 0명</div><div class="plist" id="hostPlist"></div><p class="sub" style="margin:8px 0 0">사람들이 다 들어온 걸 확인하고 [시작]을 누르세요</p></div>
 
   <div class="card" id="hostForm">
     <h2>물품 등록</h2>
@@ -86,8 +93,16 @@
     <div class="row"><input type="number" id="itStart" placeholder="시작가 (원)" inputmode="numeric" min="0" step="100"><select id="itStep"><option value="500">단위 500원</option><option value="1000" selected>단위 1,000원</option><option value="2000">단위 2,000원</option><option value="5000">단위 5,000원</option><option value="10000">단위 10,000원</option><option value="custom">단위 직접 입력</option></select></div>
     <div class="row hide" id="stepCustomRow"><input type="number" id="itStepCustom" placeholder="입찰 단위 (원)" inputmode="numeric" min="100" step="100"></div>
     <div class="row"><select id="itTime"><option value="60">60초</option><option value="90" selected>90초</option><option value="120">120초</option><option value="180">180초</option><option value="300">5분</option></select><select id="itExt"><option value="15" selected>막판 입찰 시 +15초</option><option value="30">막판 입찰 시 +30초</option><option value="0">연장 없음</option></select></div>
-    <div class="row"><input type="file" id="itPhoto" accept="image/*" capture="environment" style="flex:1"></div>
-    <img id="itPreview" class="hide" style="width:100%;max-height:260px;object-fit:contain;border-radius:10px;margin-top:8px;background:#eee">
+    <div class="row"><button type="button" class="soft" id="btnCam">📷 카메라로 찍기</button><button type="button" class="soft" id="btnAlbum">🖼 앨범에서 선택</button></div>
+    <input type="file" id="itCam" accept="image/*" capture="environment" class="hide"><input type="file" id="itAlbum" accept="image/*" multiple class="hide">
+    <div id="itPreviews" class="previews"></div>
+    <details style="margin-top:10px"><summary style="font-weight:600;cursor:pointer">세부 설정 ▾</summary>
+      <div class="row"><select id="itCool"><option value="0">입찰 간격 제한 없음</option><option value="2">같은 사람 재입찰 2초 후</option><option value="3" selected>같은 사람 재입찰 3초 후</option><option value="5">같은 사람 재입찰 5초 후</option><option value="10">같은 사람 재입찰 10초 후</option></select></div>
+      <div class="row"><select id="itExtWin"><option value="10" selected>마지막 10초 안 입찰 시 연장</option><option value="15">마지막 15초 안 입찰 시 연장</option><option value="20">마지막 20초 안 입찰 시 연장</option><option value="30">마지막 30초 안 입찰 시 연장</option></select><select id="itExt"><option value="15" selected>+15초</option><option value="10">+10초</option><option value="30">+30초</option><option value="0">연장 없음</option></select></div>
+      <div class="row"><select id="itMaxExt"><option value="3">연장 최대 3회</option><option value="5" selected>연장 최대 5회</option><option value="10">연장 최대 10회</option><option value="99">연장 무제한</option></select><select id="itBig"><option value="5" selected>마지막 5초 큰 카운트</option><option value="10">마지막 10초 큰 카운트</option><option value="3">마지막 3초 큰 카운트</option><option value="0">큰 카운트 없음</option></select></div>
+      <div class="row"><input type="number" id="itBuyNow" placeholder="즉시구매가 (선택, 원)" inputmode="numeric" min="0" step="100"><select id="itMinBid"><option value="1" selected>시작가부터 입찰 가능</option><option value="step">시작가+1단위부터</option></select></div>
+      <div class="row"><select id="itShowNick"><option value="1" selected>입찰자 닉네임 공개</option><option value="0">입찰자 익명 (입찰자1, 2…)</option></select></div>
+    </details>
     <div class="row"><button type="button" id="btnQueue" class="soft">목록에 추가</button><button type="button" id="btnStartNow">바로 시작</button></div>
   </div>
 
@@ -105,60 +120,79 @@
 </div>
 
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div><div class="bigcount" id="bigcount"><b>5</b></div>
 
 <script>
 var ROOM_CODE='7942';
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function won(n){return Number(n||0).toLocaleString('ko-KR')+'원';}
+var galIdx={};
+function gallery(photos,key){photos=photos||[];if(!photos.length)return '';var i=galIdx[key]||0;if(i>=photos.length)i=0;
+  return '<div class="gal" data-g="'+key+'"><img src="'+photos[i]+'" alt="">'+(photos.length>1?'<button type="button" class="arr l" data-d="-1">‹</button><button type="button" class="arr r" data-d="1">›</button><div class="dots">'+(i+1)+' / '+photos.length+'</div>':'')+'</div>';}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.gal .arr');if(!b)return;var g=b.closest('.gal');var key=g.dataset.g;var photos=key==='h'?(cur&&cur.photos)||[]:(bstate&&bstate.item.photos)||[];galIdx[key]=((galIdx[key]||0)+ +b.dataset.d+photos.length)%photos.length;g.outerHTML=gallery(photos,key);});
 var tt;function toast(m){var t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(function(){t.style.opacity=0;},1800);}
 function buzz(){try{if(navigator.vibrate)navigator.vibrate(50);}catch(e){}}
 function saveRec(r){try{var a=JSON.parse(localStorage.getItem('dgpk_auction')||'[]');a.push(r);localStorage.setItem('dgpk_auction',JSON.stringify(a.slice(-100)));}catch(e){}}
-function showRecs(){try{var a=JSON.parse(localStorage.getItem('dgpk_auction')||'[]');if(!a.length)return;$('myRecs').innerHTML=a.slice().reverse().slice(0,8).map(function(r){return '<div class="rec">'+(r.role==='seller'?'📤 판매':'📥 낙찰')+' · <b>'+esc(r.item)+'</b> '+won(r.price)+'<small>'+(r.role==='seller'?'낙찰자 '+esc(r.other):'판매자 '+esc(r.other))+' · '+new Date(r.t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+'</small></div>';}).join('');}catch(e){}}
-$('nick').value=localStorage.getItem('dgpk_nick')||'';$('room').value=localStorage.getItem('dgpk_room')||'';showRecs();
-function checkMe(){var n=$('nick').value.trim();if(!n){toast('닉네임을 입력하세요');return null;}if($('room').value.trim()!==ROOM_CODE){toast('방 인증코드가 틀려요');return null;}localStorage.setItem('dgpk_nick',n);localStorage.setItem('dgpk_room',ROOM_CODE);return n;}
+function showRecs(){try{var a=JSON.parse(localStorage.getItem('dgpk_auction')||'[]');if(!a.length)return;$('myRecs').innerHTML=a.slice().reverse().slice(0,8).map(function(r){return '<div class="rec">'+(r.role==='seller'?'📤 판매':'📥 낙찰')+' · <b>'+esc(r.item)+'</b> '+won(r.price)+'<small>'+(r.role==='seller'?'낙찰자 '+esc(r.other):'판매자 '+esc(r.other))+(r.kakao?' · <a href="'+esc(r.kakao)+'" target="_blank">오픈카톡</a>':'')+' · '+new Date(r.t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+'</small></div>';}).join('');}catch(e){}}
+$('nick').value=localStorage.getItem('dgpk_nick')||'';$('kakao').value=localStorage.getItem('dgpk_kakao')||'';$('room').value=localStorage.getItem('dgpk_room')||'';showRecs();
+function checkMe(){var n=$('nick').value.trim();if(!n){toast('닉네임을 입력하세요');return null;}if($('room').value.trim()!==ROOM_CODE){toast('방 인증코드가 틀려요');return null;}localStorage.setItem('dgpk_nick',n);localStorage.setItem('dgpk_room',ROOM_CODE);var k=$('kakao').value.trim();if(k&&!/^https?:\/\//.test(k))k='https://'+k;myKakao=k;localStorage.setItem('dgpk_kakao',k);return n;}
+var myKakao='';
 
 /* ================= 판매자 (호스트) ================= */
 var peer=null,conns=[],myNick='',code='',queue=[],cur=null,tick=null;
-function state(){if(!cur)return {t:'idle',seller:myNick,people:conns.length};return {t:'state',seller:myNick,people:conns.length,item:{name:cur.name,grade:cur.grade,note:cur.note,photo:cur.photo,start:cur.start,step:cur.step},price:cur.price,leader:cur.leader,bids:cur.bids.slice(-15),endsAt:cur.endsAt,ended:cur.ended,winner:cur.winner};}
+function state(){if(!cur)return {t:'idle',seller:myNick,people:conns.length};function nickOf(n){if(!cur||cur.showNick||!n)return n;if(!cur.anon)cur.anon={};if(!cur.anon[n])cur.anon[n]='입찰자'+(Object.keys(cur.anon).length+1);return cur.anon[n];}
+  return {t:'state',seller:myNick,people:conns.length,item:{name:cur.name,grade:cur.grade,note:cur.note,photos:cur.photos,start:cur.start,step:cur.step,buyNow:cur.buyNow,minFirst:cur.minFirst,cool:cur.cool,big:cur.big},price:cur.price,leader:nickOf(cur.leader),leaderReal:cur.leader,bids:cur.bids.slice(-15).map(function(b){return {nick:nickOf(b.nick),amount:b.amount};}),endsAt:cur.endsAt,ended:cur.ended,winner:cur.winner?{nick:cur.winner.nick,price:cur.winner.price}:null,extLeft:cur.maxExt-cur.extUsed};}
 function broadcast(msg){var s=JSON.stringify(msg);conns.forEach(function(c){try{if(c.open)c.send(s);}catch(e){}});}
-function pushState(){broadcast(state());renderHostLive();}
+function pushState(){var st=state();conns.forEach(function(c){try{if(c.open){var o=Object.assign({},st);o.mine=(cur&&cur.leader&&c.nick===cur.leader);delete o.leaderReal;c.send(JSON.stringify(o));}}catch(e){}});renderHostLive();}
 $('btnHost').onclick=function(){var n=checkMe();if(!n)return;myNick=n;code=String(Math.floor(1000+Math.random()*9000));$('hostCode').textContent=code;
   peer=new Peer('dgpkauc-'+code);$('btnHost').disabled=true;$('btnHost').textContent='연결 준비 중…';
   peer.on('open',function(){$('lobby').classList.add('hide');$('host').classList.remove('hide');window.scrollTo(0,0);});
-  peer.on('connection',function(c){c.on('open',function(){conns.push(c);c.send(JSON.stringify(state()));$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});
+  peer.on('connection',function(c){c.on('open',function(){conns.push(c);var o=state();delete o.leaderReal;c.send(JSON.stringify(o));$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});
     c.on('data',function(d){try{onBid(c,JSON.parse(d));}catch(e){}});
-    c.on('close',function(){conns=conns.filter(function(x){return x!==c;});$('hostPeople').textContent='접속 '+conns.length+'명';broadcast({t:'people',n:conns.length});});});
+    c.on('close',function(){conns=conns.filter(function(x){return x!==c;});$('hostPeople').textContent='접속 '+conns.length+'명';plist();broadcast({t:'people',n:conns.length});});});
   peer.on('error',function(err){toast('연결 오류: '+err.type);$('btnHost').disabled=false;$('btnHost').textContent='경매장 만들기';});};
-function onBid(c,m){if(m.t==='hello'){c.nick=m.nick;return;}if(m.t!=='bid'||!cur||cur.ended)return;
-  var amt=Math.floor(+m.amount||0);var min=cur.leader?cur.price+cur.step:cur.start;
+function plist(){$('hostPlist').textContent=conns.map(function(c){return c.nick||'?';}).filter(Boolean).join(' · ');}
+function onBid(c,m){if(m.t==='hello'){c.nick=m.nick;c.kakao=m.kakao||'';plist();return;}if(m.t!=='bid'||!cur||cur.ended)return;
+  var amt=Math.floor(+m.amount||0);var min=cur.leader?cur.price+cur.step:cur.minFirst;
+  if(cur.leader===m.nick){try{c.send(JSON.stringify({t:'reject',min:min,why:'이미 최고 입찰자'}));}catch(e){}return;}
+  var last=cur.lastBid&&cur.lastBid[m.nick]||0;if(cur.cool>0&&Date.now()-last<cur.cool*1000){try{c.send(JSON.stringify({t:'reject',min:min,why:Math.ceil((cur.cool*1000-(Date.now()-last))/1000)+'초 후 재입찰'}));}catch(e){}return;}
   if(amt<min){try{c.send(JSON.stringify({t:'reject',min:min}));}catch(e){}return;}
   if(amt%100!==0){try{c.send(JSON.stringify({t:'reject',min:min,why:'100원 단위'}));}catch(e){}return;}
+  if(!cur.lastBid)cur.lastBid={};cur.lastBid[m.nick]=Date.now();
   cur.price=amt;cur.leader=m.nick;cur.bids.push({nick:m.nick,amount:amt,t:Date.now()});
-  var left=cur.endsAt-Date.now();if(cur.ext>0&&left<cur.ext*1000){cur.endsAt=Date.now()+cur.ext*1000;}
+  if(cur.buyNow&&amt>=cur.buyNow){cur.price=cur.buyNow;cur.endsAt=Date.now();pushState();broadcast({t:'big',text:'⚡ 즉시구매!'});hostTick();return;}
+  var left=cur.endsAt-Date.now();if(cur.ext>0&&left<cur.extWin*1000&&cur.extUsed<cur.maxExt){cur.endsAt=Date.now()+cur.ext*1000;cur.extUsed++;broadcast({t:'big',text:'+'+cur.ext+'초 연장'});}
   pushState();buzz();}
 function readPhoto(file){return new Promise(function(res){if(!file){res('');return;}var img=new Image();var url=URL.createObjectURL(file);img.onload=function(){var max=720;var w=img.width,h=img.height;var sc=Math.min(1,max/Math.max(w,h));var cv=document.createElement('canvas');cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',0.72));URL.revokeObjectURL(url);};img.onerror=function(){res('');};img.src=url;});}
-var pendingPhoto='';
-$('itPhoto').onchange=function(){readPhoto(this.files[0]).then(function(d){pendingPhoto=d;var p=$('itPreview');if(d){p.src=d;p.classList.remove('hide');}else p.classList.add('hide');});};
+var pendingPhotos=[];
+function addPhotos(files){var arr=Array.prototype.slice.call(files||[]);if(!arr.length)return;var room=3-pendingPhotos.length;if(room<=0){toast('사진은 최대 3장');return;}arr=arr.slice(0,room);
+  var chain=Promise.resolve();arr.forEach(function(f){chain=chain.then(function(){return readPhoto(f).then(function(d){if(d)pendingPhotos.push(d);});});});chain.then(renderPreviews);}
+function renderPreviews(){$('itPreviews').innerHTML=pendingPhotos.map(function(d,i){return '<div><img src="'+d+'" alt=""><button type="button" data-x="'+i+'">✕</button></div>';}).join('');document.querySelectorAll('#itPreviews [data-x]').forEach(function(b){b.onclick=function(){pendingPhotos.splice(+b.dataset.x,1);renderPreviews();};});}
+$('btnCam').onclick=function(){$('itCam').click();};$('btnAlbum').onclick=function(){$('itAlbum').click();};
+$('itCam').onchange=function(){addPhotos(this.files);this.value='';};$('itAlbum').onchange=function(){addPhotos(this.files);this.value='';};
 $('itStep').onchange=function(){$('stepCustomRow').classList.toggle('hide',this.value!=='custom');};
 function readForm(){var name=$('itName').value.trim();if(!name){toast('카드 이름을 입력하세요');return null;}var start=Math.floor(+$('itStart').value||0);if(start<=0){toast('시작가를 입력하세요');return null;}
   var step=$('itStep').value==='custom'?Math.floor(+$('itStepCustom').value||0):+$('itStep').value;if(step<100){toast('입찰 단위를 확인하세요');return null;}
-  return {name:name,grade:$('itGrade').value,note:$('itNote').value.trim(),photo:pendingPhoto,start:start,step:step,time:+$('itTime').value,ext:+$('itExt').value};}
-function clearForm(){$('itName').value='';$('itNote').value='';$('itStart').value='';pendingPhoto='';$('itPhoto').value='';$('itPreview').classList.add('hide');}
+  var buy=Math.floor(+$('itBuyNow').value||0);if(buy&&buy<=start){toast('즉시구매가는 시작가보다 커야 해요');return null;}
+  return {name:name,grade:$('itGrade').value,note:$('itNote').value.trim(),photos:pendingPhotos.slice(),start:start,step:step,time:+$('itTime').value,ext:+$('itExt').value,extWin:+$('itExtWin').value,maxExt:+$('itMaxExt').value,cool:+$('itCool').value,big:+$('itBig').value,buyNow:buy,minFirst:$('itMinBid').value==='step'?start+step:start,showNick:$('itShowNick').value==='1'};}
+function clearForm(){$('itName').value='';$('itNote').value='';$('itStart').value='';$('itBuyNow').value='';pendingPhotos=[];renderPreviews();}
 $('btnQueue').onclick=function(){var it=readForm();if(!it)return;queue.push(it);clearForm();renderQueue();toast('목록에 추가됨');};
 $('btnStartNow').onclick=function(){var it=readForm();if(!it)return;if(cur&&!cur.ended){toast('진행 중인 경매가 끝난 뒤 시작하세요');queue.unshift(it);clearForm();renderQueue();return;}clearForm();startItem(it);};
-function renderQueue(){$('queueCnt').textContent=queue.length?queue.length+'개':'';$('queue').innerHTML=queue.map(function(q,i){return '<div class="q">'+(q.photo?'<img src="'+q.photo+'" alt="">':'<span style="width:44px;height:44px;border-radius:6px;background:#eee;display:inline-block"></span>')+'<b>'+esc(q.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(q.grade)+' · 시작 '+won(q.start)+'</small></b><button type="button" class="soft" data-s="'+i+'" style="padding:6px 10px">시작</button><button type="button" class="ghost" data-d="'+i+'" style="padding:6px 10px">삭제</button></div>';}).join('')||'<p class="sub">대기 물품 없음</p>';
+function renderQueue(){$('queueCnt').textContent=queue.length?queue.length+'개':'';$('queue').innerHTML=queue.map(function(q,i){return '<div class="q">'+(q.photos&&q.photos[0]?'<img src="'+q.photos[0]+'" alt="">':'<span style="width:44px;height:44px;border-radius:6px;background:#eee;display:inline-block"></span>')+'<b>'+esc(q.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(q.grade)+' · 시작 '+won(q.start)+'</small></b><button type="button" class="soft" data-s="'+i+'" style="padding:6px 10px">시작</button><button type="button" class="ghost" data-d="'+i+'" style="padding:6px 10px">삭제</button></div>';}).join('')||'<p class="sub">대기 물품 없음</p>';
   document.querySelectorAll('#queue [data-s]').forEach(function(b){b.onclick=function(){if(cur&&!cur.ended){toast('진행 중인 경매가 있어요');return;}var it=queue.splice(+b.dataset.s,1)[0];renderQueue();startItem(it);};});
   document.querySelectorAll('#queue [data-d]').forEach(function(b){b.onclick=function(){queue.splice(+b.dataset.d,1);renderQueue();};});}
-function startItem(it){cur=Object.assign({},it,{price:it.start,leader:null,bids:[],endsAt:Date.now()+it.time*1000,ended:false,winner:null});
+function startItem(it){cur=Object.assign({},it,{price:it.start,leader:null,bids:[],endsAt:Date.now()+it.time*1000,ended:false,winner:null,extUsed:0,lastBid:{},anon:{}});
   $('hostLive').classList.remove('hide');$('hostForm').classList.add('hide');pushState();clearInterval(tick);tick=setInterval(hostTick,250);broadcast({t:'start'});window.scrollTo(0,0);}
 function hostTick(){if(!cur||cur.ended)return;var left=cur.endsAt-Date.now();var el=$('hTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}
-  if(left<=0){cur.ended=true;cur.winner=cur.leader?{nick:cur.leader,price:cur.price}:null;clearInterval(tick);pushState();broadcast({t:'end',winner:cur.winner,item:cur.name});
-    if(cur.winner){saveRec({role:'seller',item:cur.name,price:cur.price,other:cur.winner.nick,t:Date.now()});buzz();}}}
+  if(left<=0){cur.ended=true;var wc=conns.find(function(c){return c.nick===cur.leader;});cur.winner=cur.leader?{nick:cur.leader,price:cur.price,kakao:(wc&&wc.kakao)||''}:null;clearInterval(tick);pushState();
+    conns.forEach(function(c){try{if(c.open)c.send(JSON.stringify({t:'end',winner:cur.winner?{nick:cur.winner.nick,price:cur.winner.price}:null,item:cur.name,sellerKakao:(cur.winner&&c.nick===cur.winner.nick)?myKakao:''}));}catch(e){}});
+    if(cur.winner){saveRec({role:'seller',item:cur.name,price:cur.price,other:cur.winner.nick,kakao:cur.winner.kakao,t:Date.now()});buzz();}}
+  else{bigCount(left,cur.big);}}
+var lastBig=-1;function bigCount(left,big){var s=Math.ceil(left/1000);var el=$('bigcount');if(!big||s>big||s<=0){el.classList.remove('on');lastBig=-1;return;}if(s!==lastBig){lastBig=s;el.querySelector('b').textContent=s;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');buzz();}}
 function renderHostLive(){if(!cur)return;var box=$('hostLive');
-  var h='<div class="card item">'+(cur.photo?'<img src="'+cur.photo+'" alt="">':'')+'<div class="nm">'+esc(cur.name)+'</div><div class="meta">'+esc(cur.grade)+(cur.note?' · '+esc(cur.note):'')+' · 시작가 '+won(cur.start)+' · 단위 '+won(cur.step)+'</div>'+
-    (cur.ended?(cur.winner?'<div class="won"><div>🎉 낙찰</div><b>'+esc(cur.winner.nick)+' · '+won(cur.winner.price)+'</b><div class="sub" style="margin:4px 0 0">낙찰자와 오픈카톡으로 연락해 거래를 진행하세요. 기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><b>유찰</b><div class="sub">입찰이 없었어요</div></div>')
+  var h='<div class="card item">'+gallery(cur.photos,'h')+'<div class="nm">'+esc(cur.name)+'</div><div class="meta">'+esc(cur.grade)+(cur.note?' · '+esc(cur.note):'')+' · 시작가 '+won(cur.start)+' · 단위 '+won(cur.step)+(cur.buyNow?' · 즉시구매 '+won(cur.buyNow):'')+' · 연장 남음 '+Math.max(0,cur.maxExt-cur.extUsed)+'회</div>'+
+    (cur.ended?(cur.winner?'<div class="won"><div>🎉 낙찰</div><b>'+esc(cur.winner.nick)+' · '+won(cur.winner.price)+'</b>'+(cur.winner.kakao?'<a href="'+esc(cur.winner.kakao)+'" target="_blank" rel="noopener" style="display:block;margin-top:8px;background:#FEE500;color:#111;padding:10px;border-radius:10px;text-decoration:none;font-weight:700">💬 낙찰자 오픈카톡으로 연락</a>':'<div class="sub" style="margin:4px 0 0">낙찰자가 오픈카톡 링크를 안 넣었어요. 방에서 닉네임으로 연락하세요.</div>')+'<div class="sub" style="margin:4px 0 0">기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><b>유찰</b><div class="sub">입찰이 없었어요</div></div>')
       :'<div class="timer" id="hTimer">⏱</div><div class="price"><b>'+won(cur.price)+'</b><small>'+(cur.leader?'현재 최고':'시작가 (입찰 없음)')+'</small></div><div class="leader">'+(cur.leader?'최고 입찰자 <b>'+esc(cur.leader)+'</b>':'첫 입찰을 기다리는 중')+'</div>')+
     '<div class="hist">'+cur.bids.slice().reverse().map(function(b,i){return '<div class="'+(i===0?'top':'')+'">'+esc(b.nick)+' — '+won(b.amount)+'</div>';}).join('')+'</div>'+
     '<div class="row">'+(cur.ended?'<button type="button" class="soft" id="hNext">다음 물품 등록</button>':'<button type="button" class="ghost" id="hCancel">이 경매 취소</button><button type="button" class="soft" id="hEndNow">지금 마감</button>')+'</div></div>';
@@ -174,7 +208,7 @@ $('btnJoin').onclick=function(){var n=checkMe();if(!n)return;myNick=n;bcode=$('j
   $('joinStat').textContent='연결 중…';bpeer=new Peer();
   bpeer.on('open',function(){bconn=bpeer.connect('dgpkauc-'+bcode,{reliable:true});bindB();});
   bpeer.on('error',function(err){$('joinStat').textContent='연결 실패: '+err.type+' (코드 확인 / 판매자가 경매장을 열었는지)';});};
-function bindB(){bconn.on('open',function(){bconn.send(JSON.stringify({t:'hello',nick:myNick}));$('lobby').classList.add('hide');$('bidder').classList.remove('hide');window.scrollTo(0,0);});
+function bindB(){bconn.on('open',function(){bconn.send(JSON.stringify({t:'hello',nick:myNick,kakao:myKakao}));$('lobby').classList.add('hide');$('bidder').classList.remove('hide');window.scrollTo(0,0);});
   bconn.on('data',function(d){try{onHost(JSON.parse(d));}catch(e){}});
   bconn.on('close',function(){toast('판매자와 연결이 끊겼어요');$('bidLive').innerHTML='<div class="card"><b>연결 끊김</b><p class="sub">판매자 폰이 화면을 끄거나 나갔을 수 있어요.</p><div class="row"><button type="button" id="bRe">다시 연결</button></div></div>';$('bRe').onclick=function(){bconn=bpeer.connect('dgpkauc-'+bcode,{reliable:true});bindB();};});}
 function onHost(m){
@@ -183,15 +217,17 @@ function onHost(m){
   if(m.t==='state'){bstate=m;$('sellerNick').textContent=m.seller||'';$('bidPeople').textContent='입찰자 '+(m.people||0)+'명';renderBid();clearInterval(btick);if(!m.ended)btick=setInterval(bidTick,250);return;}
   if(m.t==='start'){buzz();toast('경매 시작!');return;}
   if(m.t==='reject'){toast('입찰 실패 — 최소 '+won(m.min)+(m.why?' ('+m.why+')':''));return;}
-  if(m.t==='end'){buzz();if(m.cancel){toast('판매자가 경매를 취소했어요');return;}if(m.winner&&m.winner.nick===myNick){saveRec({role:'buyer',item:m.item,price:m.winner.price,other:(bstate&&bstate.seller)||'판매자',t:Date.now()});}return;}
+  if(m.t==='end'){buzz();if(m.cancel){toast('판매자가 경매를 취소했어요');return;}if(m.winner&&m.winner.nick===myNick){sellerKakao=m.sellerKakao||'';saveRec({role:'buyer',item:m.item,price:m.winner.price,other:(bstate&&bstate.seller)||'판매자',kakao:sellerKakao,t:Date.now()});if(bstate){bstate.ended=true;bstate.winner=m.winner;renderBid();}}return;}
+  if(m.t==='big'){toast(m.text);buzz();return;}
   if(m.t==='closed'){alert('판매자가 경매장을 닫았어요');location.reload();}}
-function bidTick(){if(!bstate||bstate.ended)return;var left=bstate.endsAt-Date.now();var el=$('bTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}}
+function bidTick(){if(!bstate||bstate.ended)return;var left=bstate.endsAt-Date.now();var el=$('bTimer');if(el){var s=Math.max(0,Math.ceil(left/1000));el.textContent='⏱ '+s+'초';el.classList.toggle('low',s<=10);}bigCount(left,bstate.item.big);}
 function bid(amount){if(!bstate||bstate.ended)return;bconn.send(JSON.stringify({t:'bid',nick:myNick,amount:amount}));}
-function renderBid(){var s=bstate,it=s.item;var mine=s.leader===myNick;var min=s.leader?s.price+it.step:s.start;
-  var h='<div class="card item">'+(it.photo?'<img src="'+it.photo+'" alt="">':'')+'<div class="nm">'+esc(it.name)+'</div><div class="meta">'+esc(it.grade)+(it.note?' · '+esc(it.note):'')+' · 시작가 '+won(it.start)+' · 단위 '+won(it.step)+'</div>';
-  if(s.ended){h+=s.winner?(s.winner.nick===myNick?'<div class="won"><div>🎉 내가 낙찰!</div><b>'+won(s.winner.price)+'</b><div class="sub" style="margin:4px 0 0">판매자 '+esc(s.seller)+'님과 오픈카톡으로 연락하세요. 기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><div>낙찰</div><b>'+esc(s.winner.nick)+' · '+won(s.winner.price)+'</b></div>'):'<div class="won" style="background:#eee"><b>유찰</b></div>';}
-  else{h+='<div class="timer" id="bTimer">⏱</div><div class="price"><b>'+won(s.price)+'</b><small>'+(s.leader?'현재 최고':'시작가')+'</small></div><div class="leader">'+(s.leader?(mine?'<b>내가 최고 입찰자</b> 🙌':'최고 입찰자 <b>'+esc(s.leader)+'</b>'):'아직 입찰 없음 — 시작가로 입찰 가능')+'</div>'+
-    '<div class="bidbtns"><button type="button" data-b="'+min+'" '+(mine?'disabled':'')+'>'+won(min)+'</button><button type="button" class="soft" data-b="'+(min+it.step)+'">'+won(min+it.step)+'</button><button type="button" class="soft" data-b="'+(min+it.step*2)+'">'+won(min+it.step*2)+'</button></div>'+
+var sellerKakao='';
+function renderBid(){var s=bstate,it=s.item;var mine=!!s.mine;var min=s.leader?s.price+it.step:(it.minFirst||s.start);
+  var h='<div class="card item">'+gallery(it.photos,'b')+'<div class="nm">'+esc(it.name)+'</div><div class="meta">'+esc(it.grade)+(it.note?' · '+esc(it.note):'')+' · 시작가 '+won(it.start)+' · 단위 '+won(it.step)+(it.buyNow?' · 즉시구매 '+won(it.buyNow):'')+(it.cool?' · 재입찰 '+it.cool+'초 간격':'')+'</div>';
+  if(s.ended){h+=s.winner?(s.winner.nick===myNick?'<div class="won"><div>🎉 내가 낙찰!</div><b>'+won(s.winner.price)+'</b>'+(sellerKakao?'<a href="'+esc(sellerKakao)+'" target="_blank" rel="noopener" style="display:block;margin-top:8px;background:#FEE500;color:#111;padding:10px;border-radius:10px;text-decoration:none;font-weight:700">💬 판매자 오픈카톡으로 연락</a>':'<div class="sub" style="margin:4px 0 0">판매자 '+esc(s.seller)+'님과 방에서 연락하세요.</div>')+'<div class="sub" style="margin:4px 0 0">기록은 로비 [내 기록]에 남아요.</div></div>':'<div class="won" style="background:#eee"><div>낙찰</div><b>'+esc(s.winner.nick)+' · '+won(s.winner.price)+'</b></div>'):'<div class="won" style="background:#eee"><b>유찰</b></div>';}
+  else{h+='<div class="timer" id="bTimer">⏱</div><div class="price"><b>'+won(s.price)+'</b><small>'+(s.leader?'현재 최고':'시작가')+'</small></div><div class="leader">'+(s.leader?(mine?'<b>내가 최고 입찰자</b> 🙌':'최고 입찰자 <b>'+esc(s.leader)+'</b>'):'아직 입찰 없음 — '+won(min)+'부터')+'</div>'+
+    '<div class="bidbtns"><button type="button" data-b="'+min+'" '+(mine?'disabled':'')+'>'+won(min)+'</button><button type="button" class="soft" data-b="'+(min+it.step)+'">'+won(min+it.step)+'</button><button type="button" class="soft" data-b="'+(min+it.step*2)+'">'+won(min+it.step*2)+'</button></div>'+(it.buyNow?'<div class="row"><button type="button" class="buynow" data-b="'+it.buyNow+'" style="flex:1">⚡ 즉시구매 '+won(it.buyNow)+'</button></div>':'')+
     '<div class="row"><input type="number" id="bidIn" placeholder="직접 입력 (원)" inputmode="numeric" step="100" min="'+min+'"><button type="button" id="bidGo" style="flex:0 0 auto">입찰</button></div>';}
   h+='<div class="hist">'+(s.bids||[]).slice().reverse().map(function(b,i){return '<div class="'+(i===0?'top':'')+'">'+esc(b.nick)+' — '+won(b.amount)+'</div>';}).join('')+'</div></div>';
   $('bidLive').innerHTML=h;bidTick();
