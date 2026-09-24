@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>1:1 대전 · 대구 포켓몬 카드 방</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<style>
+  :root{--bg:#1b1730;--panel:#262040;--panel2:#302a4d;--ink:#F3EFFA;--ink2:#B9B1CC;--line:#3d3560;--pink:#E85DAF;--blue:#6C8CFF;--yellow:#F5C842;--ok:#5CCB7A;--warn:#FF6B6B;box-sizing:border-box}
+  *,*::before,*::after{box-sizing:inherit}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:14px;line-height:1.4;word-break:keep-all;-webkit-text-size-adjust:100%;overflow:hidden;user-select:none;-webkit-user-select:none}
+  button,input,select{font:inherit}
+  button{border:0;border-radius:9px;padding:8px 12px;background:var(--pink);color:#fff;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+  button.soft{background:var(--panel2);color:var(--ink)}
+  button.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+  button.warn{background:var(--warn)}
+  button.sm{padding:5px 9px;font-size:12.5px}
+  input[type=text],select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink)}
+  .hide{display:none!important}
+
+  /* 로비 */
+  #lobby{position:fixed;inset:0;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 40px;background:var(--bg)}
+  #lobby h1{margin:0 0 4px;font-size:22px}
+  #lobby p{color:var(--ink2);margin:0 0 14px;font-size:13.5px}
+  .box{background:var(--panel);border-radius:14px;padding:14px;margin-bottom:12px}
+  .box h2{margin:0 0 8px;font-size:15px}
+  .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .row>*{flex:1}
+  .code{font-size:34px;letter-spacing:6px;text-align:center;font-weight:800;color:var(--yellow);margin:8px 0}
+
+  /* 게임 */
+  #game{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+  .bar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);font-size:12.5px;border-bottom:1px solid var(--line)}
+  .bar b{font-size:13.5px}
+  .bar .cnts{margin-left:auto;display:flex;gap:8px;color:var(--ink2)}
+  .bar .cnts span b{color:var(--ink)}
+  .field{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:4px 8px;min-height:0;overflow:auto}
+  .side{display:flex;flex-direction:column;gap:4px}
+  .side.opp{transform:none}
+  .bench{display:flex;gap:4px;justify-content:center;min-height:62px}
+  .slot{position:relative;width:44px;flex:0 0 44px;border-radius:5px;background:var(--panel2);border:1px dashed var(--line);aspect-ratio:63/88}
+  .slot.active{width:66px;flex:0 0 66px}
+  .slot img{width:100%;height:100%;object-fit:cover;border-radius:5px;display:block}
+  .slot .dmg{position:absolute;left:-4px;top:-6px;background:var(--warn);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:1px 5px;min-width:22px;text-align:center}
+  .slot .en{position:absolute;right:-3px;bottom:-4px;display:flex;flex-wrap:wrap;gap:1px;max-width:34px;justify-content:flex-end}
+  .slot .en i{width:9px;height:9px;border-radius:50%;background:#9ca3af;border:1px solid #fff}
+  .slot .st{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:9px;background:rgba(0,0,0,.65);border-radius:0 0 5px 5px;padding:1px 0}
+  .slot .ev{position:absolute;right:-3px;top:-5px;background:var(--blue);color:#fff;font-size:9px;border-radius:999px;padding:0 4px}
+  .center{display:flex;gap:6px;align-items:flex-start;justify-content:center}
+  .piles{display:flex;flex-direction:column;gap:4px;font-size:10.5px;color:var(--ink2);text-align:center}
+  .pile{width:44px;aspect-ratio:63/88;border-radius:5px;background:var(--panel2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--ink);cursor:pointer}
+  .pile b{font-size:15px}
+  .pile.deck{background:linear-gradient(135deg,#3b2f6b,#6a3f8f)}
+  .pile.prize{background:linear-gradient(135deg,#6b4b2f,#b07a3c)}
+  .mid{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px}
+  .mid .log{flex:1;min-width:0;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mid .turn{font-weight:800;padding:2px 8px;border-radius:999px;background:var(--panel2)}
+  .mid .turn.me{background:var(--ok);color:#111}
+  .hand{display:flex;gap:6px;overflow-x:auto;padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 8px);background:var(--panel);min-height:112px}
+  .hand .c{flex:0 0 62px;border-radius:6px;overflow:hidden;background:var(--panel2);cursor:pointer}
+  .hand .c img{width:100%;display:block;aspect-ratio:63/88;object-fit:cover}
+  .hand .empty{color:var(--ink2);font-size:12.5px;align-self:center;padding:0 6px}
+  .tools{display:flex;gap:6px;padding:6px 10px;background:var(--panel);overflow-x:auto}
+  .tools button{flex:0 0 auto}
+  .flags{font-size:11px;color:var(--ink2);margin-left:auto;white-space:nowrap}
+
+  /* 시트 */
+  .sheet{display:none;position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.5)}
+  .sheet.on{display:block}
+  .sheet .in{position:absolute;left:0;right:0;bottom:0;max-height:86%;background:var(--panel);border-radius:16px 16px 0 0;padding:12px 12px calc(env(safe-area-inset-bottom,0px) + 12px);overflow:auto}
+  .sheet h3{margin:0 0 8px;font-size:15px}
+  .acts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .acts button{padding:10px 8px}
+  .acts .full{grid-column:1/-1}
+  .list{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .list .c{border-radius:6px;overflow:hidden;background:var(--panel2);position:relative}
+  .list .c img{width:100%;display:block;aspect-ratio:63/88;object-fit:cover}
+  .list .c .n{font-size:10px;padding:2px 3px;color:var(--ink2);height:26px;overflow:hidden}
+  .preview{display:flex;gap:10px;margin-bottom:8px}
+  .preview img{width:96px;border-radius:6px}
+  .preview .info{flex:1;font-size:12.5px;color:var(--ink2)}
+  .preview .info b{color:var(--ink);font-size:14px;display:block}
+  .detail img{width:100%;max-width:300px;display:block;margin:0 auto 8px;border-radius:8px}
+  .detail .atk{background:var(--panel2);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px}
+  .detail .atk b{display:block}
+  .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 50px);transform:translateX(-50%);background:#000;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;max-width:90%;text-align:center}
+  .big{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-size:56px;font-weight:900;color:var(--yellow);text-shadow:0 4px 20px #000}
+  .big.on{display:flex}
+</style>
+</head>
+<body>
+
+<!-- ================= 로비 ================= -->
+<div id="lobby">
+  <h1>⚔️ 1:1 대전</h1>
+  <p>실제 TCG 룰 그대로. 카드 효과는 버튼으로 직접 처리하고, 상대 화면에 실시간으로 보입니다.</p>
+
+  <div class="box">
+    <h2>내 정보</h2>
+    <input type="text" id="nick" placeholder="닉네임 (카톡방 닉과 같게)" maxlength="12">
+    <div class="row"><select id="deckSel"><option value="">덱을 고르세요</option></select></div>
+    <div class="row"><button type="button" class="soft" id="btnPaste">덱 코드 붙여넣기</button><a href="deck.html" style="text-align:center;color:var(--blue);font-size:13px">덱 만들기 →</a></div>
+    <input type="text" id="codeIn" class="hide" placeholder="덱 코드" style="margin-top:8px">
+  </div>
+
+  <div class="box">
+    <h2>같이 하기</h2>
+    <button type="button" id="btnHost" style="width:100%">방 만들기</button>
+    <div id="hostBox" class="hide"><div class="code" id="roomCode">----</div><p style="text-align:center;margin:0">상대에게 이 코드를 알려 주세요</p><p id="hostStat" style="text-align:center">연결 대기 중…</p></div>
+    <div class="row"><input type="text" id="joinCode" placeholder="상대 방 코드 4자리" maxlength="4" inputmode="numeric"><button type="button" class="soft" id="btnJoin" style="flex:0 0 auto">참가</button></div>
+    <p id="joinStat" style="margin:6px 0 0"></p>
+  </div>
+
+  <div class="box">
+    <h2>혼자 연습</h2>
+    <p style="margin:0 0 8px">양쪽을 다 내가 조작하면서 룰을 익히는 모드. 아래 [시점 전환]으로 상대 쪽을 조작합니다.</p>
+    <button type="button" class="soft" id="btnSolo" style="width:100%">혼자 연습 시작</button>
+  </div>
+  <p style="text-align:center"><a href="notice.html" style="color:var(--ink2)">← 공지 페이지</a></p>
+</div>
+
+<!-- ================= 게임 ================= -->
+<div id="game" class="hide">
+  <div class="bar" id="oppBar"><b id="oppNick">상대</b><span id="oppDeckName" style="color:var(--ink2)"></span>
+    <div class="cnts"><span>손 <b id="oHand">0</b></span><span>덱 <b id="oDeck">0</b></span><span>프라이즈 <b id="oPrize">0</b></span></div></div>
+
+  <div class="field">
+    <div class="side opp">
+      <div class="bench" id="oBench"></div>
+      <div class="center">
+        <div class="piles"><div class="pile" id="oDiscard"><b>0</b>트래시</div></div>
+        <div class="slot active" id="oActive"></div>
+        <div class="piles"><div class="pile" id="oLost"><b>0</b>로스트</div></div>
+      </div>
+    </div>
+
+    <div class="mid"><span class="turn" id="turnTag">준비</span><span class="log" id="logLine">시작 전</span><button type="button" class="sm ghost" id="btnLog">기록</button></div>
+
+    <div class="side me">
+      <div class="center">
+        <div class="piles"><div class="pile prize" id="mPrize"><b>0</b>프라이즈</div><div class="pile" id="mDiscard"><b>0</b>트래시</div></div>
+        <div class="slot active" id="mActive"></div>
+        <div class="piles"><div class="pile deck" id="mDeck"><b>0</b>덱</div><div class="pile" id="mLost"><b>0</b>로스트</div></div>
+      </div>
+      <div class="bench" id="mBench"></div>
+    </div>
+  </div>
+
+  <div class="tools">
+    <button type="button" class="sm soft" id="btnDraw">드로</button>
+    <button type="button" class="sm soft" id="btnCoin">코인</button>
+    <button type="button" class="sm soft" id="btnDice">주사위</button>
+    <button type="button" class="sm warn" id="btnAttack">공격</button>
+    <button type="button" class="sm" id="btnEnd">턴 종료</button>
+    <button type="button" class="sm ghost" id="btnSwap">시점 전환</button>
+    <button type="button" class="sm ghost" id="btnMenu">⋯</button>
+    <span class="flags" id="flags"></span>
+  </div>
+  <div class="hand" id="mHand"></div>
+</div>
+
+<div class="sheet" id="sheet"><div class="in" id="sheetIn"></div></div>
+<div class="big" id="big"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   대구 포켓몬 카드 방 · 1:1 대전 시뮬레이터
+   - 규칙 "구조"만 강제(드로·프라이즈·에너지 1턴 1장·서포트 1장·선공 첫턴 공격X)
+   - 카드 효과는 플레이어가 버튼으로 처리, 모든 행동이 상대에게 실시간 반영
+   - 통신: PeerJS(WebRTC) — 서버·계정 없음. 각자 자기 카드 상태를 보내는 구조
+   ============================================================ */
+var API='https://api.tcgdex.net/v2/', LS_DECKS='dgpk_decks';
+var STATUS={poison:'독',burn:'화상',asleep:'잠듦',paralyzed:'마비',confused:'혼란'};
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function imgOf(c,q){return c&&c.img?c.img+'/'+(q||'low')+'.webp':'';}
+var tt;function toast(m){var t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(function(){t.style.opacity=0;},1600);}
+function big(m){var b=$('big');b.textContent=m;b.classList.add('on');setTimeout(function(){b.classList.remove('on');},1400);}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function uid(){return Math.random().toString(36).slice(2,9);}
+function sheet(html){$('sheetIn').innerHTML=html;$('sheet').classList.add('on');}
+function closeSheet(){$('sheet').classList.remove('on');}
+$('sheet').onclick=function(e){if(e.target===$('sheet'))closeSheet();};
+
+/* ---------- 플레이어 상태 ---------- */
+function newPlayer(nick,deckObj){
+  var deck=[];
+  Object.keys(deckObj.cards).forEach(function(k){var c=deckObj.cards[k];for(var i=0;i<c.n;i++)deck.push({uid:uid(),id:c.id,name:c.name,img:c.img});});
+  return {nick:nick,deckName:deckObj.name,deck:shuffle(deck),hand:[],prizes:[],active:null,bench:[],discard:[],lost:[],
+    energyUsed:false,supporterUsed:false,attacked:false,ready:false};
+}
+function slotOf(card){return {stack:[card],energy:[],tools:[],dmg:0,status:{}};}
+function topCard(s){return s.stack[s.stack.length-1];}
+function pub(p){ /* 상대에게 보낼 공개 정보 */
+  return {nick:p.nick,deckName:p.deckName,hand:p.hand.length,deck:p.deck.length,prizes:p.prizes.length,active:p.active,bench:p.bench,discard:p.discard,lost:p.lost,energyUsed:p.energyUsed,supporterUsed:p.supporterUsed,attacked:p.attacked,ready:p.ready};
+}
+
+var me=null, opp=null, oppPub=null, solo=false, conn=null, peer=null, isHost=false;
+var turn=null /* 'me'|'opp' */, turnNo=0, logs=[];
+var rules={enforce:true};
+
+/* ---------- 로비 ---------- */
+function getDecks(){try{return JSON.parse(localStorage.getItem(LS_DECKS)||'[]');}catch(e){return[];}}
+function fillDecks(){var s=$('deckSel');s.innerHTML='<option value="">덱을 고르세요</option>';getDecks().forEach(function(d,i){var n=0;for(var k in d.cards)n+=d.cards[k].n;var o=document.createElement('option');o.value=i;o.textContent=d.name+' ('+n+'장)';s.appendChild(o);});}
+function chosenDeck(){
+  var code=$('codeIn').value.trim();
+  if(code){try{var o=JSON.parse(decodeURIComponent(escape(atob(code))));if(o.cards)return {name:o.name||'코드 덱',cards:o.cards};}catch(e){toast('덱 코드가 올바르지 않아요');return null;}}
+  var i=$('deckSel').value;if(i==='')return null;return getDecks()[+i];
+}
+function deckSize(d){var n=0;for(var k in d.cards)n+=d.cards[k].n;return n;}
+function startCheck(){
+  var nick=$('nick').value.trim();if(!nick){toast('닉네임을 입력하세요');return null;}
+  var d=chosenDeck();if(!d){toast('덱을 고르거나 코드를 붙여넣으세요');return null;}
+  if(deckSize(d)!==60&&!confirm('덱이 60장이 아니에요('+deckSize(d)+'장). 그래도 시작할까요?'))return null;
+  localStorage.setItem('dgpk_nick',nick);return {nick:nick,deck:d};
+}
+$('nick').value=localStorage.getItem('dgpk_nick')||'';
+fillDecks();
+$('btnPaste').onclick=function(e){e.preventDefault();$('codeIn').classList.toggle('hide');};
+
+$('btnSolo').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;solo=true;isHost=true;
+  me=newPlayer(s.nick,s.deck);opp=newPlayer('연습 상대',s.deck);enterGame();};
+
+$('btnHost').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;
+  var code=String(Math.floor(1000+Math.random()*9000));$('roomCode').textContent=code;$('hostBox').classList.remove('hide');$('btnHost').disabled=true;
+  me=newPlayer(s.nick,s.deck);isHost=true;
+  peer=new Peer('dgpk-'+code);
+  peer.on('open',function(){$('hostStat').textContent='연결 대기 중… 상대가 참가하면 자동 시작';});
+  peer.on('connection',function(c){conn=c;bindConn();});
+  peer.on('error',function(err){$('hostStat').textContent='오류: '+err.type+' (코드가 겹쳤으면 다시 만들기)';$('btnHost').disabled=false;});
+};
+$('btnJoin').onclick=function(e){e.preventDefault();var s=startCheck();if(!s)return;var code=$('joinCode').value.trim();if(code.length!==4){toast('코드 4자리');return;}
+  me=newPlayer(s.nick,s.deck);isHost=false;$('joinStat').textContent='연결 중…';
+  peer=new Peer();
+  peer.on('open',function(){conn=peer.connect('dgpk-'+code,{reliable:true});bindConn();});
+  peer.on('error',function(err){$('joinStat').textContent='연결 실패: '+err.type+' (코드 확인 / 상대가 방을 만들었는지)';});
+};
+function bindConn(){
+  conn.on('open',function(){send({t:'hello',pub:pub(me)});});
+  conn.on('data',onData);
+  conn.on('close',function(){toast('상대 연결이 끊겼어요');log('상대 연결 끊김');});
+}
+function send(m){if(conn&&conn.open)conn.send(m);}
+function onData(m){
+  if(m.t==='hello'){oppPub=m.pub;if(!$('game').classList.contains('hide')){}else{send({t:'hello',pub:pub(me)});enterGame();}return;}
+  if(m.t==='state'){oppPub=m.pub;render();return;}
+  if(m.t==='log'){log(m.text,true);return;}
+  if(m.t==='big'){big(m.text);return;}
+  if(m.t==='attack'){applyAttack(m.target,m.dmg,m.name);return;}
+  if(m.t==='turn'){turn=(m.turn==='me')?'opp':'me';turnNo=m.no;if(turn==='me')startTurn();render();return;}
+  if(m.t==='first'){turn=m.first==='host'?(isHost?'me':'opp'):(isHost?'opp':'me');me.first=(turn==='me');turnNo=1;log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();render();return;}
+}
+function sync(){if(solo){oppPub=pub(opp);}else send({t:'state',pub:pub(me)});render();}
+function log(text,fromOpp){var who=fromOpp?'[상대] ':(solo?'':'[나] ');logs.push(who+text);if(logs.length>200)logs.shift();$('logLine').textContent=who+text;if(!fromOpp&&!solo)send({t:'log',text:text});}
+
+/* ---------- 게임 시작 ---------- */
+function enterGame(){
+  $('lobby').classList.add('hide');$('game').classList.remove('hide');
+  $('btnSwap').classList.toggle('hide',!solo);
+  if(solo){oppPub=pub(opp);}
+  render();
+  setup(me);
+  if(solo){setup(opp);oppPub=pub(opp);var f=Math.random()<.5;turn=f?'me':'opp';(f?me:opp).first=true;turnNo=1;log('코인: '+(f?'내가 선공':'상대 선공'));if(turn==='me')startTurn();sync();}
+  else if(isHost){var first=Math.random()<.5?'host':'guest';turn=first==='host'?'me':'opp';me.first=(turn==='me');turnNo=1;send({t:'first',first:first});log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();sync();}
+  else sync();
+}
+function setup(p){p.hand=p.deck.splice(0,7);p.prizes=p.deck.splice(0,6);p.ready=true;}
+function mulligan(){if(!confirm('멀리건: 손패를 덱에 되돌리고 셔플 후 7장 다시 뽑습니다. (기본 포켓몬이 없을 때만)'))return;
+  me.deck=shuffle(me.deck.concat(me.hand,me.prizes));me.hand=me.deck.splice(0,7);me.prizes=me.deck.splice(0,6);log('멀리건 (상대는 원하면 1장 더 드로)');sync();}
+function startTurn(){me.energyUsed=false;me.supporterUsed=false;me.attacked=false;toast('내 턴 '+turnNo+' — 드로하세요');}
+$('btnEnd').onclick=function(e){e.preventDefault();if(turn!=='me'){toast('내 턴이 아니에요');return;}
+  if(!e.skip&&!confirm('턴을 종료할까요?'))return;log('턴 종료');turnNo++;
+  if(solo){turn='opp';var t=me;me=opp;opp=t;/* 시점 전환 없이 상대 턴 시작 */me.energyUsed=false;me.supporterUsed=false;me.attacked=false;turn='me';toast('상대(연습) 턴 — 시점이 전환됐어요');sync();return;}
+  turn='opp';send({t:'turn',turn:'me',no:turnNo});render();};
+$('btnSwap').onclick=function(e){e.preventDefault();if(!solo)return;var t=me;me=opp;opp=t;turn=turn==='me'?'opp':'me';sync();toast('시점: '+me.nick);};
+
+/* ---------- 렌더 ---------- */
+function slotHTML(s,mine,idx,isActive){
+  if(!s)return '<div class="slot'+(isActive?' active':'')+'" data-k="'+(mine?'m':'o')+'" data-i="'+idx+'"></div>';
+  var c=topCard(s);var st=Object.keys(s.status).filter(function(k){return s.status[k];}).map(function(k){return STATUS[k];}).join('·');
+  return '<div class="slot'+(isActive?' active':'')+'" data-k="'+(mine?'m':'o')+'" data-i="'+idx+'"><img src="'+imgOf(c)+'" alt="">'+
+    (s.dmg?'<span class="dmg">'+s.dmg+'</span>':'')+(s.stack.length>1?'<span class="ev">'+s.stack.length+'</span>':'')+
+    (s.energy.length||s.tools.length?'<span class="en">'+s.energy.map(function(){return '<i></i>';}).join('')+s.tools.map(function(){return '<i style="background:var(--yellow)"></i>';}).join('')+'</span>':'')+
+    (st?'<span class="st">'+st+'</span>':'')+'</div>';
+}
+function render(){
+  var o=oppPub||{hand:0,deck:0,prizes:0,bench:[],discard:[],lost:[],active:null,nick:'상대'};
+  $('oppNick').textContent=o.nick||'상대';$('oppDeckName').textContent=o.deckName?'· '+o.deckName:'';
+  $('oHand').textContent=o.hand;$('oDeck').textContent=o.deck;$('oPrize').textContent=o.prizes;
+  $('oBench').innerHTML=(o.bench||[]).map(function(s,i){return slotHTML(s,false,i,false);}).join('')||'<div class="slot" style="opacity:.3"></div>';
+  $('oActive').outerHTML=slotHTML(o.active,false,-1,true).replace('class="slot active"','class="slot active" id="oActive"');
+  $('oDiscard').innerHTML='<b>'+o.discard.length+'</b>트래시';$('oLost').innerHTML='<b>'+o.lost.length+'</b>로스트';
+
+  $('mActive').outerHTML=slotHTML(me.active,true,-1,true).replace('class="slot active"','class="slot active" id="mActive"');
+  var bh='';for(var i=0;i<Math.max(5,me.bench.length);i++)bh+=slotHTML(me.bench[i]||null,true,i,false);$('mBench').innerHTML=bh;
+  $('mDeck').innerHTML='<b>'+me.deck.length+'</b>덱';$('mPrize').innerHTML='<b>'+me.prizes.length+'</b>프라이즈';$('mDiscard').innerHTML='<b>'+me.discard.length+'</b>트래시';$('mLost').innerHTML='<b>'+me.lost.length+'</b>로스트';
+  $('mHand').innerHTML=me.hand.length?me.hand.map(function(c,i){return '<div class="c" data-i="'+i+'"><img src="'+imgOf(c)+'" alt=""></div>';}).join(''):'<span class="empty">손패 없음</span>';
+  var tg=$('turnTag');tg.textContent=turn==='me'?'내 턴 '+turnNo:turn==='opp'?'상대 턴 '+turnNo:'준비';tg.className='turn'+(turn==='me'?' me':'');
+  $('flags').textContent=(me.energyUsed?'⚡사용 ':'⚡가능 ')+(me.supporterUsed?'서포트✔':'서포트○');
+  bind();
+}
+function bind(){
+  document.querySelectorAll('#mHand .c').forEach(function(el){el.onclick=function(){handMenu(+el.dataset.i);};});
+  document.querySelectorAll('.slot[data-k="m"]').forEach(function(el){el.onclick=function(){var i=+el.dataset.i;var s=i<0?me.active:me.bench[i];if(s)fieldMenu(s,i);else emptySlot(i);};});
+  document.querySelectorAll('.slot[data-k="o"]').forEach(function(el){el.onclick=function(){var i=+el.dataset.i;var o=oppPub||{};var s=i<0?o.active:(o.bench||[])[i];if(s)oppSlot(s);};});
+  $('mDeck').onclick=deckMenu;$('mPrize').onclick=prizeMenu;$('mDiscard').onclick=function(){pileView(me.discard,'내 트래시',true);};$('mLost').onclick=function(){pileView(me.lost,'내 로스트존',true);};
+  $('oDiscard').onclick=function(){pileView((oppPub||{}).discard||[],'상대 트래시',false);};$('oLost').onclick=function(){pileView((oppPub||{}).lost||[],'상대 로스트존',false);};
+}
+$('btnLog').onclick=function(e){e.preventDefault();sheet('<h3>기록</h3><div style="font-size:12.5px;color:var(--ink2);white-space:pre-line">'+esc(logs.slice(-60).join('\n'))+'</div>');};
+$('btnMenu').onclick=function(e){e.preventDefault();sheet('<h3>메뉴</h3><div class="acts">'+
+  '<button type="button" class="soft" onclick="mulligan();closeSheet()">멀리건</button>'+
+  '<button type="button" class="soft" onclick="rules.enforce=!rules.enforce;toast(\'규칙 강제 \'+(rules.enforce?\'ON\':\'OFF\'));closeSheet()">규칙 강제 '+(rules.enforce?'ON':'OFF')+'</button>'+
+  '<button type="button" class="soft" onclick="extraDraw()">1장 더 드로 (멀리건 보상)</button>'+
+  '<button type="button" class="warn" onclick="concede()">항복</button>'+
+  '<button type="button" class="ghost full" onclick="if(confirm(\'로비로 나갈까요? 게임이 끝납니다.\'))location.reload()">나가기</button></div>');};
+function extraDraw(){drawN(1);closeSheet();}
+function concede(){if(!confirm('항복할까요?'))return;log('항복! 상대 승리');send({t:'big',text:'상대 항복 🏆'});big('패배…');closeSheet();}
+
+/* ---------- 드로/덱 ---------- */
+function drawN(n){if(me.deck.length<n){toast('덱이 부족해요! (드로 못 하면 패배)');log('덱 없음 — 드로 불가');return;}me.hand=me.hand.concat(me.deck.splice(0,n));log(n+'장 드로');sync();}
+$('btnDraw').onclick=function(e){e.preventDefault();drawN(1);};
+$('btnCoin').onclick=function(e){e.preventDefault();var r=Math.random()<.5?'앞면':'뒷면';big('🪙 '+r);log('코인: '+r);send({t:'big',text:'상대 코인: '+r});};
+$('btnDice').onclick=function(e){e.preventDefault();var r=1+Math.floor(Math.random()*6);big('🎲 '+r);log('주사위: '+r);send({t:'big',text:'상대 주사위: '+r});};
+function deckMenu(){sheet('<h3>덱 ('+me.deck.length+'장)</h3><div class="acts">'+
+  '<button type="button" onclick="drawN(1);closeSheet()">1장 드로</button><button type="button" class="soft" onclick="drawN(2);closeSheet()">2장 드로</button>'+
+  '<button type="button" class="soft" onclick="me.deck=shuffle(me.deck);log(\'덱 셔플\');sync();closeSheet()">셔플</button>'+
+  '<button type="button" class="soft" onclick="searchDeck()">덱 검색</button>'+
+  '<button type="button" class="soft" onclick="peekTop()">위에서 N장 보기</button>'+
+  '<button type="button" class="soft" onclick="millTop()">위 1장 트래시</button></div>');}
+function searchDeck(){log('덱 검색 중');
+  var sorted=me.deck.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+  sheet('<h3>덱 검색 — 카드를 누르면 손패로</h3><p style="font-size:12px;color:var(--ink2);margin:0 0 6px">끝나면 자동 셔플</p><div class="list">'+sorted.map(function(c){return '<div class="c" data-u="'+c.uid+'"><img src="'+imgOf(c)+'" alt=""><div class="n">'+esc(c.name)+'</div></div>';}).join('')+'</div><div class="row"><button type="button" class="soft" onclick="me.deck=shuffle(me.deck);log(\'검색 종료·셔플\');sync();closeSheet()">완료(셔플)</button></div>');
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var i=me.deck.findIndex(function(c){return c.uid===el.dataset.u;});if(i<0)return;var c=me.deck.splice(i,1)[0];me.hand.push(c);log('덱에서 '+c.name+' 손패로');el.remove();sync();};});}
+function peekTop(){var n=+prompt('몇 장 볼까요?','3')||0;if(!n)return;var top=me.deck.slice(0,n);
+  sheet('<h3>덱 위 '+top.length+'장 (위→아래)</h3><div class="list">'+top.map(function(c){return '<div class="c" data-u="'+c.uid+'"><img src="'+imgOf(c)+'" alt=""><div class="n">'+esc(c.name)+'</div></div>';}).join('')+'</div><p style="font-size:12px;color:var(--ink2)">누르면 손패로. 아래 버튼으로 순서 정리</p><div class="acts"><button type="button" class="soft" onclick="var t=me.deck.splice(0,'+top.length+');me.deck=me.deck.concat(t);log(\'위 '+top.length+'장 덱 아래로\');sync();closeSheet()">전부 덱 아래로</button><button type="button" class="soft" onclick="me.deck=shuffle(me.deck);log(\'셔플\');sync();closeSheet()">셔플</button><button type="button" class="ghost" onclick="closeSheet()">그대로 두기</button></div>');
+  log('덱 위 '+top.length+'장 확인');
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var i=me.deck.findIndex(function(c){return c.uid===el.dataset.u;});if(i<0)return;var c=me.deck.splice(i,1)[0];me.hand.push(c);log(c.name+' 손패로');el.remove();sync();};});}
+function millTop(){if(!me.deck.length)return;var c=me.deck.shift();me.discard.push(c);log('덱 위 '+c.name+' 트래시');sync();closeSheet();}
+
+/* ---------- 프라이즈 ---------- */
+function prizeMenu(){if(!me.prizes.length){toast('프라이즈 없음');return;}
+  sheet('<h3>프라이즈 ('+me.prizes.length+'장) — 뒷면</h3><p style="font-size:12px;color:var(--ink2);margin:0 0 8px">상대 포켓몬을 기절시켰을 때 1장(ex 등은 2장) 가져오기</p><div class="list">'+me.prizes.map(function(c,i){return '<div class="c" data-i="'+i+'" style="aspect-ratio:63/88;background:linear-gradient(135deg,#6b4b2f,#b07a3c);display:flex;align-items:center;justify-content:center;font-weight:800">'+(i+1)+'</div>';}).join('')+'</div>');
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var c=me.prizes.splice(+el.dataset.i,1)[0];me.hand.push(c);log('프라이즈 1장 획득 (남은 '+me.prizes.length+')');sync();closeSheet();if(!me.prizes.length){big('🏆 승리!');send({t:'big',text:'상대 프라이즈 완료 — 패배'});}};});}
+
+/* ---------- 손패 ---------- */
+function isBasicGuess(c){return true;}
+function handMenu(i){var c=me.hand[i];
+  sheet('<div class="preview"><img src="'+imgOf(c)+'" alt=""><div class="info"><b>'+esc(c.name)+'</b>'+esc(c.id)+'<br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세 보기</a></div></div><div class="acts">'+
+   (!me.active?'<button type="button" onclick="toActive('+i+')">배틀 포켓몬으로</button>':'')+
+   '<button type="button" onclick="toBench('+i+')">벤치에 내기</button>'+
+   '<button type="button" class="soft" onclick="attach('+i+',\'energy\')">에너지 붙이기</button>'+
+   '<button type="button" class="soft" onclick="attach('+i+',\'evolve\')">진화시키기</button>'+
+   '<button type="button" class="soft" onclick="attach('+i+',\'tool\')">도구 붙이기</button>'+
+   '<button type="button" class="soft" onclick="playTrainer('+i+',false)">굿즈·스타디움 사용→트래시</button>'+
+   '<button type="button" class="soft full" onclick="playTrainer('+i+',true)">서포트 사용→트래시</button>'+
+   '<button type="button" class="ghost" onclick="handTo('+i+',\'discard\')">트래시</button>'+
+   '<button type="button" class="ghost" onclick="handTo('+i+',\'lost\')">로스트존</button>'+
+   '<button type="button" class="ghost" onclick="handTo('+i+',\'deckTop\')">덱 위로</button>'+
+   '<button type="button" class="ghost" onclick="handTo('+i+',\'deckBottom\')">덱 아래로</button>'+
+   '<button type="button" class="ghost full" onclick="revealHand()">손패 전체 공개(기록)</button></div>');}
+function toActive(i){var c=me.hand.splice(i,1)[0];me.active=slotOf(c);log(c.name+' 배틀 포켓몬으로');sync();closeSheet();}
+function toBench(i){if(me.bench.length>=8){toast('벤치가 꽉 찼어요');return;}if(rules.enforce&&me.bench.length>=5&&!confirm('벤치 5장 초과 — 특수 효과(스타디움 등)로 늘어난 경우에만 확인'))return;var c=me.hand.splice(i,1)[0];me.bench.push(slotOf(c));log(c.name+' 벤치에');sync();closeSheet();}
+function handTo(i,where){var c=me.hand.splice(i,1)[0];if(where==='discard')me.discard.push(c);else if(where==='lost')me.lost.push(c);else if(where==='deckTop')me.deck.unshift(c);else me.deck.push(c);log(c.name+' → '+({discard:'트래시',lost:'로스트존',deckTop:'덱 위',deckBottom:'덱 아래'})[where]);sync();closeSheet();}
+function playTrainer(i,supporter){if(supporter&&rules.enforce&&me.supporterUsed){toast('이번 턴 서포트를 이미 썼어요');return;}if(supporter&&rules.enforce&&turnNo===1&&turn==='me'&&isFirstPlayer()){toast('선공 첫 턴은 서포트 사용 불가');return;}
+  var c=me.hand.splice(i,1)[0];me.discard.push(c);if(supporter)me.supporterUsed=true;log((supporter?'서포트 ':'')+c.name+' 사용');sync();closeSheet();}
+function revealHand(){log('손패 공개: '+me.hand.map(function(c){return c.name;}).join(', '));closeSheet();}
+function isFirstPlayer(){return !!me.first;}
+function attach(i,kind){var c=me.hand[i];var targets=[];if(me.active)targets.push({s:me.active,label:'배틀: '+topCard(me.active).name});me.bench.forEach(function(s,j){targets.push({s:s,label:'벤치'+(j+1)+': '+topCard(s).name});});
+  if(!targets.length){toast('필드에 포켓몬이 없어요');return;}
+  if(kind==='energy'&&rules.enforce&&me.energyUsed&&!confirm('이번 턴 이미 에너지를 붙였어요. 특성·효과로 붙이는 건가요?'))return;
+  sheet('<h3>'+esc(c.name)+' — '+({energy:'에너지 붙일 대상',evolve:'진화시킬 포켓몬',tool:'도구 붙일 대상'})[kind]+'</h3><div class="acts">'+targets.map(function(t,k){return '<button type="button" class="soft full" data-k="'+k+'">'+esc(t.label)+'</button>';}).join('')+'</div>');
+  document.querySelectorAll('#sheetIn button').forEach(function(b){b.onclick=function(){var t=targets[+b.dataset.k];me.hand.splice(i,1);
+    if(kind==='energy'){t.s.energy.push(c);me.energyUsed=true;log(c.name+' → '+topCard(t.s).name+'에 붙임');}
+    else if(kind==='tool'){t.s.tools.push(c);log(c.name+' → '+topCard(t.s).name+'에 도구');}
+    else{log(topCard(t.s).name+' → '+c.name+' 진화');t.s.stack.push(c);t.s.status={};}
+    sync();closeSheet();};});}
+
+/* ---------- 공격 ---------- */
+$('btnAttack').onclick=function(e){e.preventDefault();
+  if(rules.enforce){if(turn!=='me'){toast('내 턴이 아니에요');return;}if(!me.active){toast('배틀 포켓몬이 없어요');return;}if(me.attacked){toast('이번 턴 이미 공격했어요');return;}if(turnNo===1&&isFirstPlayer()){toast('선공 첫 턴은 공격 불가');return;}}
+  var o=oppPub||{};var targets=[];if(o.active)targets.push({i:-1,label:'배틀: '+topCard(o.active).name});(o.bench||[]).forEach(function(s,j){targets.push({i:j,label:'벤치'+(j+1)+': '+topCard(s).name});});
+  if(!targets.length){toast('상대 필드에 포켓몬이 없어요');return;}
+  sheet('<h3>공격 — 대상 선택</h3><p style="font-size:12px;color:var(--ink2);margin:0 0 6px">약점·저항력·효과를 계산한 최종 데미지를 입력하세요. 상대 화면에 자동 반영됩니다.</p><div class="acts">'+targets.map(function(t,k){return '<button type="button" class="soft full" data-k="'+k+'">'+esc(t.label)+'</button>';}).join('')+'</div>');
+  document.querySelectorAll('#sheetIn button').forEach(function(b){b.onclick=function(){var t=targets[+b.dataset.k];var v=prompt(t.label+'에 줄 데미지',"30");if(v===null)return;var d=Math.max(0,+v||0);var an=topCard(me.active).name;
+    me.attacked=true;log(an+'의 공격 → '+t.label+' '+d+' 데미지');
+    if(solo){applyAttackTo(opp,t.i,d,an);oppPub=pub(opp);}else send({t:'attack',target:t.i,dmg:d,name:an});
+    sync();closeSheet();if(confirm('공격하면 턴이 끝납니다. 턴을 종료할까요?'))$('btnEnd').onclick({preventDefault:function(){},skip:true});};});};
+function applyAttackTo(p,i,d,an){var s=i<0?p.active:p.bench[i];if(!s)return;s.dmg+=d;}
+function applyAttack(i,d,an){var s=i<0?me.active:me.bench[i];if(!s){toast('상대 공격 대상이 없어요');return;}s.dmg+=d;big('💥 '+d);log('상대 '+an+' 공격 → '+topCard(s).name+' +'+d+' (총 '+s.dmg+')',true);sync();}
+
+/* ---------- 필드 ---------- */
+function fieldMenu(s,i){var c=topCard(s);var isA=i<0;
+  var stBtn=Object.keys(STATUS).map(function(k){return '<button type="button" class="sm '+(s.status[k]?'':'ghost')+'" onclick="tog('+i+',\''+k+'\')">'+STATUS[k]+'</button>';}).join('');
+  sheet('<div class="preview"><img src="'+imgOf(c)+'" alt=""><div class="info"><b>'+esc(c.name)+(isA?' (배틀)':' (벤치'+(i+1)+')')+'</b>데미지 '+s.dmg+' · 에너지 '+s.energy.length+'장'+(s.tools.length?' · 도구 '+s.tools.length:'')+(s.stack.length>1?' · 진화 '+s.stack.length+'단':'')+'<br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세 보기</a></div></div>'+
+   '<div class="acts"><button type="button" class="warn" onclick="dmg('+i+',10)">데미지 +10</button><button type="button" class="soft" onclick="dmg('+i+',-10)">데미지 −10</button>'+
+   '<button type="button" class="warn" onclick="dmg('+i+',30)">+30</button><button type="button" class="soft" onclick="dmg('+i+',0,true)">직접 입력</button>'+
+   '<div class="full" style="display:flex;gap:4px;flex-wrap:wrap">'+stBtn+'</div>'+
+   (isA?'<button type="button" class="soft full" onclick="retreat()">후퇴/교체 (벤치와 바꾸기)</button>':'<button type="button" class="soft full" onclick="promote('+i+')">배틀 포켓몬으로</button>')+
+   '<button type="button" class="soft" onclick="attachedView('+i+')">붙은 카드 관리</button><button type="button" class="soft" onclick="devolve('+i+')">퇴화(진화 취소)</button>'+
+   '<button type="button" class="warn full" onclick="ko('+i+')">기절 → 전부 트래시</button>'+
+   '<button type="button" class="ghost" onclick="fieldTo('+i+',\'hand\')">전부 손패로</button><button type="button" class="ghost" onclick="fieldTo('+i+',\'deck\')">전부 덱으로(셔플)</button>'+
+   '<button type="button" class="ghost" onclick="fieldTo('+i+',\'lost\')">전부 로스트존</button><button type="button" class="ghost" onclick="closeSheet()">닫기</button></div>');}
+function getSlot(i){return i<0?me.active:me.bench[i];}
+function dmg(i,d,ask){var s=getSlot(i);if(ask){var v=prompt('데미지 카운터 총량',s.dmg);if(v===null)return;s.dmg=Math.max(0,+v||0);}else s.dmg=Math.max(0,s.dmg+d);log(topCard(s).name+' 데미지 '+s.dmg);sync();fieldMenu(s,i);}
+function tog(i,k){var s=getSlot(i);if(k==='asleep'||k==='paralyzed'||k==='confused'){var was=s.status[k];s.status.asleep=s.status.paralyzed=s.status.confused=false;s.status[k]=!was;}else s.status[k]=!s.status[k];log(topCard(s).name+' '+STATUS[k]+(s.status[k]?' 걸림':' 해제'));sync();fieldMenu(s,i);}
+function retreat(){if(!me.bench.length){toast('벤치가 없어요');return;}
+  sheet('<h3>교체할 벤치 포켓몬</h3><div class="acts">'+me.bench.map(function(s,j){return '<button type="button" class="soft full" data-j="'+j+'">벤치'+(j+1)+': '+esc(topCard(s).name)+'</button>';}).join('')+'</div>');
+  document.querySelectorAll('#sheetIn button').forEach(function(b){b.onclick=function(){var j=+b.dataset.j;var a=me.active;me.active=me.bench[j];me.bench[j]=a;a.status={};log(topCard(a).name+' ↔ '+topCard(me.active).name+' 교체');sync();closeSheet();};});}
+function promote(i){var s=me.bench.splice(i,1)[0];if(me.active){me.bench.push(me.active);}me.active=s;log(topCard(s).name+' 배틀로');sync();closeSheet();}
+function devolve(i){var s=getSlot(i);if(s.stack.length<2){toast('진화 전 상태예요');return;}var c=s.stack.pop();me.hand.push(c);log(c.name+' 퇴화 → 손패');sync();closeSheet();}
+function attachedView(i){var s=getSlot(i);var all=s.energy.map(function(c){return {c:c,k:'energy'};}).concat(s.tools.map(function(c){return {c:c,k:'tools'};}));if(!all.length){toast('붙은 카드 없음');return;}
+  sheet('<h3>붙은 카드 — 누르면 트래시</h3><div class="list">'+all.map(function(x,k){return '<div class="c" data-k="'+k+'"><img src="'+imgOf(x.c)+'" alt=""><div class="n">'+esc(x.c.name)+'</div></div>';}).join('')+'</div><div class="row"><button type="button" class="ghost" onclick="closeSheet()">닫기</button></div>');
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){el.onclick=function(){var x=all[+el.dataset.k];var arr=s[x.k];var j=arr.indexOf(x.c);if(j>-1)arr.splice(j,1);me.discard.push(x.c);log(x.c.name+' 떼서 트래시');el.remove();sync();};});}
+function allCards(s){return s.stack.concat(s.energy,s.tools);}
+function removeSlot(i){if(i<0){var a=me.active;me.active=null;return a;}return me.bench.splice(i,1)[0];}
+function ko(i){var s=getSlot(i);if(!confirm(topCard(s).name+' 기절 처리? (붙은 카드 포함 전부 트래시)'))return;removeSlot(i);me.discard=me.discard.concat(allCards(s));log(topCard(s).name+' 기절! 상대가 프라이즈를 가져갑니다');send({t:'big',text:'상대 '+topCard(s).name+' 기절 — 프라이즈 획득!'});sync();closeSheet();
+  if(!me.active&&!me.bench.length){log('필드에 포켓몬 없음 — 패배');big('필드 전멸…');send({t:'big',text:'상대 필드 전멸 🏆'});}
+  else if(!me.active)toast('벤치에서 새 배틀 포켓몬을 올리세요');}
+function fieldTo(i,where){var s=getSlot(i);var cards=allCards(s);if(!confirm(topCard(s).name+' 카드 '+cards.length+'장 전부 이동?'))return;removeSlot(i);
+  if(where==='hand')me.hand=me.hand.concat(cards);else if(where==='lost')me.lost=me.lost.concat(cards);else me.deck=shuffle(me.deck.concat(cards));log(topCard(s).name+' 전부 → '+({hand:'손패',lost:'로스트존',deck:'덱'})[where]);sync();closeSheet();}
+function emptySlot(i){if(!me.hand.length){toast('손패에서 카드를 골라 내세요');return;}toast('손패의 카드를 눌러 "벤치에 내기"');}
+function oppSlot(s){var c=topCard(s);sheet('<div class="preview"><img src="'+imgOf(c)+'" alt=""><div class="info"><b>'+esc(c.name)+'</b>데미지 '+s.dmg+' · 에너지 '+s.energy.length+'장'+(s.stack.length>1?' · 진화 '+s.stack.length+'단':'')+'<br><a href="#" onclick="cardDetail(\''+c.id+'\',\''+esc(c.name)+'\');return false" style="color:var(--blue)">카드 상세 보기</a></div></div>'+
+  (s.energy.length||s.tools.length?'<div class="list">'+s.energy.concat(s.tools).map(function(x){return '<div class="c"><img src="'+imgOf(x)+'" alt=""><div class="n">'+esc(x.name)+'</div></div>';}).join('')+'</div>':'')+
+  (s.stack.length>1?'<p style="font-size:12px;color:var(--ink2)">진화 스택: '+s.stack.map(function(x){return esc(x.name);}).join(' → ')+'</p>':''));}
+function pileView(list,title,mine){if(!list.length){toast(title+' 비어 있음');return;}
+  sheet('<h3>'+title+' ('+list.length+'장)'+(mine?' — 누르면 손패로':'')+'</h3><div class="list">'+list.slice().reverse().map(function(c){return '<div class="c" data-u="'+c.uid+'"><img src="'+imgOf(c)+'" alt=""><div class="n">'+esc(c.name)+'</div></div>';}).join('')+'</div>'+(mine?'<p style="font-size:12px;color:var(--ink2)">길게 누르면 덱으로(셔플)</p>':''));
+  if(!mine)return;
+  document.querySelectorAll('#sheetIn .c').forEach(function(el){var t=null,l=false;
+    el.addEventListener('pointerdown',function(){l=false;t=setTimeout(function(){l=true;move('deck');},500);});
+    el.addEventListener('pointerup',function(){if(t){clearTimeout(t);t=null;if(!l)move('hand');}});
+    el.addEventListener('pointermove',function(){if(t){clearTimeout(t);t=null;}});
+    function move(where){var j=list.findIndex(function(c){return c.uid===el.dataset.u;});if(j<0)return;var c=list.splice(j,1)[0];if(where==='hand')me.hand.push(c);else me.deck=shuffle(me.deck.concat([c]));log(c.name+' '+title.replace('내 ','')+' → '+(where==='hand'?'손패':'덱'));el.remove();sync();}
+  });}
+
+/* ---------- 카드 상세 (TCGdex) ---------- */
+var dcache={};
+function cardDetail(id,name){var lang=localStorage.getItem('dgpk_lang')||'ko';
+  sheet('<div class="detail"><h3>'+esc(name)+'</h3><p style="color:var(--ink2)">불러오는 중…</p></div>');
+  var p=dcache[id]?Promise.resolve(dcache[id]):fetch(API+lang+'/cards/'+id).then(function(r){return r.json();}).then(function(d){dcache[id]=d;return d;});
+  p.then(function(d){var h='<div class="detail"><img src="'+(d.image?d.image+'/high.webp':'')+'" alt=""><h3>'+esc(d.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(d.category)+(d.stage?' · '+esc(d.stage):'')+(d.hp?' · HP '+d.hp:'')+'</small></h3>';
+    (d.abilities||[]).forEach(function(a){h+='<div class="atk"><b>[특성] '+esc(a.name)+'</b>'+esc(a.effect||'')+'</div>';});
+    (d.attacks||[]).forEach(function(a){h+='<div class="atk"><b>'+(a.cost||[]).map(function(x){return x[0];}).join('')+' '+esc(a.name)+(a.damage?' — '+esc(a.damage):'')+'</b>'+esc(a.effect||'')+'</div>';});
+    if(d.effect)h+='<div class="atk">'+esc(d.effect)+'</div>';
+    var meta=[];if(d.weaknesses)meta.push('약점 '+d.weaknesses.map(function(w){return w.type+w.value;}).join(','));if(d.resistances)meta.push('저항 '+d.resistances.map(function(w){return w.type+w.value;}).join(','));if(d.retreat!=null)meta.push('후퇴 '+d.retreat);
+    if(meta.length)h+='<p style="font-size:12px;color:var(--ink2)">'+meta.join(' · ')+'</p>';
+    h+='<button type="button" class="ghost" onclick="closeSheet()">닫기</button></div>';$('sheetIn').innerHTML=h;
+  }).catch(function(){$('sheetIn').innerHTML+='<p>상세를 불러오지 못했어요.</p>';});}
+</script>
+</body>
+</html>
