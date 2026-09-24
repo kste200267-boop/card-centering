@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>대전 랭킹 · 대구 포켓몬 카드 방</title>
+<style>
+  :root{--bg:#F8F4FB;--paper:#fff;--ink:#1D1B16;--ink2:#5B5850;--line:#E6DEEE;--pink:#D64A9B;--pinkS:#FBE8F3;--blue:#5A7BD6;--blueS:#EAEFFC;--gold:#D4A017;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+  *,*::before,*::after{box-sizing:inherit}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5;word-break:keep-all}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 50px}
+  h1{margin:0 0 4px;font-size:22px}
+  .sub{color:var(--ink2);font-size:13px;margin:0 0 14px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+  .top3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+  .p{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 6px;text-align:center}
+  .p.g{border-color:var(--gold);background:#FFF8E1}
+  .p .m{font-size:26px}.p b{display:block;font-size:15px;margin:4px 0 2px}.p span{font-size:12px;color:var(--ink2)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center}
+  th{font-size:12.5px;color:var(--ink2);font-weight:600}
+  td:first-child,th:first-child{text-align:left}
+  td.r{font-weight:700;width:34px}
+  .rec{font-size:13.5px;padding:7px 0;border-bottom:1px solid var(--line);display:flex;gap:8px}
+  .rec:last-child{border:0}
+  .rec .d{color:var(--ink2);font-size:12px;flex:0 0 60px}
+  .rec .w{color:#2E7D32;font-weight:700}
+  .note{font-size:12.5px;color:var(--ink2)}
+  .nav{display:flex;gap:6px;margin-top:10px}
+  .nav a{flex:1;text-align:center;background:var(--blueS);color:var(--blue);padding:9px;border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏆 대전 랭킹</h1>
+  <p class="sub" id="sub">불러오는 중…</p>
+  <div class="top3" id="top3"></div>
+  <div class="card"><table id="tbl"><tr><th>#</th><th style="text-align:left">닉네임</th><th>승</th><th>패</th><th>승률</th><th>연승</th></tr></table></div>
+  <div class="card"><b style="font-size:14px">최근 경기</b><div id="recent"></div></div>
+  <p class="note" id="note"></p>
+  <div class="nav"><a href="battle.html">⚔️ 대전</a><a href="deck.html">🃏 덱</a><a href="notice.html">📢 공지</a></div>
+</div>
+<script>
+/* battle.html 의 RANK.csv 와 같은 주소를 넣으세요 */
+var CSV='';
+var ROOM_CODE='7942';
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function parseCSV(text){var rows=[],row=[],cur='',q=false;for(var i=0;i<text.length;i++){var ch=text[i];if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else if(ch==='"')q=true;else if(ch===','){row.push(cur);cur='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur='';}else cur+=ch;}if(cur!==''||row.length){row.push(cur);rows.push(row);}return rows;}
+function col(head,kw,fb){for(var i=0;i<head.length;i++)if(String(head[i]).indexOf(kw)>-1)return i;return fb;}
+
+function build(rows,head){
+  var iW=col(head,'승자',1),iL=col(head,'패자',2),iR=col(head,'신고',3),iRoom=col(head,'방',4),iC=col(head,'인증',5);
+  var pins={},reports=[];
+  rows.forEach(function(r){if(String(r[iC]||'').trim()!==ROOM_CODE)return;
+    var rep=String(r[iR]||'').split('#');var nick=rep[0].trim(),pin=(rep[1]||'').trim();if(!nick)return;
+    if(pins[nick]&&pin&&pins[nick]!==pin)return; /* 같은 닉인데 PIN 다르면 무시 (도용 방지) */
+    if(pin&&!pins[nick])pins[nick]=pin;
+    reports.push({t:new Date(r[0]).getTime()||0,w:String(r[iW]||'').trim(),l:String(r[iL]||'').trim(),by:nick,room:String(r[iRoom]||'').trim()});});
+  /* 두 사람이 같은 결과를 30분 안에 보고하면 확정 1경기 */
+  var matches=[],used=[];
+  reports.forEach(function(a,i){if(used[i])return;for(var j=i+1;j<reports.length;j++){var b=reports[j];if(used[j])continue;
+    if(a.w===b.w&&a.l===b.l&&a.by!==b.by&&Math.abs(a.t-b.t)<30*60*1000){used[i]=used[j]=true;matches.push({t:Math.max(a.t,b.t),w:a.w,l:a.l,ok:true});return;}}
+    used[i]=true;matches.push({t:a.t,w:a.w,l:a.l,ok:false});});
+  matches.sort(function(a,b){return a.t-b.t;});
+  var st={};function P(n){return st[n]||(st[n]={n:n,w:0,l:0,streak:0,best:0});}
+  var confirmed=matches.filter(function(m){return m.ok;}),pending=matches.length-confirmed.length;
+  confirmed.forEach(function(m){var W=P(m.w),L=P(m.l);W.w++;W.streak++;if(W.streak>W.best)W.best=W.streak;L.l++;L.streak=0;});
+  var list=Object.keys(st).map(function(k){return st[k];}).sort(function(a,b){return (b.w-a.w)||((b.w/(b.w+b.l))-(a.w/(a.w+a.l)))||(a.l-b.l);});
+  $('sub').textContent='확정 '+confirmed.length+'경기 · 참가 '+list.length+'명'+(pending?' · 한쪽만 보고 '+pending+'건(미반영)':'');
+  var medals=['🥇','🥈','🥉'];
+  $('top3').innerHTML=list.slice(0,3).map(function(p,i){return '<div class="p'+(i===0?' g':'')+'"><div class="m">'+medals[i]+'</div><b>'+esc(p.n)+'</b><span>'+p.w+'승 '+p.l+'패</span></div>';}).join('')||'<p class="note" style="grid-column:1/-1">아직 확정된 경기가 없어요.</p>';
+  var t=$('tbl');list.forEach(function(p,i){var tr=document.createElement('tr');var g=p.w+p.l;tr.innerHTML='<td class="r">'+(i+1)+'</td><td style="text-align:left">'+esc(p.n)+'</td><td>'+p.w+'</td><td>'+p.l+'</td><td>'+(g?Math.round(p.w/g*100):0)+'%</td><td>'+(p.streak?'🔥'+p.streak:'-')+'</td>';t.appendChild(tr);});
+  $('recent').innerHTML=matches.slice(-10).reverse().map(function(m){return '<div class="rec"><span class="d">'+new Date(m.t).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})+'</span><span><span class="w">'+esc(m.w)+'</span> 승 · '+esc(m.l)+(m.ok?'':' <small style="color:var(--pink)">(한쪽 보고)</small>')+'</span></div>';}).join('')||'<p class="note">기록 없음</p>';
+  $('note').textContent='경기가 끝나면 양쪽 기기에서 자동으로 결과가 올라가고, 두 사람 보고가 일치할 때만 확정됩니다. 닉네임은 처음 쓴 PIN과 묶여서 남이 내 이름으로 기록을 올릴 수 없어요.';
+}
+if(!CSV){$('sub').textContent='랭킹 시트가 아직 연결되지 않았어요.';$('note').textContent='대전 페이지에서 경기 결과가 자동으로 올라가도록 구글 폼·시트를 연결하면 여기에 랭킹이 뜹니다.';}
+else fetch(CSV+'&t='+Date.now()).then(function(r){return r.text();}).then(function(t){var rows=parseCSV(t);var head=rows.shift()||[];build(rows,head);}).catch(function(){$('sub').textContent='랭킹을 불러오지 못했어요.';});
+</script>
+</body>
+</html>
