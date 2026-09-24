@@ -37,18 +37,20 @@
   .sheet .in{position:absolute;left:0;right:0;bottom:0;max-height:88%;background:var(--paper);border-radius:16px 16px 0 0;padding:12px 12px env(safe-area-inset-bottom,12px);overflow:auto}
   .sheet h2{margin:0 0 8px;font-size:16px}
   .dl{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
-  .dl img{width:38px;border-radius:4px}
+  .dl img,.dl .noimg{width:38px;border-radius:4px;flex:0 0 38px}
   .dl .n{flex:1;font-size:14px}
   .dl .n small{display:block;color:var(--ink2);font-size:12px}
   .dl button{padding:5px 10px;font-size:14px}
   .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
   .chip{font-size:12px;background:var(--blueS);color:var(--blue);border-radius:999px;padding:3px 9px}
   textarea{width:100%;font:inherit;font-size:12px;padding:8px;border:1px solid var(--line);border-radius:10px;min-height:80px}
-  .detail img{width:100%;max-width:320px;display:block;margin:0 auto 8px;border-radius:10px}
+  .detail img,.detail .noimg{width:100%;max-width:320px;display:block;margin:0 auto 8px;border-radius:10px;font-size:16px}
   .detail .atk{background:var(--bg);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13.5px}
   .detail .atk b{display:block}
   .nav{display:flex;gap:6px;margin-top:6px}
   .nav a{flex:1;text-align:center;background:var(--blueS);color:var(--blue);padding:8px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600}
+.noimg{aspect-ratio:63/88;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;line-height:1.2;padding:4px;background:linear-gradient(135deg,#d9d2e6,#f0e9f7);color:#3a3452;border-radius:5px;word-break:keep-all}
+  .card .noimg{border-radius:0}
 </style>
 </head>
 <body>
@@ -117,7 +119,17 @@ var LS_DECKS = 'dgpk_decks';
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-function img(c, q){ return c.image ? c.image + '/' + (q||'low') + '.webp' : ''; }
+function cardImgBase(c){ if(c.image) return c.image; if(curSet&&curSet.serie&&c.localId) return 'https://assets.tcgdex.net/'+lang+'/'+curSet.serie.id+'/'+curSet.id+'/'+c.localId; return ''; }
+
+/* ---- 이미지: 한국어 없으면 일본어→영어 순으로 대체, 다 없으면 이름 표시 ---- */
+var IMG_LANGS=['ko','ja','en'];
+function imgCands(c,q){q=q||'low';var base=c&&c.img;if(!base)return [];var m=base.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);
+  if(!m)return [base+'/'+q+'.webp'];var langs=[m[2]].concat(IMG_LANGS.filter(function(l){return l!==m[2];}));return langs.map(function(l){return m[1]+l+m[3]+'/'+q+'.webp';});}
+function imgTagOf(c,q,cls){var cs=imgCands(c,q);if(!cs.length)return '<div class="noimg'+(cls?' '+cls:'')+'">'+esc(c&&c.name)+'</div>';
+  return '<img src="'+cs[0]+'" data-alt="'+cs.slice(1).join('|')+'" data-name="'+esc(c&&c.name)+'" alt="" onerror="imgFallback(this)"'+(cls?' class="'+cls+'"':'')+' loading="lazy">';}
+function imgFallback(el){var list=el.getAttribute('data-alt')?el.getAttribute('data-alt').split('|'):[];if(list.length){el.setAttribute('data-alt',list.slice(1).join('|'));el.src=list[0];return;}
+  var d=document.createElement('div');d.className='noimg'+(el.className?' '+el.className:'');d.textContent=el.getAttribute('data-name')||'';el.parentNode&&el.parentNode.replaceChild(d,el);}
+
 function total(){ var n=0; for(var k in deck.cards) n+=deck.cards[k].n; return n; }
 function show(id,on){ $(id).classList.toggle('on', on!==false); }
 
@@ -146,7 +158,7 @@ function render(){
   cards.filter(function(c){ return !q || (c.name||'').toLowerCase().indexOf(q)>-1; }).forEach(function(c){
     var d = document.createElement('div'); d.className='card';
     var n = deck.cards[c.id] ? deck.cards[c.id].n : 0;
-    d.innerHTML = '<img loading="lazy" src="'+img(c)+'" alt=""><div class="nm">'+esc(c.name)+'<br>#'+esc(c.localId)+'</div><span class="cnt'+(n?'':' z')+'">'+n+'</span>';
+    d.innerHTML = imgTagOf({img:cardImgBase(c),name:c.name})+'<div class="nm">'+esc(c.name)+'<br>#'+esc(c.localId)+'</div><span class="cnt'+(n?'':' z')+'">'+n+'</span>';
     var t=null, longed=false;
     d.addEventListener('pointerdown', function(){ longed=false; t=setTimeout(function(){ longed=true; openDetail(c); },480); });
     d.addEventListener('pointermove', function(){ if(t){ clearTimeout(t); t=null; } });
@@ -164,7 +176,7 @@ function add(c){
   var isEnergy = /에너지|Energy|エネルギー/.test(c.name) && !/특수|Special/.test(c.name);
   if(total() >= 60){ toast('60장이 꽉 찼어요'); return; }
   if(!isEnergy && sameName >= 4){ toast('같은 이름은 4장까지'); return; }
-  e.n++; e.img = c.image; update();
+  e.n++; e.img = cardImgBase(c)||e.img; update();
 }
 function sub(id){ var e=deck.cards[id]; if(!e) return; e.n--; if(e.n<=0) delete deck.cards[id]; update(); }
 function update(){
@@ -179,7 +191,7 @@ function renderDeck(){
   $('deckSum').textContent = total()+'장 · '+list.length+'종';
   list.forEach(function(e){
     var d=document.createElement('div'); d.className='dl';
-    d.innerHTML='<img src="'+(e.img?e.img+'/low.webp':'')+'" alt=""><div class="n">'+esc(e.name)+'<small>'+esc(e.id)+'</small></div><button type="button" class="ghost">−</button><b>'+e.n+'</b><button type="button" class="soft">+</button>';
+    d.innerHTML=imgTagOf(e)+'<div class="n">'+esc(e.name)+'<small>'+esc(e.id)+'</small></div><button type="button" class="ghost">−</button><b>'+e.n+'</b><button type="button" class="soft">+</button>';
     d.querySelectorAll('button')[0].onclick=function(ev){ ev.preventDefault(); sub(e.id); };
     d.querySelectorAll('button')[1].onclick=function(ev){ ev.preventDefault(); add({id:e.id,name:e.name,image:e.img,localId:''}); };
     box.appendChild(d);
@@ -247,11 +259,11 @@ function report(info){
 
 /* ---------- 상세 ---------- */
 function openDetail(c){
-  var box=$('detailIn'); box.innerHTML='<img src="'+img(c,'high')+'" alt=""><p class="msg">상세 불러오는 중…</p>'; show('shDetail');
+  var box=$('detailIn'); var bc={img:cardImgBase(c),name:c.name}; box.innerHTML=imgTagOf(bc,'high')+'<p class="msg">상세 불러오는 중…</p>'; show('shDetail');
   $('shDetail').onclick=function(e){ if(e.target===$('shDetail')) show('shDetail',false); };
   var p = detailCache[c.id] ? Promise.resolve(detailCache[c.id]) : fetch(API+lang+'/cards/'+c.id).then(function(r){ return r.json(); }).then(function(d){ detailCache[c.id]=d; return d; });
   p.then(function(d){
-    var h='<img src="'+img(c,'high')+'" alt=""><h2>'+esc(d.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(d.category)+(d.stage?' · '+esc(d.stage):'')+(d.hp?' · HP '+d.hp:'')+'</small></h2>';
+    var h=imgTagOf(bc,'high')+'<h2>'+esc(d.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(d.category)+(d.stage?' · '+esc(d.stage):'')+(d.hp?' · HP '+d.hp:'')+'</small></h2>';
     if(d.types) h+='<div class="chips">'+d.types.map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join('')+(d.evolveFrom?'<span class="chip">← '+esc(d.evolveFrom)+'</span>':'')+'</div>';
     (d.abilities||[]).forEach(function(a){ h+='<div class="atk"><b>[특성] '+esc(a.name)+'</b>'+esc(a.effect||'')+'</div>'; });
     (d.attacks||[]).forEach(function(a){ h+='<div class="atk"><b>'+(a.cost||[]).map(function(x){return x[0];}).join('')+' '+esc(a.name)+(a.damage?' — '+esc(a.damage):'')+'</b>'+esc(a.effect||'')+'</div>'; });
