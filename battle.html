@@ -94,6 +94,19 @@
   .hand .c.rec1{outline:2px solid var(--yellow);outline-offset:-2px}
   .hint{background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
   .hint b{display:block;color:var(--yellow);margin-bottom:2px}
+  .chat{display:flex;flex-direction:column;max-height:60vh}
+  .chat .msgs{flex:1;overflow:auto;background:var(--bg);border-radius:10px;padding:8px;margin-bottom:8px;min-height:120px}
+  .chat .m{max-width:82%;margin:4px 0;padding:7px 10px;border-radius:12px;font-size:14px;background:var(--panel2);word-break:break-word}
+  .chat .m.me{margin-left:auto;background:var(--pink);color:#fff;border-bottom-right-radius:3px}
+  .chat .m.op{border-bottom-left-radius:3px}
+  .chat .m small{display:block;font-size:10.5px;opacity:.7;margin-top:2px}
+  .chat .quick{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+  .chat .quick button{flex:0 0 auto;font-size:12.5px;padding:6px 10px}
+  .chat .inrow{display:flex;gap:6px}
+  .chat .inrow input{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink)}
+  #btnMsg{position:relative}
+  #btnMsg i{position:absolute;top:-5px;right:-5px;background:var(--warn);color:#fff;font-style:normal;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;line-height:16px;text-align:center;display:none}
+  #btnMsg i.on{display:block}
   .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 50px);transform:translateX(-50%);background:#000;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;max-width:90%;text-align:center}
   .big{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-size:56px;font-weight:900;color:var(--yellow);text-shadow:0 4px 20px #000}
   .big.on{display:flex}
@@ -194,7 +207,7 @@
     <button type="button" class="sm warn" id="btnAttack">공격</button>
     <button type="button" class="sm" id="btnEnd">턴 종료</button>
     <button type="button" class="sm ghost" id="btnSwap">시점 전환</button>
-    <button type="button" class="sm ghost" id="btnMsg">💬</button>
+    <button type="button" class="sm ghost" id="btnMsg">💬 채팅<i id="unread"></i></button>
     <button type="button" class="sm ghost" id="btnMenu">⋯</button>
     <span class="flags" id="flags"></span>
   </div>
@@ -337,7 +350,7 @@ function onData(m){
   if(m.t==='attack'){applyAttack(m.hits||[{target:m.target,dmg:m.dmg}],m.name,m.status);return;}
   if(m.t==='fx'){fxBanner(m.text,true);return;}
   if(m.t==='stadium'){if(me.stadium){me.discard.push(me.stadium);log('내 스타디움 '+me.stadium.name+' 트래시 (상대가 새 스타디움)');me.stadium=null;sync();}return;}
-  if(m.t==='msg'){big(m.text);log('💬 '+m.text,true);buzz();return;}
+  if(m.t==='msg'){pushChat(m.text,false);if(!chatOpen)fxBanner('💬 '+m.text,true);log('💬 '+m.text,true);buzz();return;}
   if(m.t==='result'){gameOver(m.win?false:true,true);return;}
   if(m.t==='turn'){turn='me';turnNo=m.no;startTurn();buzz();render();return;}
   if(m.t==='first'){turn=m.first==='host'?(isHost?'me':'opp'):(isHost?'opp':'me');me.first=(turn==='me');turnNo=1;log('선공: '+(turn==='me'?'나':'상대'));if(turn==='me')startTurn();render();return;}
@@ -513,10 +526,20 @@ function attach(i,kind,from){var c=me.hand[i];var targets=[];if(me.active)target
     else{log(topCard(t.s).name+' → '+c.name+' 진화');t.s.stack.push(c);t.s.status={};}
     sync();closeSheet();};});}
 
-/* ---------- 빠른 메시지 ---------- */
-$('btnMsg').onclick=function(e){e.preventDefault();var list=['잠시만요 ⏳','확인했어요 👍','다시 볼게요 🔍','효과 처리 중…','코인 던져 주세요','기절이에요 💀','GG 👋','잘했어요 👏'];
-  sheet('<h3>메시지</h3><div class="acts">'+list.map(function(m){return '<button type="button" class="soft" data-m="'+m+'">'+m+'</button>';}).join('')+'<button type="button" class="ghost full" data-m="">직접 입력</button></div>');
-  document.querySelectorAll('#sheetIn button').forEach(function(b){b.onclick=function(){var m=b.dataset.m||prompt('메시지')||'';if(!m)return;send({t:'msg',text:m});log('💬 '+m);closeSheet();};});};
+/* ---------- 채팅 ---------- */
+var chatLog=[],unread=0,chatOpen=false;
+var QUICK=['잠시만요 ⏳','확인했어요 👍','다시 볼게요 🔍','효과 처리 중…','코인 던져 주세요','기절이에요 💀','GG 👋','잘했어요 👏','ㅋㅋㅋ','한 판 더?'];
+function pushChat(text,mine){chatLog.push({t:text,me:mine,at:Date.now()});if(chatLog.length>200)chatLog.shift();if(chatOpen)renderChat();else if(!mine){unread++;var u=$('unread');u.textContent=unread;u.classList.add('on');}}
+function renderChat(){var box=$('chatMsgs');if(!box)return;box.innerHTML=chatLog.map(function(m){var d=new Date(m.at);return '<div class="m '+(m.me?'me':'op')+'">'+esc(m.t)+'<small>'+(m.me?'나':esc((oppPub&&oppPub.nick)||'상대'))+' · '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2)+'</small></div>';}).join('')||'<p style="color:var(--ink2);font-size:13px;text-align:center">아직 메시지가 없어요</p>';box.scrollTop=box.scrollHeight;}
+function sendChat(text){text=String(text||'').trim();if(!text)return;if(solo){pushChat(text,true);toast('혼자 연습 모드 — 상대가 없어요');return;}send({t:'msg',text:text});pushChat(text,true);log('💬 '+text);}
+$('btnMsg').onclick=function(e){e.preventDefault();chatOpen=true;unread=0;$('unread').classList.remove('on');
+  sheet('<div class="chat"><h3 style="margin:0 0 8px">💬 채팅 — '+esc((oppPub&&oppPub.nick)||'상대')+'</h3><div class="msgs" id="chatMsgs"></div><div class="quick">'+QUICK.map(function(m){return '<button type="button" class="soft" data-q="'+esc(m)+'">'+esc(m)+'</button>';}).join('')+'</div><div class="inrow"><input type="text" id="chatIn" placeholder="메시지 입력" maxlength="120" autocomplete="off"><button type="button" id="chatSend">보내기</button></div></div>');
+  renderChat();var inp=$('chatIn');
+  document.querySelectorAll('#sheetIn [data-q]').forEach(function(b){b.onclick=function(){sendChat(b.dataset.q);};});
+  $('chatSend').onclick=function(){sendChat(inp.value);inp.value='';inp.focus();};
+  inp.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();sendChat(inp.value);inp.value='';}});
+  setTimeout(function(){inp.focus();},50);};
+var _closeSheet=closeSheet;closeSheet=function(){chatOpen=false;_closeSheet();};
 
 /* ---------- 공격 (카드 기술 목록 + 효과 버튼) ---------- */
 function cardData(id){if(dcache[id])return Promise.resolve(dcache[id]);
