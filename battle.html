@@ -200,8 +200,16 @@ function imgOf(c,q){var cs=imgCands(c,q);return cs[0]||'';}
 
 /* ---- 이미지: 한국어 없으면 일본어→영어 순으로 대체, 다 없으면 이름 표시 ---- */
 var IMG_LANGS=['ko','ja','en'];
-function imgCands(c,q){q=q||'low';var base=c&&c.img;if(!base)return [];var m=base.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);
-  if(!m)return [base+'/'+q+'.webp'];var langs=[m[2]].concat(IMG_LANGS.filter(function(l){return l!==m[2];}));return langs.map(function(l){return m[1]+l+m[3]+'/'+q+'.webp';});}
+var LIMITLESS='https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/';
+function jpCodes(setId){var s=String(setId||'');if(!s)return [];var out=[s];if(s.length>2){var p=s.slice(0,2).toLowerCase()+s.slice(2);out.push(p);out.push(p.slice(0,-1)+p.slice(-1).toLowerCase());out.push(p.slice(0,-1)+p.slice(-1).toUpperCase());}
+  return out.filter(function(v,i){return out.indexOf(v)===i;});}
+function imgCands(c,q){q=q||'low';var out=[];
+  var id=String((c&&c.id)||'');var m=id.match(/^([^-]+)-(\d+)$/);
+  if(m){var num=m[2];var pad=('000'+num).slice(-3);var un=String(parseInt(num,10));
+    jpCodes(m[1]).forEach(function(code){out.push(LIMITLESS+code+'/'+code+'_'+pad+'_R_JP.png');if(un!==pad)out.push(LIMITLESS+code+'/'+code+'_'+un+'_R_JP.png');});}
+  var base=c&&c.img;if(base){var t=base.match(/^(https:\/\/assets\.tcgdex\.net\/)([a-z-]+)(\/.+)$/);
+    if(!t)out.push(base+'/'+q+'.webp');else{var langs=[t[2]].concat(IMG_LANGS.filter(function(l){return l!==t[2];}));langs.forEach(function(l){out.push(t[1]+l+t[3]+'/'+q+'.webp');});}}
+  return out;}
 function imgTagOf(c,q,cls){var cs=imgCands(c,q);if(!cs.length)return '<div class="noimg'+(cls?' '+cls:'')+'">'+esc(c&&c.name)+'</div>';
   return '<img src="'+cs[0]+'" data-alt="'+cs.slice(1).join('|')+'" data-name="'+esc(c&&c.name)+'" alt="" onerror="imgFallback(this)"'+(cls?' class="'+cls+'"':'')+' loading="lazy">';}
 function imgFallback(el){var list=el.getAttribute('data-alt')?el.getAttribute('data-alt').split('|'):[];if(list.length){el.setAttribute('data-alt',list.slice(1).join('|'));el.src=list[0];return;}
@@ -507,7 +515,7 @@ var dcache={};
 function cardDetail(id,name){var lang=localStorage.getItem('dgpk_lang')||'ko';
   sheet('<div class="detail"><h3>'+esc(name)+'</h3><p style="color:var(--ink2)">불러오는 중…</p></div>');
   var p=dcache[id]?Promise.resolve(dcache[id]):fetch(API+lang+'/cards/'+id).then(function(r){return r.json();}).then(function(d){dcache[id]=d;return d;});
-  p.then(function(d){var h='<div class="detail">'+imgTagOf({img:d.image,name:d.name},'high')+'<h3>'+esc(d.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(d.category)+(d.stage?' · '+esc(d.stage):'')+(d.hp?' · HP '+d.hp:'')+'</small></h3>';
+  p.then(function(d){var h='<div class="detail">'+imgTagOf({id:d.id,img:d.image,name:d.name},'high')+'<h3>'+esc(d.name)+' <small style="font-weight:400;color:var(--ink2)">'+esc(d.category)+(d.stage?' · '+esc(d.stage):'')+(d.hp?' · HP '+d.hp:'')+'</small></h3>';
     (d.abilities||[]).forEach(function(a){h+='<div class="atk"><b>[특성] '+esc(a.name)+'</b>'+esc(a.effect||'')+'</div>';});
     (d.attacks||[]).forEach(function(a){h+='<div class="atk"><b>'+(a.cost||[]).map(function(x){return x[0];}).join('')+' '+esc(a.name)+(a.damage?' — '+esc(a.damage):'')+'</b>'+esc(a.effect||'')+'</div>';});
     if(d.effect)h+='<div class="atk">'+esc(d.effect)+'</div>';
