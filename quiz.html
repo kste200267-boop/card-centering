@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>포켓몬 퀴즈 20 · 대구 포켓몬 카드 방</title>
+<style>
+  :root{--bg:#F8F4FB;--paper:#fff;--ink:#1D1B16;--ink2:#5B5850;--line:#E6DEEE;--pink:#D64A9B;--pinkS:#FBE8F3;--blue:#5A7BD6;--blueS:#EAEFFC;--ok:#2E7D32;--warn:#C0392B;--yel:#FFF7D6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+  *,*::before,*::after{box-sizing:inherit}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-size:15px;line-height:1.5;word-break:keep-all;user-select:none;-webkit-user-select:none}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 50px}
+  h1{margin:0 0 4px;font-size:22px}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 12px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  input,button{font:inherit}
+  input[type=text]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px}
+  button{border:0;border-radius:10px;padding:11px 14px;background:var(--pink);color:#fff;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  button.soft{background:var(--blueS);color:var(--blue)}button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2)}
+  button:disabled{opacity:.5}
+  .row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+  .prog{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:10px}.prog i{display:block;height:100%;background:var(--pink);transition:width .3s}
+  .qno{font-size:13px;color:var(--ink2);display:flex;justify-content:space-between}
+  .q{font-size:18px;font-weight:700;margin:8px 0 12px;line-height:1.4}
+  .opts{display:grid;gap:8px}
+  .opts button{text-align:left;background:var(--paper);color:var(--ink);border:1.5px solid var(--line);padding:13px 14px;font-weight:500;font-size:15.5px}
+  .opts button.on{border-color:var(--pink);background:var(--pinkS)}
+  .timer{font-weight:800;color:var(--pink)}.timer.low{color:var(--warn)}
+  .big{font-size:52px;font-weight:900;text-align:center;color:var(--pink);line-height:1.1}
+  .tier{text-align:center;font-size:18px;font-weight:700;margin:4px 0 10px}
+  .hide{display:none!important}
+  .res img{width:100%;border-radius:12px;border:1px solid var(--line);margin-top:8px}
+  .closed{background:var(--yel);border-radius:12px;padding:14px;text-align:center;font-weight:700}
+  .nav{display:flex;gap:6px;margin-top:10px}.nav a{flex:1;text-align:center;background:var(--blueS);color:var(--blue);padding:9px;border-radius:10px;text-decoration:none;font-size:13.5px;font-weight:600}
+  .note{font-size:12.5px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧠 포켓몬 퀴즈 20</h1>
+  <p class="sub" id="deadTxt"></p>
+
+  <div id="intro" class="card">
+    <p>20문제 · 문제당 20초 · 한 기기당 1회. 결과는 점수 이미지로 만들어져서 <b>방 대장에게만</b> 보내면 됩니다.</p>
+    <input type="text" id="nick" placeholder="닉네임 (카톡방 닉과 같게)" maxlength="12">
+    <div class="row"><input type="text" id="room" placeholder="방 인증코드" inputmode="numeric" maxlength="4"></div>
+    <div class="row"><button type="button" id="btnStart">시작</button></div>
+    <p class="note" style="margin:8px 0 0">시작하면 중간에 멈출 수 없어요. 문제 순서와 보기 순서는 사람마다 다릅니다.</p>
+  </div>
+
+  <div id="quiz" class="card hide">
+    <div class="prog"><i id="prog"></i></div>
+    <div class="qno"><span id="qn"></span><span class="timer" id="qt">20</span></div>
+    <p class="q" id="qtext"></p>
+    <div class="opts" id="opts"></div>
+  </div>
+
+  <div id="result" class="card res hide"></div>
+
+  <div id="closed" class="closed hide">⏰ 참여 기간이 끝났어요</div>
+
+  <div class="nav"><a href="notice.html">📢 공지</a><a href="battle.html">⚔️ 대전</a></div>
+</div>
+
+<script>
+/* ===== 설정 ===== */
+var ROOM_CODE='7942';
+var DEADLINE='2026-09-25T13:00:00+09:00';   /* 이 시각 이후 참여 불가 */
+var SECONDS=20;                              /* 문제당 시간 */
+var QUIZ_ID='q1';                            /* 새 퀴즈를 낼 때 바꾸면 다시 참여 가능 */
+var SUBMIT={form:'',entries:{nick:'',score:'',code:'',time:''}}; /* 구글 폼을 연결하면 점수가 방장 시트로 자동 제출됨 (선택) */
+
+var Q=[
+ ['포켓몬 카드 게임을 시작할 때 프라이즈 카드는 몇 장 놓나요?',['4장','5장','6장','7장'],2],
+ ['선공 플레이어가 첫 번째 턴에 할 수 없는 것은?',['벤치에 포켓몬 내기','에너지 붙이기','공격하기','굿즈 사용'],2],
+ ['한 턴에 손패에서 붙일 수 있는 기본 에너지는 몇 장?',['1장','2장','3장','제한 없음'],0],
+ ['서포트 카드는 한 턴에 몇 장까지 쓸 수 있나요?',['1장','2장','3장','제한 없음'],0],
+ ['공식 대회용 덱은 정확히 몇 장으로 구성하나요?',['40장','50장','60장','80장'],2],
+ ['기본 에너지를 제외하고, 같은 이름의 카드는 덱에 몇 장까지?',['2장','3장','4장','5장'],2],
+ ['벤치에 낼 수 있는 포켓몬은 기본적으로 최대 몇 마리?',['3마리','4마리','5마리','6마리'],2],
+ ['카드 게임에서 피카츄의 타입은?',['번개','불꽃','초','무색'],0],
+ ['전국도감 1번 포켓몬은?',['피카츄','이상해씨','파이리','꼬부기'],1],
+ ['뮤의 전국도감 번호는?',['150','151','152','149'],1],
+ ['잠듦 상태인 배틀 포켓몬은 공격할 수 있을까요?',['할 수 있다','할 수 없다','코인 앞면이면 가능','에너지가 2개 이상이면 가능'],1],
+ ['포켓몬 체크 때 화상 상태 포켓몬이 받는 데미지는? (코인 뒷면)',['10','20','30','40'],1],
+ ['포켓몬 체크 때 독 상태 포켓몬이 받는 기본 데미지는?',['10','20','30','50'],0],
+ ['포켓몬 ex가 기절하면 상대는 프라이즈를 몇 장 가져가나요?',['1장','2장','3장','4장'],1],
+ ['게임 시작 시 처음 뽑는 손패는 몇 장?',['5장','6장','7장','8장'],2],
+ ['이상해씨의 최종 진화형은?',['이상해풀','이상해꽃','리자몽','거북왕'],1],
+ ['대구 공식샵 트레이너 스쿨의 휴무일은?',['월·화','화·수','일요일','연중무휴'],0],
+ ['카드 게임에서 리자몽의 기본 타입은?',['드래곤','불꽃','비행','무색'],1],
+ ['벤치에 낸 그 턴에 바로 진화시킬 수 있을까요? (특수 효과 없이)',['가능','불가능 — 다음 턴부터','코인 앞면이면 가능','에너지가 붙어 있으면 가능'],1],
+ ['뮤츠가 처음 등장한 세대는?',['1세대','2세대','3세대','4세대'],0]
+];
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function hash(str){var h=5381;for(var i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return (h%1679616).toString(36).toUpperCase().padStart(4,'0');}
+var dl=new Date(DEADLINE);
+$('deadTxt').textContent='참여 마감: '+dl.toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})+' · 20문제 · 결과는 이미지로';
+var done=localStorage.getItem('dgpk_quiz_'+QUIZ_ID);
+if(Date.now()>dl.getTime()){$('intro').classList.add('hide');$('closed').classList.remove('hide');}
+else if(done){try{showResult(JSON.parse(done),true);}catch(e){}}
+$('nick').value=localStorage.getItem('dgpk_nick')||'';$('room').value=localStorage.getItem('dgpk_room')||'';
+
+var order=[],cur=0,score=0,nick='',answers=[],tick=null,left=SECONDS,startedAt=0;
+$('btnStart').onclick=function(){nick=$('nick').value.trim();if(!nick){alert('닉네임을 입력하세요');return;}if($('room').value.trim()!==ROOM_CODE){alert('방 인증코드가 틀려요');return;}
+  if(Date.now()>dl.getTime()){location.reload();return;}
+  localStorage.setItem('dgpk_nick',nick);localStorage.setItem('dgpk_room',ROOM_CODE);
+  order=shuffle(Q.map(function(q,i){return i;}));cur=0;score=0;answers=[];startedAt=Date.now();
+  $('intro').classList.add('hide');$('quiz').classList.remove('hide');showQ();};
+function showQ(){var qi=order[cur],q=Q[qi];var opts=shuffle(q[1].map(function(o,i){return {t:o,ok:i===q[2]};}));
+  $('prog').style.width=(cur/Q.length*100)+'%';$('qn').textContent=(cur+1)+' / '+Q.length;$('qtext').textContent=q[0];
+  $('opts').innerHTML=opts.map(function(o,i){return '<button type="button" data-i="'+i+'">'+esc(o.t)+'</button>';}).join('');
+  var locked=false;document.querySelectorAll('#opts button').forEach(function(b){b.onclick=function(){if(locked)return;locked=true;b.classList.add('on');clearInterval(tick);var ok=opts[+b.dataset.i].ok;if(ok)score++;answers.push(ok);setTimeout(next,350);};});
+  left=SECONDS;$('qt').textContent=left;$('qt').classList.remove('low');clearInterval(tick);
+  tick=setInterval(function(){left--;$('qt').textContent=left;if(left<=5)$('qt').classList.add('low');if(left<=0){clearInterval(tick);if(!locked){locked=true;answers.push(false);next();}}},1000);}
+function next(){cur++;if(cur>=Q.length){finish();return;}showQ();}
+function tierOf(s){return s>=19?'👑 포켓몬 마스터':s>=16?'🏆 체육관 관장':s>=12?'⭐ 베테랑 트레이너':s>=8?'🌱 신인 트레이너':'🥚 알에서 갓 부화';}
+function finish(){clearInterval(tick);var secs=Math.round((Date.now()-startedAt)/1000);var r={nick:nick,score:score,secs:secs,t:Date.now(),code:hash(nick+'|'+score+'|'+secs+'|'+QUIZ_ID+'|'+ROOM_CODE)};
+  localStorage.setItem('dgpk_quiz_'+QUIZ_ID,JSON.stringify(r));submit(r);showResult(r,false);}
+function submit(r){if(!SUBMIT.form)return;var fd=new FormData();fd.append(SUBMIT.entries.nick,r.nick);fd.append(SUBMIT.entries.score,String(r.score));fd.append(SUBMIT.entries.code,r.code);fd.append(SUBMIT.entries.time,String(r.secs));try{fetch(SUBMIT.form,{method:'POST',mode:'no-cors',body:fd});}catch(e){}}
+function showResult(r,again){$('intro').classList.add('hide');$('quiz').classList.add('hide');var box=$('result');box.classList.remove('hide');
+  box.innerHTML='<div class="big">'+r.score+' / '+Q.length+'</div><div class="tier">'+tierOf(r.score)+'</div><p class="note" style="text-align:center">'+esc(r.nick)+' · '+r.secs+'초 · 인증코드 <b>'+r.code+'</b>'+(again?' · 이미 참여한 기기예요':'')+'</p>'+
+    '<div class="row"><button type="button" id="btnImg">점수 이미지 만들기</button></div><div id="imgBox"></div>'+
+    '<p class="note" style="margin-top:10px">이미지는 <b>방 대장(SoR)에게 1:1로만</b> 보내 주세요. 방에 올리면 다른 사람 점수와 비교돼 버립니다. 인증코드는 위조 방지용이라 대장이 확인합니다.</p>';
+  $('btnImg').onclick=function(){makeImage(r);};window.scrollTo(0,0);}
+function roundRect(ctx,x,y,w,h,rad,fill){ctx.beginPath();ctx.moveTo(x+rad,y);ctx.arcTo(x+w,y,x+w,y+h,rad);ctx.arcTo(x+w,y+h,x,y+h,rad);ctx.arcTo(x,y+h,x,y,rad);ctx.arcTo(x,y,x+w,y,rad);ctx.closePath();ctx.fillStyle=fill;ctx.fill();}
+function makeImage(r){var W=1080,H=1080;var cv=document.createElement('canvas');cv.width=W;cv.height=H;var ctx=cv.getContext('2d');
+  var g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#FBE8F3');g.addColorStop(1,'#EAEFFC');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  var F='Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+  ctx.fillStyle='#5B5850';ctx.font='600 30px '+F;ctx.textAlign='center';ctx.fillText('대구 포켓몬 카드 카톡방',W/2,110);
+  ctx.fillStyle='#1D1B16';ctx.font='900 64px '+F;ctx.fillText('🧠 포켓몬 퀴즈 20',W/2,190);
+  roundRect(ctx,140,260,W-280,420,40,'#fff');
+  ctx.fillStyle='#D64A9B';ctx.font='900 220px '+F;ctx.fillText(String(r.score),W/2,500);
+  ctx.fillStyle='#5B5850';ctx.font='700 44px '+F;ctx.fillText('/ '+Q.length+' 문제',W/2,570);
+  ctx.fillStyle='#1D1B16';ctx.font='800 46px '+F;ctx.fillText(tierOf(r.score),W/2,650);
+  ctx.font='800 56px '+F;ctx.fillText(r.nick,W/2,780);
+  ctx.fillStyle='#5B5850';ctx.font='500 30px '+F;ctx.fillText('소요 '+r.secs+'초 · '+new Date(r.t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}),W/2,840);
+  roundRect(ctx,340,890,W-680,90,20,'#1D1B16');ctx.fillStyle='#F5C842';ctx.font='800 40px '+F;ctx.fillText('인증코드 '+r.code,W/2,950);
+  ctx.fillStyle='#5B5850';ctx.font='500 24px '+F;ctx.fillText('kste200267-boop.github.io/card-centering/quiz.html',W/2,1030);
+  cv.toBlob(function(b){var url=URL.createObjectURL(b);$('imgBox').innerHTML='<img src="'+url+'" alt="점수 이미지"><div class="row"><button type="button" id="btnShare">📤 대장에게 보내기 / 저장</button></div>';
+    $('btnShare').onclick=function(){var f=new File([b],'quiz_'+r.nick+'.jpg',{type:'image/jpeg'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:'포켓몬 퀴즈 점수'}).catch(function(){});}else{var a=document.createElement('a');a.href=url;a.download='quiz_'+r.nick+'.jpg';document.body.appendChild(a);a.click();a.remove();}};},'image/jpeg',0.9);}
+</script>
+</body>
+</html>
