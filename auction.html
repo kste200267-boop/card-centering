@@ -108,6 +108,15 @@
 
   <div class="card queue" id="queueBox"><h2>대기 물품 <small id="queueCnt" style="font-weight:400;color:var(--ink2)"></small></h2><div id="queue"></div></div>
 
+  <div class="card" id="promoBox">
+    <h2>📣 경매 예고 이미지</h2>
+    <p class="sub" style="margin:0 0 6px">코드·시작 시각·판매 물품을 한 장으로 만들어 카톡방에 올리세요. (대기 물품 목록 기준)</p>
+    <div class="row"><input type="datetime-local" id="promoWhen" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff"></div>
+    <div class="row"><input type="text" id="promoMsg" placeholder="한 줄 안내 (예: 시작 5분 전에 입장해 주세요)" maxlength="40"></div>
+    <div class="row"><button type="button" id="btnPromo">이미지 만들기</button><button type="button" class="soft hide" id="btnPromoShare">📤 공유 / 저장</button></div>
+    <img id="promoImg" class="hide" style="width:100%;border-radius:10px;margin-top:8px;border:1px solid var(--line)">
+  </div>
+
   <div id="hostLive" class="hide"></div>
   <div class="row"><button type="button" class="ghost" id="btnHostEnd" style="flex:1">경매장 닫기</button></div>
 </div>
@@ -204,6 +213,34 @@ function renderHostLive(){if(!cur)return;var box=$('hostLive');
   var nx=$('hNext');if(nx)nx.onclick=function(){cur=null;$('hostLive').classList.add('hide');$('hostForm').classList.remove('hide');broadcast({t:'idle',seller:myNick,people:conns.length});renderQueue();};
   var cc=$('hCancel');if(cc)cc.onclick=function(){if(!confirm('이 경매를 취소할까요? (입찰 무효)'))return;cur.ended=true;cur.winner=null;clearInterval(tick);broadcast({t:'end',winner:null,item:cur.name,cancel:true});pushState();};
   var en=$('hEndNow');if(en)en.onclick=function(){if(!confirm('지금 마감하고 현재 최고가로 낙찰할까요?'))return;cur.endsAt=Date.now();hostTick();};}
+/* ---- 예고 이미지 ---- */
+var promoBlob=null;
+function loadImg(src){return new Promise(function(r){if(!src){r(null);return;}var i=new Image();i.onload=function(){r(i);};i.onerror=function(){r(null);};i.src=src;});}
+function roundRect(ctx,x,y,w,h,r,fill){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fillStyle=fill;ctx.fill();}
+function fitText(ctx,t,max){while(ctx.measureText(t).width>max&&t.length>1)t=t.slice(0,-2)+'…';return t;}
+$('btnPromo').onclick=function(){var items=queue.slice();if(cur&&!cur.ended)items.unshift(cur);if(!items.length){toast('대기 물품을 먼저 추가하세요');return;}
+  var when=$('promoWhen').value;var whenTxt=when?new Date(when).toLocaleString('ko-KR',{month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'}):'시작 시각 미정 (방에서 안내)';
+  var W=1080,rowH=150,top=560,H=top+items.length*rowH+170;var cv=document.createElement('canvas');cv.width=W;cv.height=H;var ctx=cv.getContext('2d');
+  var g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#FBE8F3');g.addColorStop(1,'#EAEFFC');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#1D1B16';ctx.font='900 64px Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';ctx.fillText('🔨 실시간 카드 경매',60,120);
+  ctx.font='500 30px Pretendard, sans-serif';ctx.fillStyle='#5B5850';ctx.fillText('대구 포켓몬 카드 카톡방 · 판매자 '+myNick,60,170);
+  roundRect(ctx,60,210,W-120,150,24,'#fff');ctx.fillStyle='#5B5850';ctx.font='600 28px Pretendard, sans-serif';ctx.fillText('경매 코드',100,262);ctx.fillStyle='#D64A9B';ctx.font='900 88px Pretendard, sans-serif';ctx.fillText(code,100,340);
+  ctx.fillStyle='#5B5850';ctx.font='600 28px Pretendard, sans-serif';ctx.fillText('시작 시각',560,262);ctx.fillStyle='#1D1B16';ctx.font='800 40px Pretendard, sans-serif';ctx.fillText(fitText(ctx,whenTxt,440),560,320);
+  var msg=$('promoMsg').value.trim();if(msg){ctx.fillStyle='#1D1B16';ctx.font='500 30px Pretendard, sans-serif';ctx.fillText('💬 '+fitText(ctx,msg,W-120),60,410);}
+  ctx.fillStyle='#1D1B16';ctx.font='800 36px Pretendard, sans-serif';ctx.fillText('판매 물품 '+items.length+'개',60,490);
+  var pr=Promise.resolve();items.forEach(function(it,i){pr=pr.then(function(){return loadImg((it.photos||[])[0]).then(function(img){var y=top+i*rowH;roundRect(ctx,60,y-20,W-120,rowH-16,20,'#fff');
+    if(img){var sc=Math.max(110/img.width,110/img.height);var sw=110/sc,sh=110/sc;ctx.save();ctx.beginPath();ctx.rect(84,y-8,110,110);ctx.clip();ctx.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,84,y-8,110,110);ctx.restore();}else roundRect(ctx,84,y-8,110,110,12,'#eee');
+    ctx.fillStyle='#1D1B16';ctx.font='800 34px Pretendard, sans-serif';ctx.fillText(fitText(ctx,(i+1)+'. '+it.name,W-360),220,y+38);
+    ctx.fillStyle='#5B5850';ctx.font='500 26px Pretendard, sans-serif';ctx.fillText(fitText(ctx,it.grade+(it.note?' · '+it.note:''),W-360),220,y+82);
+    ctx.fillStyle='#D64A9B';ctx.font='800 30px Pretendard, sans-serif';var pt='시작 '+won(it.start)+(it.buyNow?' · 즉시 '+won(it.buyNow):'');ctx.fillText(pt,W-100-ctx.measureText(pt).width,y+40);
+    ctx.fillStyle='#5B5850';ctx.font='500 24px Pretendard, sans-serif';var st='단위 '+won(it.step)+' · '+it.time+'초';ctx.fillText(st,W-100-ctx.measureText(st).width,y+82);});});});
+  pr.then(function(){ctx.fillStyle='#5B5850';ctx.font='500 24px Pretendard, sans-serif';ctx.fillText('입장: kste200267-boop.github.io/card-centering/auction.html → 코드 입력 · 방 인증코드 필요',60,H-90);
+    ctx.fillText('낙찰 후 거래는 당사자끼리 · 근거 없는 취소·노쇼는 방 규정 위반',60,H-50);
+    cv.toBlob(function(b){promoBlob=b;var url=URL.createObjectURL(b);var im=$('promoImg');im.src=url;im.classList.remove('hide');$('btnPromoShare').classList.remove('hide');toast('이미지 완성 — 아래에서 공유/저장');},'image/jpeg',0.9);});};
+$('btnPromoShare').onclick=function(){if(!promoBlob)return;var f=new File([promoBlob],'auction_'+code+'.jpg',{type:'image/jpeg'});
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:'실시간 카드 경매 예고'}).catch(function(){});}
+  else{var a=document.createElement('a');a.href=URL.createObjectURL(promoBlob);a.download='auction_'+code+'.jpg';document.body.appendChild(a);a.click();a.remove();toast('이미지를 저장했어요. 갤러리에서 공유하세요');}};
+
 $('btnHostEnd').onclick=function(){if(!confirm('경매장을 닫을까요? 접속한 사람들이 모두 나가게 됩니다.'))return;broadcast({t:'closed'});setTimeout(function(){location.reload();},300);};
 
 /* ================= 입찰자 ================= */
