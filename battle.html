@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>1:1 대전 · 대구 포켓몬 카드 방</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <style>
   :root{--bg:#1b1730;--panel:#262040;--panel2:#302a4d;--ink:#F3EFFA;--ink2:#B9B1CC;--line:#3d3560;--pink:#E85DAF;--blue:#6C8CFF;--yellow:#F5C842;--ok:#5CCB7A;--warn:#FF6B6B;box-sizing:border-box}
   *,*::before,*::after{box-sizing:inherit}
@@ -145,13 +145,13 @@
   .fx{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
   .fx button{font-size:12.5px;padding:7px 10px}
 </style>
+<link rel="stylesheet" href="battle-ui.css?v=20261007b">
 </head>
 <body>
 
 <!-- ================= 로비 ================= -->
 <div id="lobby">
-  <h1>⚔️ 1:1 대전</h1>
-  <p>실제 TCG 룰 그대로. 카드 효과는 버튼으로 직접 처리하고, 상대 화면에 실시간으로 보입니다.</p>
+  <div class="lobby-hero"><span class="eyebrow">DAEGU POKÉMON · BATTLE ROOM</span><h1>한 판, 시작해 볼까요?</h1><p>AI와 차근차근 연습하고, 친구와 실시간으로 대전하세요.</p><div class="hero-chips"><span>자동 턴 진행</span><span>HP 한눈에</span><span>모바일 최적화</span></div></div>
 
   <div class="box">
     <h2>내 정보</h2>
@@ -172,19 +172,19 @@
   </div>
 
   <div class="box">
-    <h2>혼자 연습</h2>
+    <h2>🤖 AI 연습</h2><p>덱이 없어도 기본 연습 덱으로 바로 시작할 수 있어요. AI 연습에는 인증코드·PIN이 필요하지 않아요.</p>
     <div class="row" style="margin:0 0 8px"><label style="flex:0 0 auto;font-size:14px">컴퓨터 난이도</label><input type="range" id="aiLv" min="1" max="10" value="6" style="flex:1"><b id="aiLvTxt" style="flex:0 0 60px;text-align:right">Lv.6</b></div>
     <p id="aiDesc" style="font-size:12.5px;color:var(--ink2);margin:0 0 8px"></p>
-    <div class="row" style="margin:0 0 8px"><label style="flex:0 0 auto;font-size:14px">컴퓨터 덱</label><select id="aiDeckSel"><option value="auto">레벨별 자동 (Lv.1 불꽃 ~ Lv.10 대회 덱)</option><option value="mirror">내 덱과 미러전</option></select></div>
-    <button type="button" id="btnAI" style="width:100%">🤖 컴퓨터와 대전</button>
+    <div class="row" style="margin:0 0 8px"><label style="flex:0 0 auto;font-size:14px">컴퓨터 덱</label><select id="aiDeckSel"><option value="starter">불꽃 스타터 · 자동 효과 지원</option><option value="auto">레벨별 덱 불러오기 (일부 효과 수동)</option><option value="mirror">내 덱과 미러전</option></select></div>
+    <div class="row"><label for="aiSpeed">AI 진행 속도</label><select id="aiSpeed"><option value="650">보통</option><option value="250">빠르게</option><option value="1200">천천히</option></select></div><button type="button" id="btnAI" style="width:100%;margin-top:12px">AI 대전 시작</button><button type="button" id="resumeAI" class="soft hide" style="width:100%;margin-top:8px">중단한 AI 대전 이어하기</button><div id="aiLoadStatus" role="status" aria-live="polite"></div><p class="scope-note">기본 연습 덱은 공격과 트레이너 효과를 자동 처리합니다. 내 덱의 미지원 효과는 ‘수동 효과’로 표시돼요.</p>
     <p style="margin:10px 0 6px;font-size:12.5px;color:var(--ink2)">또는 양쪽을 다 내가 조작하며 룰 익히기 ([시점 전환] 사용)</p>
     <button type="button" class="soft" id="btnSolo" style="width:100%">양쪽 직접 조작</button>
   </div>
 
   <div class="box">
-    <h2>⏱ 턴 제한 시간</h2>
-    <select id="timerSel"><option value="90">90초 (기본 · 온라인 공식앱 수준)</option><option value="60">60초 (빠르게)</option><option value="120">120초 (초보 여유)</option><option value="180">180초</option><option value="0">제한 없음</option></select>
-    <p style="font-size:12px;color:var(--ink2);margin:6px 0 0">시간이 다 되면 자동으로 턴이 넘어갑니다. 방을 만든 사람 설정이 양쪽에 적용돼요. (종이 대회 공식 룰엔 턴 제한이 없고 경기 전체 시간만 있어요)</p>
+    <h2>친구 대전 턴 제한 시간</h2>
+    <select id="timerSel"><option value="90">90초</option><option value="60">60초 (빠르게)</option><option value="120">120초 (초보 여유)</option><option value="180">180초</option><option value="0">제한 없음 · AI 연습 권장</option></select>
+    <p style="font-size:12px;color:var(--ink2);margin:6px 0 0">친구 대전은 방을 만든 사람의 설정이 적용됩니다. AI 연습은 시간 제한 없이 진행하며, 언제든 일시정지할 수 있어요.</p>
   </div>
   <div class="box">
     <h2>내 전적</h2>
@@ -196,12 +196,13 @@
 
 <!-- ================= 게임 ================= -->
 <div id="game" class="hide">
+  <div class="battle-status" id="battleStatus"><div><span class="eyebrow" id="phaseTag">BATTLE ROOM</span><strong id="phaseTitle">대전 준비</strong><p id="phaseHint">카드를 눌러 자세히 볼 수 있어요.</p></div><button type="button" class="sm ghost hide" id="pauseAI">일시정지</button></div>
   <div class="bar" id="oppBar"><b id="oppNick">상대</b><span id="oppDeckName" style="color:var(--ink2)"></span>
     <div class="cnts"><span>손 <b id="oHand">0</b></span><span>덱 <b id="oDeck">0</b></span><span>프라이즈 <b id="oPrize">0</b></span></div></div>
 
   <div class="field">
     <div class="side opp">
-      <div class="bench" id="oBench"></div>
+      <div class="side-label">상대 벤치 <span id="oBenchCount"></span></div><div class="bench" id="oBench"></div>
       <div class="center">
         <div class="piles"><div class="pile" id="oDiscard"><b>0</b>트래시</div></div>
         <div class="slot active" id="oActive"></div>
@@ -217,12 +218,12 @@
         <div class="slot active" id="mActive"></div>
         <div class="piles"><div class="pile deck" id="mDeck"><b>0</b>덱</div><div class="pile" id="mLost"><b>0</b>로스트</div></div>
       </div>
-      <div class="bench" id="mBench"></div>
+      <div class="side-label">내 벤치 <span id="mBenchCount"></span></div><div class="bench" id="mBench"></div>
     </div>
   </div>
 
   <div class="tools">
-    <button type="button" class="sm soft" id="btnDraw">드로</button>
+    <button type="button" class="sm soft" id="btnDraw">드로</button><button type="button" class="sm soft hide" id="btnReady">준비 완료</button>
     <button type="button" class="sm soft" id="btnGust">상대 벤치 호출</button>
     <button type="button" class="sm soft" id="btnCoin">코인</button>
     <button type="button" class="sm soft" id="btnDice">주사위</button>
@@ -233,7 +234,7 @@
     <button type="button" class="sm ghost" id="btnMenu">⋯</button>
     <span class="flags" id="flags"></span>
   </div>
-  <div class="hand-actions"><button type="button" class="sm soft" id="btnBatchDiscard">손패 여러 장 트래시</button><small>선택 · 전체 선택</small></div>
+  <div class="hand-actions"><strong id="handCount">내 손패</strong><button type="button" class="sm soft" id="btnBatchDiscard">여러 장 트래시</button><small id="actionFlags"></small></div>
   <div class="hand" id="mHand"></div>
 </div>
 
@@ -1024,5 +1025,6 @@ function cardDetail(id,name){
     h+='<button type="button" class="ghost" onclick="closeSheet()">닫기</button></div>';$('sheetIn').innerHTML=h;
   }).catch(function(){$('sheetIn').innerHTML+='<p>상세를 불러오지 못했어요.</p>';});}
 </script>
+<script src="battle-ai.js?v=20261007b"></script>
 </body>
 </html>
